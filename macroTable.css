@@ -1,0 +1,365 @@
+.wrapper {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: 300px;
+    height: 300px;
+}
+.macro-table {
+	overflow: hidden;
+	z-index: 0;
+	position: relative;
+	height: 100%;
+	width: 100%;
+}
+
+.macro-table table {
+	table-layout: fixed;
+	border-spacing: 0;
+	width: 0;
+	background: #fff; 
+}
+
+.macro-table tr.macro-table-highlight {
+	background: rgba(0, 0, 0, .2);
+}
+
+.macro-table .macro-table-selected-column {
+	background: rgba(0, 0, 255, .2);
+}
+
+.macro-table tr.macro-table-highlight .macro-table-selected-column {
+	background: rgba(0, 0, 255, .4);
+}
+
+.macro-table td,
+.macro-table th {
+	height: 30px;
+	padding: 0 3px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	-moz-box-shadow:inset -1px 0px 0px #fff;
+	-webkit-box-shadow:inset -1px 0px 0px #fff;
+	box-shadow:inset -1px 0px 0px #fff;
+}
+
+.macro-table .macro-table-column-sizer th {
+	height: 0;
+}
+
+.macro-table.macro-table-resizing {
+	cursor: e-resize;
+}
+
+.macro-table-resize-guide {
+	position: absolute;
+	top: 0;
+	z-index: 3;
+	width: 3px;
+	cursor: e-resize;
+	background: rgba(0, 0, 0, .2);
+	display: none;
+}
+
+.macro-table-column-moving .macro-table-resize-guide {
+	cursor: inherit;
+}
+
+.macro-table-reorder-guide {
+	position: absolute;
+	bottom: 0;
+	z-index: 3;
+	background: rgba(0, 0, 0, .2);
+	display: none;
+}
+
+.macro-table-resize-guide.macro-table-highlight,
+.macro-table-column-moving .macro-table-reorder-guide,
+.macro-table-column-moving .macro-table-resize-guide {
+	display: block;
+}
+
+.macro-table-column-moving .macro-table-reorder-guide,
+.macro-table-column-moving .macro-table-resize-guide {
+	pointer-events: none; /* this rule is what allows the reordering to work, making mouse events pass through. not supported in ie! */
+}
+
+.macro-table.macro-table-column-moving {
+	cursor: -webkit-grabbing;
+	cursor: -moz-grabbing;
+}
+
+.macro-table.macro-table-resizing,
+.macro-table.macro-table-column-moving {
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+.macro-table-static-header,
+.macro-table-header,
+.macro-table-static-data-container,
+.macro-table-data-container {
+	overflow: hidden;
+	position: relative;
+}
+
+.macro-table-data-container-wrapper {
+	position: absolute;
+	overflow: hidden;
+	z-index: 2;
+	width: 100%;
+	height: 100%;
+}
+
+.macro-table-scroll-container {
+	position: absolute;
+	overflow: scroll;
+	border-width: 0;
+	padding: 0;
+	margin: 0;
+	z-index: 1;
+	width: 100%;
+	height: 100%;
+}
+
+/* static column rules */
+
+.macro-table .macro-table-static-header,
+.macro-table .macro-table-static-data-container {
+	display: none;
+	float: left;
+}
+
+.macro-table.macro-table-static-column-enabled .macro-table-static-header,
+.macro-table.macro-table-static-column-enabled .macro-table-static-data-container {
+	display: block;
+}
+
+.macro-table-static-column-enabled.macro-table-rows-selectable .macro-table-static-header,
+.macro-table-static-column-enabled.macro-table-rows-selectable .macro-table-static-data-container,
+.macro-table-static-column-enabled.macro-table-rows-collapsible .macro-table-static-header,
+.macro-table-static-column-enabled.macro-table-rows-collapsible .macro-table-static-data-container {
+	width: 20px;
+}
+
+.macro-table-static-column-enabled.macro-table-rows-collapsible.macro-table-rows-collapsible .macro-table-static-header,
+.macro-table-static-column-enabled.macro-table-rows-collapsible.macro-table-rows-collapsible .macro-table-static-data-container {
+	width: 40px;
+}
+
+/* scrollbar styling */
+
+.macro-table-scroll-container::-webkit-scrollbar {
+	overflow: visible;
+}
+
+.macro-table-scroll-container::-webkit-scrollbar-thumb {
+	border-width: 1px 1px 1px 6px;
+}
+
+.macro-table-scroll-container::-webkit-scrollbar:vertical {
+	width: 12px;
+}
+.macro-table-scroll-container::-webkit-scrollbar:horizontal {
+	height: 12px;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:start {
+	display: none;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:end {
+	display: block;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button {
+	border: 1px solid #ccc;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:horizontal {
+	border-width: 1px 0 1px 0;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:vertical {
+	border-width: 0 1px 0 1px;
+}
+/*
+.scroll-container-ltr::-webkit-scrollbar-button:vertical {
+	border-width: 0 0 0 1px;
+}
+.scroll-container-rtl::-webkit-scrollbar-button:vertical {
+	border-width: 0 1px 0 0;
+}
+*/
+.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:increment {
+	padding-left: 1px;
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -152px -62px;
+	width: 15px;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:increment:hover {
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -279px -100px;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:increment:active {
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -420px -79px;
+}
+
+.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:decrement {
+	border-left: 1px solid #ccc;
+	border-right: 1px solid #ccc;
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -40px -16px;
+	width: 17px;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:hover {
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -168px -62px;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:active {
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -115px -98px;
+}
+
+.macro-table-scroll-container::-webkit-scrollbar-button:vertical:increment {
+	padding-top: 1px;
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -356px -15px;
+	height: 15px;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:vertical:increment:hover {
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -356px 0;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:vertical:increment:active {
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -40px 0;
+}
+
+.macro-table-scroll-container::-webkit-scrollbar-button:vertical:decrement {
+	border-top: 1px solid #ccc;
+	border-bottom: 1px solid #ccc;
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -265px -62px;
+	height: 17px;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:vertical:decrement:hover {
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -263px -123px;
+}
+.macro-table-scroll-container::-webkit-scrollbar-button:vertical:decrement:active {
+	background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -29px 0;
+}
+
+.macro-table-scroll-container::-webkit-scrollbar-track:vertical {
+	background-clip: border-box;
+	border: 1px solid #ccc;
+	border-width: 1px 1px 0 1px;
+	box-shadow: none;
+	background-color: #f8f8f8;
+}
+/*
+.macro-table-scroll-container-ltr::-webkit-scrollbar-track:vertical {
+	border-width: 0 0 0 1px;
+}
+.macro-table-scroll-container-rtl::-webkit-scrollbar-track:vertical {
+	border-width: 0 1px 0 0;
+}
+*/
+.macro-table-scroll-container::-webkit-scrollbar-track:horizontal {
+	background-clip: border-box;
+	border: 1px solid #ccc;
+	border-width: 1px 0 1px 1px;
+	box-shadow: none;
+	background-color: #f8f8f8;
+}
+.macro-table-scroll-container::-webkit-scrollbar-track:hover {
+	background: none;
+	box-shadow: none;
+}
+.macro-table-scroll-container::-webkit-scrollbar-track:horizontal:hover,
+.macro-table-scroll-container::-webkit-scrollbar-track:vertical:hover {
+	box-shadow: none;
+	background-clip: border-box;
+	border: 1px solid #ccc;
+	box-shadow: none;
+	background-color: #f8f8f8;
+}
+/*.macro-table-scroll-container::-webkit-scrollbar-track:horizontal:hover {
+	border-width: 1px 0 1px 0;
+}
+.macro-table-scroll-container::-webkit-scrollbar-track:vertical:hover {
+	border-width: 0 1px 0 1px;
+}*/
+.macro-table-scroll-container::-webkit-scrollbar-thumb {
+	background-color: rgba(0, 0, 0, .2);
+	background-clip: padding-box;
+	border: solid transparent;
+	min-height: 28px;
+	padding: 1px 1px 1px 1px;
+	box-shadow: none;
+	border-width: 2px 2px 2px 2px;
+}
+/*.macro-table-scroll-container::-webkit-scrollbar-thumb:horizontal {
+	box-shadow: none;
+	padding: 1px 1px 1px 1px;
+}
+.macro-table-scroll-container::-webkit-scrollbar-thumb:vertical {
+	padding: 1px 1px 1px 1px;
+	box-shadow: none;
+}*/
+/*.macro-table-scroll-container-ltr::-webkit-scrollbar-thumb:vertical {
+	border-width: 1px 1px 1px 2px;
+}
+.macro-table-scroll-container-rtl::-webkit-scrollbar-thumb:vertical {
+	border-width: 1px 2px 1px 1px;
+}*/
+.macro-table-scroll-container::-webkit-scrollbar-thumb:hover {
+	background-color: rgba(0, 0, 0, .4);
+	box-shadow: none;
+}
+.macro-table-scroll-container::-webkit-scrollbar-corner {
+	border: 1px solid #ccc;
+}
+/*.macro-table-scroll-container-rtl::-webkit-scrollbar-corner {
+	border-width: 1px 1px 0 0;
+}
+.macro-table-scroll-container-ltr::-webkit-scrollbar-corner {
+	border-width: 1px 0 0 1px;
+}​*/
+
+/*
+.scroll-container::-webkit-scrollbar-button {
+height: 0;
+width: 0;
+}
+.scroll-container::-webkit-scrollbar-track {
+background-clip: padding-box;
+border: solid transparent;
+border-width: 0 0 0 4px;
+}
+.scroll-container::-webkit-scrollbar-track-piece {
+background-clip: padding-box;
+background-color: whiteSmoke;
+border: solid white;
+border-width: 0 0 0 3px;
+box-shadow: inset 1px 0 0 rgba(0, 0, 0, .14),inset -1px 0 0 rgba(0, 0, 0, .07);
+}
+.scroll-container::-webkit-scrollbar-corner {
+background-clip: padding-box;
+background-color: whiteSmoke;
+border: solid white;
+border-width: 3px 0 0 3px;
+box-shadow: inset 1px 1px 0 rgba(0, 0, 0, .14);
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+background-color: rgba(0, 0, 0, .2);
+background-clip: padding-box;
+border: solid transparent;
+min-height: 28px;
+border-width: 1px 1px 1px 1px;
+}
+.scroll-container::-webkit-scrollbar-button {
+border: 1px solid #CCC;
+}
+.scroll-container::-webkit-scrollbar-corner {
+border-width: 1px 0 0 1px;
+}
+.scroll-container::-webkit-scrollbar-corner {
+border: 1px solid #CCC;
+}
+*/
+
+
