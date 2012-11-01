@@ -79,6 +79,8 @@
 		defaultTableHeight = 200, //default the table to this height
 		displayRowWindow, //the max number of rows that will show in the provided table height
 		replaceRowWindow, //when a row swap is triggered, this many rows will be removed and replaced at the other end of the table
+		//scrollSpacerBuffered = false, //if margin-bottom added to scroll spacer to allow taller than default rows to render properly at the end of the table, 
+										//set flag prevents re-calculations of this value (only needs to be done once the last rows have been rendered for the first time)
 
 		//columns
 		maxTotalDomColumns, //TODO
@@ -178,6 +180,7 @@
 	function scrollTableVertical(direction) {
 		var rowBuffer = this.options.rowBuffer,
 			tableData = this.options.tableData,
+			$tableScrollSpacer = this.element.find('div.macro-table-scroll-spacer'),
 			$tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
 			$tableContainer = $tableContentWrapper.find('div.macro-table-data-container'),
 			$tableScrollWrappers = $tableContentWrapper.find('div.macro-table-scroll-wrapper'),
@@ -185,8 +188,6 @@
 			$tableBody = $tableContainer.find('tbody.macro-table-column-content'),
 			$tableRows = $tableBody.find('tr'),
 			newRenderCount = 0; //number of new rows we need to remove and re-add with new values
-
-		$tableScrollWrappers.css('margin-bottom', 0); //remove possible bottom margin
 
 		//a huge scroll, passed the normal row swap threshold (grab the thumb with the mouse and whip it all the way in one direction)
 		if(currentDomRow + direction > maxTotalDomRows || currentDomRow + direction <= 0) {
@@ -199,6 +200,7 @@
 			//console.log('re-render',currentRow,'(DOM row)',currentDomRow);
 
 			$tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
+
 		//more normal situations
 		} else {
 
@@ -216,6 +218,7 @@
 
 				//console.log('currentRow',currentRow,'currentDomRow',currentDomRow,'finalDomRowWindow',finalDomRowWindow,'remainingDomRows',remainingDomRows,'isInFinalDomWindow',isInFinalDomWindow,'moreRowRenderingNeeded',moreRowRenderingNeeded);
 
+				//render new rows appropriate to current DOM possition, or if a big jump landed into the final DOM window and need the remaining rows fleshed out
 				if(!isInFinalDomWindow || (isInFinalDomWindow && moreRowRenderingNeeded)) {
 				//if(currentDomRow >= triggerDownDomRow && ) { 
 				//	if(currentRow <= finalDomRowPosition || (currentRow > finalDomRowPosition && remainingRows > rowBuffer + displayRowWindow)) {
@@ -235,12 +238,40 @@
 				//in the finalDomRowWindow, add margin to bottom of wrapper to allow scrolling the last row completely into the visible window
 				} else {
 
-					var distanceToBottom = 0;
-					$tableRows.filter(':gt('+(maxTotalDomRows - displayRowWindow - 1)+')').each(function(i, element) {
+					var //distanceToBottom = 0,
+						distanceFromBottomToNewLastDomRow = 0,
+						newLastDomRow,
+						tableContainerHeight = $tableContainer.height();
+
+					/*$tableRows.filter(':gt('+($tableRows.length - displayRowWindow - 1)+')').each(function(i, element) {
 						distanceToBottom += $(element).height();
 					});
 
-					$tableScrollWrappers.css('margin-bottom', $tableContainer.height() - distanceToBottom);
+					//minor case of final rows being slightly larger than default, causing only the very last row not to render
+					if(tableContainerHeight > distanceToBottom) {
+
+						//if this is reached and scrollSpacerBuffered block was once reached, reset the scrollSpacerBuffered settings
+						//possibly due to change in table's data via an update
+						$tableScrollSpacer.css('margin-bottom', 0);
+						$tableScrollWrappers.css('margin-bottom', tableContainerHeight - distanceToBottom);
+						scrollSpacerBuffered = false;
+
+					//the final rows are larger than default heights, calculate the amount of extra scrolling needed to display the last row in the window
+					} else if(!scrollSpacerBuffered) { //once calculated, the effects are permanent*/
+
+						$($tableRows.get().reverse()).each(function(i, element) {
+							distanceFromBottomToNewLastDomRow += $(element).height();
+							if(distanceFromBottomToNewLastDomRow > tableContainerHeight) {
+								distanceFromBottomToNewLastDomRow -= $(element).height();
+								newLastDomRow = $tableRows.length - i + 1;
+								return false;
+							}
+						});
+
+						$tableScrollSpacer.css('margin-bottom', (newLastDomRow - rowBuffer - displayRowWindow) * this.options.rowHeight);
+						$tableScrollWrappers.css('margin-bottom', tableContainerHeight - distanceFromBottomToNewLastDomRow);
+						//scrollSpacerBuffered = true;
+					//}
 
 				}
 
