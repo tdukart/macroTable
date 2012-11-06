@@ -1,5 +1,5 @@
 .wrapper {
-  position: absolute;
+  position: relative;
   top: 10px;
   left: 10px;
   right: 10px;
@@ -22,8 +22,16 @@
   background: #fff; 
 }
 
+.macro-table tr.macro-table-row-stripe {
+  background: rgba(0, 0, 0, .1);
+}
+
 .macro-table tr.macro-table-highlight {
   background: rgba(0, 0, 0, .2);
+}
+
+.macro-table tr.macro-table-row-stripe.macro-table-highlight {
+  background: rgba(0, 0, 0, .3);
 }
 
 .macro-table .macro-table-selected-column {

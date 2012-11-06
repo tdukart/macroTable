@@ -5,6 +5,16 @@
 
     <link rel="stylesheet" type="text/css" href="macroTable.css">
 
+  </head>
+  <body>
+    <div class="wrapper">
+      <div id="table"></div>
+    </div>
+
+    <ul>
+      <li><button id="get-selected-rows">Get Selected Rows</button></li>
+    </ul>
+
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.js"></script>
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.23/jquery-ui.min.js"></script>
     <script type="text/javascript" src="macroTable.js"></script>
@@ -15,15 +25,15 @@
         var tableData = [];
         //populate fake data
         for(var i = 0, len = 200; i < len; i++) {
-            tableData.push({
-                index: i,
-                column1: i+'(1)',
-                column2: i+'(2)'+(i == 10 ? 'jhgfjhgfjhgf' : ''),
-                column3: i+'(3)',
-                column4: i+'(4)',
-                column5: i+'(5)',
-                column6: i+'(6)',
-            });
+          tableData.push({
+            index: i,
+            column1: i+'(1)',
+            column2: i+'(2)'+(i == 10 ? 'jhgfjhgfjhgf' : ''),
+            column3: i+'(3)',
+            column4: i+'(4)',
+            column5: i+'(5)',
+            column6: i+'(6)',
+          });
         }
         tableData[192].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
         tableData[193].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
@@ -33,65 +43,67 @@
         tableData[197].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
         tableData[198].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
         tableData[199].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
-        $('div.some-data').macroTable({
-            tableData: tableData,
-            rowsSelectable: true,
-            columns: [{
-                title: 'Col 1',
-                field: 'column1',
-                formatter: function(text) {
-                    return text+' blah';    
-                }
-            },{
-                title: 'Col 2',
-                field: 'column2',
-                formatter: function(text) {
-                    return text+' barf';    
-                }
-            },{
-                title: 'Col 3',
-                field: 'column3',
-                formatter: function(text) {
-                    return text+' bum';    
-                }
-            },{
-                title: 'Col 4',
-                field: 'column4',
-                formatter: function(text) {
-                    return text+' bum';    
-                }
-            },{
-                title: 'Col 5',
-                field: 'column5',
-                formatter: function(text) {
-                    return text+' bum';    
-                }
-            },{
-                title: 'Col 6',
-                field: 'column6',
-                formatter: function(text) {
-                    return text+' bum';    
-                }
-            }],
-            onColumnReorder: function(columns) {
-                alert('reorder');        
-            },
-            onColumnResize: function(columnIndex, width) {
-                alert(columnIndex+', '+width);        
+        $('#table').macroTable({
+          tableData: tableData,
+          rowsSelectable: true,
+          columns: [{
+            title: 'Col 1',
+            field: 'column1',
+            formatter: function(text) {
+                return text+' blah';
             }
+          },{
+            title: 'Col 2',
+            field: 'column2',
+            formatter: function(text) {
+                return text+' barf';
+            }
+          },{
+            title: 'Col 3',
+            field: 'column3',
+            formatter: function(text) {
+                return text+' bum';
+            }
+          },{
+            title: 'Col 4',
+            field: 'column4',
+            formatter: function(text) {
+                return text+' bum';
+            }
+          },{
+            title: 'Col 5',
+            field: 'column5',
+            formatter: function(text) {
+                return text+' bum';
+            }
+          },{
+            title: 'Col 6',
+            field: 'column6',
+            formatter: function(text) {
+                return text+' bum';
+            }
+          }],
+          onColumnReorder: function(columns) {
+            alert('reorder');
+          },
+          onColumnResize: function(columnIndex, width) {
+            alert(columnIndex+', '+width);
+          }
         });
         //$('div.some-data').macroTable('scrollToColumn',0);
-        $('div.some-data').macroTable('scrollToRow',177);
+        $('#table').macroTable('scrollToRow',177);
         $(window).resize(function() {
-            $('div.some-data').macroTable('resizeTable');
+          $('div.some-data').macroTable('resizeTable');
+        });
+
+        $('#get-selected-rows').click(function(e) {
+          e.preventDefault();
+
+          var selectedRows = $('#table').macroTable('getSelectedRows');
+          console.log('Currently Selected Rows:',selectedRows);
         });
 
       });//]]>  
     </script>
-  </head>
-  <body>
-    <div class="wrapper">
-      <div class="some-data"></div>
-    </div>
   </body>
 </html>

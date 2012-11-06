@@ -93,7 +93,9 @@
     currentRow = 0, //0-indexed, describes the top-most, visible data row (direct correlation with array index). default to first row
     currentDomRow = 0, //0-indexed, describes the top-most, visible DOM row. default to first row
     triggerUpDomRow, //when scrolling up, when on this DOM row, a row swap will trigger
-    triggerDownDomRow; //when scrolling down, when on this DOM row, a row swap will trigger
+    triggerDownDomRow, //when scrolling down, when on this DOM row, a row swap will trigger
+
+    selectedRowCount = 0; //counter to keep track of selected rows, used to optimize selecting behavior comparing currently selected to length of total rows
 
   /** Truly Private functions */
 
@@ -336,10 +338,23 @@
    */
   function renderRow(data, index) {
     var columns = this.options.columns,
-      dynamicRow,
-      staticRow;
+      isRowsSelectable = this.options.rowsSelectable === true,
+      dynamicRowColumns = '',
+      staticRowColumns = '',
+      $dynamicRow = $(document.createElement('tr')),
+      $staticRow = $(document.createElement('tr'));
 
-    dynamicRow = staticRow = '<tr class="'+(index % 2 == 0 ? 'macro-table-highlight' : '')+'">';
+    //give even rows a stripe color
+    if(index % 2 == 0) {
+      $dynamicRow.addClass('macro-table-row-stripe');
+      $staticRow.addClass('macro-table-row-stripe');
+    }
+
+    //if selecting rows is enabled and this row has already been selected, style appropriately
+    if(isRowsSelectable && data.selected) {
+      $dynamicRow.addClass('macro-table-highlight');
+      $staticRow.addClass('macro-table-highlight');
+    }
 
     //build dynamically left-scrollable row
     for(var i = 0, len = columns.length; i < len; i++) {
@@ -347,19 +362,17 @@
       if(typeof columns[i].formatter === 'function') {
         columnContent = columns[i].formatter(columnContent);
       }
-      dynamicRow += '<td'+(columns[i].resizable !== false ? ' class="macro-table-column-resizable"' : '')+'>'+columnContent+'</td>';
+      dynamicRowColumns += '<td'+(columns[i].resizable !== false ? ' class="macro-table-column-resizable"' : '')+'>'+columnContent+'</td>';
     }
-    dynamicRow += '</tr>';
 
     //build static row
-    if(this.options.rowsSelectable === true) {
-      staticRow += '<td><input type="checkbox" data-row-index="'+index+'"/></td>';
+    if(isRowsSelectable) {
+      staticRowColumns += '<td><input type="checkbox" class="macro-table-checkbox" data-row-index="'+index+'" '+(data.selected ? 'checked="checked"' : '')+'/></td>';
     }
-    staticRow += '</tr>';
 
     return {
-      dynamicRow: $(dynamicRow),
-      staticRow: $(staticRow)
+      dynamicRow: $dynamicRow.html(dynamicRowColumns),
+      staticRow: $staticRow.html(staticRowColumns)
     };
   }
 
@@ -466,9 +479,11 @@
 
       var $scroll = $macroTable.find('div.macro-table-scroll-container'),
         $dataContainer = $macroTable.find('div.macro-table-data-container'),
+        $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
         $resizer = $macroTable.find('div.macro-table-resize-guide'),
         $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
         $header = $macroTable.find('div.macro-table-header table'),
+        $staticHeaderRow = $macroTable.find('div.macro-table-static-header tr.macro-table-static-header-row'),
         $columnToResize;
 
       //shortcut function to remove styling for when hovering over the resizer handle
@@ -529,6 +544,44 @@
         //TODO select all checkbox
       });
 
+      $staticDataContainer.delegate('input.macro-table-checkbox', 'click', function(e) {
+        var tableData = self.options.tableData,
+          $headerCheckbox = $staticHeaderRow.find('input.macro-table-select-toggle'),
+          $checkbox = $(this),
+          $checkboxRow = $checkbox.parents('tr'),
+          domRow = $checkboxRow.index(),
+          dataRow = $checkbox.data('row-index'),
+          $dataRow = $macroTable.find('tbody.macro-table-column-content tr').eq(domRow);
+
+        if($checkbox.is(':checked')) {
+          $checkboxRow.addClass('macro-table-highlight');
+          $dataRow.addClass('macro-table-highlight');
+          tableData[dataRow].selected = true;
+          selectedRowCount++;
+        } else {
+          $checkboxRow.removeClass('macro-table-highlight');
+          $dataRow.removeClass('macro-table-highlight');
+          tableData[dataRow].selected = false;
+          selectedRowCount--;
+        }
+
+        //set header checkbox state
+        if(selectedRowCount == 0) { //no rows selected
+
+          $headerCheckbox.attr('checked', false);
+          $headerCheckbox[0].indeterminate = false;
+
+        } else if(selectedRowCount == tableData.length) { //all rows selected
+
+          $headerCheckbox.attr('checked', true);
+          $headerCheckbox[0].indeterminate = false;
+
+        } else { //at least one row selected, but not all
+
+          $headerCheckbox[0].indeterminate = true;
+        }
+      });
+
       //mousemove event on the table root element, handling movement for column reordering and column resizing
       var lastPageX, scrollColumnTimer;
       $macroTable.bind('mousemove', function(e) {
@@ -569,7 +622,7 @@
           e.stopPropagation();
 
           //reposition the resizer, do it out of the thread for performance improvements
-          setTimeout(function() { 
+          setTimeout(function() {
             $resizer.css('left', 
               //TODO: verify this works with selectable rows and collapsible rows turned on
               Math.max(
@@ -780,7 +833,8 @@
      * @private
      */
     _init: function() {
-      var options = this.options,
+      var self = this,
+        options = this.options,
         rowHeight = options.rowHeight,
         tableData = options.tableData,
         columns = options.columns,
@@ -821,10 +875,40 @@
       //set up table for rows to have checkbox columns, sizing handled in .resizeTable()
       if(options.rowsSelectable === true) {
         var $checboxColumnSizer = $(document.createElement('col')).width(rowSelectColumnWidth),
-          $checboxColumn = $(document.createElement('th')).html('<input type="checkbox"/>');
+          $checkboxColumn = $(document.createElement('th')).html('<input type="checkbox" class="macro-table-checkbox macro-table-select-toggle" />');
+
+        //wire toggle all rows behavior
+        $checkboxColumn.find('input').change(function(e) {
+          var tableData = self.options.tableData,
+            $checkboxes = $staticTableBody.find('input.macro-table-checkbox'),
+            $tableRows = $staticTableBody.find('tr').add($tableBody.find('tr')),
+            isToggled;
+
+          //header checkbox selected or indeterminate (rows have already been individually selected)
+          if(this.indeterminate === true || $(this).is(':checked')) {
+
+            isToggled = true;
+            $checkboxes.attr('checked', true);
+            $tableRows.addClass('macro-table-highlight');
+            selectedRowCount = tableData.length;
+
+          //header checkbox deselected
+          } else {
+
+            isToggled = false;
+            $checkboxes.attr('checked', false);
+            $tableRows.removeClass('macro-table-highlight');
+            selectedRowCount = 0;
+          }
+
+          //set the row data structure to the appropriate selected state
+          for(var i = 0, len = tableData.length; i < len; i++) {
+            tableData[i].selected = isToggled;
+          }
+        });
 
         $staticColumnSizers.append($checboxColumnSizer);
-        $staticHeaderRow.append($checboxColumn);
+        $staticHeaderRow.append($checkboxColumn);
 
         $macroTable.addClass('macro-table-rows-selectable');
       } else {
@@ -938,6 +1022,7 @@
             this.element.removeClass('macro-table-static-column-enabled');
           }
           this.resizeTable(options.height, options.width);
+          break;
       }
 
       // In jQuery UI 1.8, you have to manually invoke the _setOption method from the base widget
@@ -972,12 +1057,21 @@
      * @returns {Array} ordered list of selected rows
      */
     getSelectedRows: function() {
+      var selectedRows = [],
+        tableData = this.options.tableData;
 
-      if(this.options.rowsSelectable !== true) {
-        return [];
+      if(this.options.rowsSelectable === true && selectedRowCount != 0) {
+
+        for(var i = 0, len = tableData.length; i < len; i++) {
+
+          if(tableData[i].selected) {
+            selectedRows.push(tableData[i]);
+          }
+
+        }
       }
 
-
+      return selectedRows;
     },
 
     /**
