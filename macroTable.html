@@ -92,6 +92,7 @@
         });
         //$('div.some-data').macroTable('scrollToColumn',0);
         $('#table').macroTable('scrollToRow',177);
+        //$('#table').macroTable('scrollToRow',199); //FIXME: doesn't work because the rows are too tall...
         $(window).resize(function() {
           $('div.some-data').macroTable('resizeTable');
         });
