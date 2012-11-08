@@ -81,6 +81,7 @@
 
 .macro-table-reorder-guide {
   position: absolute;
+  top: 0;
   bottom: 0;
   z-index: 3;
   background: rgba(0, 0, 0, .2);
@@ -118,6 +119,10 @@
 .macro-table-static-data-container,
 .macro-table-data-container {
   overflow: hidden;
+  position: relative;
+}
+
+.macro-table-data-container .macro-table-scroll-wrapper {
   position: relative;
 }
 
