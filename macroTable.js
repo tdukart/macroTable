@@ -514,6 +514,7 @@
         $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
         $header = $macroTable.find('div.macro-table-header table'),
         $staticHeaderRow = $macroTable.find('div.macro-table-static-header tr.macro-table-static-header-row'),
+        $staticTableBody = $macroTable.find('tbody.macro-table-static-column-content'),
         $columnToResize;
 
       //shortcut function to remove styling for when hovering over the resizer handle
@@ -539,7 +540,35 @@
 
       /* Wire row selector events */
 
-      //FIXME: wiring of select all rows toggle checkbox done in _init because delegate() and 'change' events are incompatible
+       //wire toggle all rows behavior
+      $staticHeaderRow.delegate('input.macro-table-select-toggle', 'click', function(e) {
+        var tableData = self.options.tableData,
+          $checkboxes = $staticTableBody.find('input.macro-table-checkbox'),
+          $tableRows = $staticTableBody.find('tr').add($tableBody.find('tr')),
+          isToggled;
+
+        //header checkbox selected or indeterminate (rows have already been individually selected)
+        if(this.indeterminate === true || $(this).is(':checked')) {
+
+          isToggled = true;
+          $checkboxes.attr('checked', true);
+          $tableRows.addClass('macro-table-highlight');
+          selectedRowCount = tableData.length;
+
+        //header checkbox deselected
+        } else {
+
+          isToggled = false;
+          $checkboxes.attr('checked', false);
+          $tableRows.removeClass('macro-table-highlight');
+          selectedRowCount = 0;
+        }
+
+        //set the row data structure to the appropriate selected state
+        for(var i = 0, len = tableData.length; i < len; i++) {
+          tableData[i].selected = isToggled;
+        }
+      });
 
       //wire row select checkbox event behavior 
       $staticDataContainer.delegate('input.macro-table-checkbox', 'click', function(e) {
@@ -810,7 +839,6 @@
       //mousemove event on the table root element, handling movement for column reordering and column resizing
       var lastPageX, //allow reorder guide to follow cursor without changing it's relative position from where it started
         scrollColumnTimer;
-      
       $macroTable.bind('mousemove', function(e) {
         var $element = $(e.target),
           resizerWidth = $resizer.outerWidth(),
@@ -1012,36 +1040,6 @@
       if(options.rowsSelectable === true) {
         var $checboxColumnSizer = $(document.createElement('col')).width(rowSelectColumnWidth),
           $checkboxColumn = $(document.createElement('th')).html('<input type="checkbox" class="macro-table-checkbox macro-table-select-toggle" />');
-
-        //wire toggle all rows behavior
-        $staticHeaderRow.delegate('input.macro-table-select-toggle', 'change', function(e) {
-          var tableData = self.options.tableData,
-            $checkboxes = $staticTableBody.find('input.macro-table-checkbox'),
-            $tableRows = $staticTableBody.find('tr').add($tableBody.find('tr')),
-            isToggled;
-
-          //header checkbox selected or indeterminate (rows have already been individually selected)
-          if(this.indeterminate === true || $(this).is(':checked')) {
-
-            isToggled = true;
-            $checkboxes.attr('checked', true);
-            $tableRows.addClass('macro-table-highlight');
-            selectedRowCount = tableData.length;
-
-          //header checkbox deselected
-          } else {
-
-            isToggled = false;
-            $checkboxes.attr('checked', false);
-            $tableRows.removeClass('macro-table-highlight');
-            selectedRowCount = 0;
-          }
-
-          //set the row data structure to the appropriate selected state
-          for(var i = 0, len = tableData.length; i < len; i++) {
-            tableData[i].selected = isToggled;
-          }
-        });
 
         $staticColumnSizers.append($checboxColumnSizer);
         $staticHeaderRow.append($checkboxColumn);
