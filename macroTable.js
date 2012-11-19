@@ -111,8 +111,8 @@
       $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
       $tableContainer = $tableContentWrapper.find('div.macro-table-data-container'),
       $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
-      $tableBody = $tableContainer.find('tbody.macro-table-column-content'),
-      $staticTableBody = $staticTableContainer.find('tbody.macro-table-static-column-content'),
+      $tableBody = $tableContainer.find('table.macro-table-column-content'),
+      $staticTableBody = $staticTableContainer.find('table.macro-table-static-column-content'),
       $rows,
       $staticRows,
       renderCount = 0,
@@ -123,10 +123,10 @@
     direction = direction || 0; //default to "no scroll" for complete re-render
 
     //detach the table from the DOM for impending manipulation ideally, but need to know row heights, so can't...
-    $rows = $tableBody.find('tr');
-    $tableBody.empty();
-    $staticRows = $staticTableBody.find('tr');
-    $staticTableBody.empty();
+    $rows = $tableBody.find('tbody');
+    $tableBody.find('tbody').remove();
+    $staticRows = $staticTableBody.find('tbody');
+    $staticTableBody.find('tbody').remove();
 
     //append all new rows to the table, since we've exhausted the ones we can reuse already in the DOM
     while(startRowIndex + renderCount != endRowIndex) {
@@ -162,11 +162,11 @@
 
     //add back previous selection of rows
     if(direction < 0) {
-      $tableBody.append($rows.filter('tr:lt('+(maxTotalDomRows - renderCount)+')'));
-      $staticTableBody.append($staticRows.filter('tr:lt('+(maxTotalDomRows - renderCount)+')'));
+      $tableBody.append($rows.filter('tbody:lt('+(maxTotalDomRows - renderCount)+')'));
+      $staticTableBody.append($staticRows.filter('tbody:lt('+(maxTotalDomRows - renderCount)+')'));
     } else if(direction > 0) {
-      $tableBody.prepend($rows.filter('tr:gt('+(renderCount - 1)+')'));
-      $staticTableBody.prepend($staticRows.filter('tr:gt('+(renderCount - 1)+')'));
+      $tableBody.find('colgroup').after($rows.filter('tbody:gt('+(renderCount - 1)+')'));
+      $staticTableBody.find('colgroup').after($staticRows.filter('tbody:gt('+(renderCount - 1)+')'));
     }
 
     return Math.abs(renderCount);
@@ -184,7 +184,7 @@
       $macroTable = this.element,
       $tableContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
       $tableContainer = $tableContainerWrapper.find('div.macro-table-data-container'),
-      $tableRows = $tableContainer.find('tbody.macro-table-column-content tr'),
+      $tableRows = $tableContainer.find('table.macro-table-column-content tr'),
       $tableScrollSpacer = $macroTable.find('div.macro-table-scroll-spacer'),
       $tableScrollWrappers = $tableContainerWrapper.find('div.macro-table-scroll-wrapper'),
       $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
@@ -222,7 +222,7 @@
       $tableContainer = $tableContentWrapper.find('div.macro-table-data-container')
 
       $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
-      $tableBody = $tableContainer.find('tbody.macro-table-column-content'),
+      $tableBody = $tableContainer.find('table.macro-table-column-content'),
       $tableRows = $tableBody.find('tr'),
       newRenderCount = 0; //number of new rows we need to remove and re-add with new values
 
@@ -368,40 +368,68 @@
   function renderRow(data, index) {
     var columns = this.options.columns,
       isRowsSelectable = this.options.rowsSelectable === true,
-      dynamicRowColumns = '',
-      staticRowColumns = '',
-      $dynamicRow = $(document.createElement('tr')),
+      rowData,
+      dynamicRowColumns,
+      staticRowColumns,
+      $dynamicTBody = $(document.createElement('tbody')),
+      $staticTBody = $(document.createElement('tbody')),
+      $dynamicRow,
+      $staticRow;
+
+    //build row group of main row and sub rows
+    for(var i = 0, rowGroupLen = 1 + (typeof data.subRows !== 'undefined' ? data.subRows.length : 0); i < rowGroupLen; i++) {
+
+      rowData = rowGroupLen > 1 ? data.subRows[i - 1] : data;
+
+      $dynamicRow = $(document.createElement('tr'));
       $staticRow = $(document.createElement('tr'));
+      dynamicRowColumns = ''
+      staticRowColumns = '';
 
-    //give even rows a stripe color
-    if(index % 2 == 0) {
-      $dynamicRow.addClass('macro-table-row-stripe');
-      $staticRow.addClass('macro-table-row-stripe');
-    }
-
-    //if selecting rows is enabled and this row has already been selected, style appropriately
-    if(isRowsSelectable && data.selected) {
-      $dynamicRow.addClass('macro-table-highlight');
-      $staticRow.addClass('macro-table-highlight');
-    }
-
-    //build dynamically left-scrollable row
-    for(var i = 0, len = columns.length; i < len; i++) {
-      var columnContent = data[columns[i].field];
-      if(typeof columns[i].formatter === 'function') {
-        columnContent = columns[i].formatter(columnContent);
+      if(rowGroupLen > 1) {
+        $dynamicRow.addClass('macro-table-sub-row');
+        $staticRow.addClass('macro-table-sub-row');
       }
-      dynamicRowColumns += '<td'+(columns[i].resizable !== false ? ' class="macro-table-column-resizable"' : '')+'>'+columnContent+'</td>';
-    }
 
-    //build static row
-    if(isRowsSelectable) {
-      staticRowColumns += '<td><input type="checkbox" class="macro-table-checkbox" data-row-index="'+index+'" '+(data.selected ? 'checked="checked"' : '')+'/></td>';
+      //if selecting rows is enabled and this row has already been selected, style appropriately
+      if(isRowsSelectable && rowData.selected) {
+        $dynamicRow.addClass('macro-table-highlight macro-table-selected-row');
+        $staticRow.addClass('macro-table-highlight  macro-table-selected-row');
+      }
+
+      //give even rows a stripe color
+      if(index % 2 == 0) {
+        $dynamicRow.addClass('macro-table-row-stripe');
+        $staticRow.addClass('macro-table-row-stripe');
+      }
+
+      //build dynamically left-scrollable row
+      for(var j = 0, len = columns.length; j < len; j++) {
+        var columnContent = rowData[columns[j].field];
+        if(typeof columns[j].formatter === 'function') {
+          columnContent = columns[j].formatter(columnContent);
+        }
+        dynamicRowColumns += '<td'+(columns[j].resizable !== false ? ' class="macro-table-column-resizable"' : '')+'>'+columnContent+'</td>';
+      }
+
+      //build static row
+      if(isRowsSelectable) {
+        staticRowColumns += '<td><input type="checkbox" class="macro-table-checkbox" data-row-index="'+index+'" '+(rowData.selected ? 'checked="checked"' : '')+'/></td>';
+      }
+
+      //build row expand column
+      staticRowColumns += '<td>' + (rowGroupLen > 1 ? '<span class="macro-table-icon macro-table-arrow-' + (true /* TODO: figure out the saved toggle state of this row*/ ? 'right' : 'down') + '"></span>' : '') + '</td>'; 
+
+      $dynamicRow.html(dynamicRowColumns);
+      $staticRow.html(staticRowColumns);
+
+      $dynamicTBody.append($dynamicRow);
+      $staticTBody.append($staticRow);
     }
 
     return {
-      dynamicRow: $dynamicRow.html(dynamicRowColumns),
-      staticRow: $staticRow.html(staticRowColumns)
+      dynamicRow: $dynamicTBody,
+      staticRow: $staticTBody
     };
   }
 
@@ -485,17 +513,17 @@
       '<div class="macro-table-data-container-wrapper">'+
         '<div class="macro-table-static-data-container">'+
           '<div class="macro-table-scroll-wrapper">'+
-            '<table>'+
+            '<table class="macro-table-static-column-content">'+
               '<colgroup class="macro-table-static-column-sizer"></colgroup>'+
-              '<tbody class="macro-table-static-column-content"></tbody>'+
+              //'<tbody class="macro-table-static-column-content"></tbody>'+
             '</table>'+
           '</div>'+
         '</div>'+
         '<div class="macro-table-data-container">'+
           '<div class="macro-table-scroll-wrapper">'+
-            '<table>'+
+            '<table class="macro-table-column-content">'+
               '<colgroup class="macro-table-column-sizer"></colgroup>'+
-              '<tbody class="macro-table-column-content"></tbody>'+
+              //'<tbody class="macro-table-column-content"></tbody>'+
             '</table>'+
             '<div class="macro-table-reorder-guide"></div>'+
           '</div>'+
@@ -514,7 +542,7 @@
         $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
         $header = $macroTable.find('div.macro-table-header table'),
         $staticHeaderRow = $macroTable.find('div.macro-table-static-header tr.macro-table-static-header-row'),
-        $staticTableBody = $macroTable.find('tbody.macro-table-static-column-content'),
+        $staticTableBody = $macroTable.find('table.macro-table-static-column-content'),
         $columnToResize;
 
       //shortcut function to remove styling for when hovering over the resizer handle
@@ -575,10 +603,10 @@
         var tableData = self.options.tableData,
           $headerCheckbox = $staticHeaderRow.find('input.macro-table-select-toggle'),
           $checkbox = $(this),
-          $checkboxRow = $checkbox.parents('tr'),
-          domRow = $checkboxRow.index(),
+          $checkboxRow = $checkbox.parent().parent(), //tr
+          domRow = $staticTableBody.find('tr').index($checkboxRow), //index of $checkboxRow among all rows in $staticTableBody
           dataRow = $checkbox.data('row-index'),
-          $dataRow = $macroTable.find('tbody.macro-table-column-content tr').eq(domRow);
+          $dataRow = $macroTable.find('table.macro-table-column-content tr').eq(domRow);
 
         if($checkbox.is(':checked')) {
           $checkboxRow.addClass('macro-table-highlight macro-table-selected-row');
@@ -1004,8 +1032,8 @@
 
         $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
         $leftScrollWrapperBody = $dataContainerWrapper.find('div.macro-table-data-container div.macro-table-scroll-wrapper'),
-        $tableBody = $dataContainerWrapper.find('tbody.macro-table-column-content'),
-        $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content'),
+        $tableBody = $dataContainerWrapper.find('table.macro-table-column-content'),
+        $staticTableBody = $dataContainerWrapper.find('table.macro-table-static-column-content'),
 
         totalColumnWidth = 0,
         tableViewportWidth = $macroTable.parent().width() - scrollBarWidth,
@@ -1025,8 +1053,8 @@
       $headerRow.empty();
       $columnSizers.empty();
       $staticColumnSizers.empty();
-      $tableBody.empty();
-      $staticTableBody.empty();
+      $tableBody.find('tbody').remove();
+      $staticTableBody.find('tbody').remove();
 
       $scrollContainer.scrollTop(0);
 
