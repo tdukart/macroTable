@@ -12,11 +12,13 @@
     </div>
 
     <ul>
+      <li><button id="toggle-selectable-rows">Toggle Selectable Rows</button></li>
       <li><button id="get-selected-rows">Get Selected Rows</button></li>
+      <li><button id="scroll-to-row">Scroll to Row</button><input id="scroll-to-row-input" value="177" /></li>
     </ul>
 
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.js"></script>
-    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.23/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.23/jquery-ui.js"></script>
     <script type="text/javascript" src="macroTable.js"></script>
 
     <script type="text/javascript">//<![CDATA[ 
@@ -94,8 +96,20 @@
         $('#table').macroTable('scrollToRow',177);
         //$('#table').macroTable('scrollToRow',199); //FIXME: doesn't work because the rows are too tall...
         $(window).resize(function() {
-          $('div.some-data').macroTable('resizeTable');
+          $('#table').macroTable('resizeTable');
         });
+
+        $('#toggle-selectable-rows').click(function(e) {
+          e.preventDefault();
+
+          $('#table').macroTable('option', {'rowsSelectable': !$('#table').macroTable('option', 'rowsSelectable')});
+        });
+
+        $('#scroll-to-row').click(function(e) {
+          e.preventDefault();
+
+          $('#table').macroTable('scrollToRow',$('#scroll-to-row-input').val());
+        })
 
         $('#get-selected-rows').click(function(e) {
           e.preventDefault();

@@ -552,7 +552,7 @@
 
           isToggled = true;
           $checkboxes.attr('checked', true);
-          $tableRows.addClass('macro-table-highlight');
+          $tableRows.addClass('macro-table-highlight macro-table-selected-row');
           selectedRowCount = tableData.length;
 
         //header checkbox deselected
@@ -560,7 +560,7 @@
 
           isToggled = false;
           $checkboxes.attr('checked', false);
-          $tableRows.removeClass('macro-table-highlight');
+          $tableRows.removeClass('macro-table-highlight macro-table-selected-row');
           selectedRowCount = 0;
         }
 
@@ -581,13 +581,13 @@
           $dataRow = $macroTable.find('tbody.macro-table-column-content tr').eq(domRow);
 
         if($checkbox.is(':checked')) {
-          $checkboxRow.addClass('macro-table-highlight');
-          $dataRow.addClass('macro-table-highlight');
+          $checkboxRow.addClass('macro-table-highlight macro-table-selected-row');
+          $dataRow.addClass('macro-table-highlight macro-table-selected-row');
           tableData[dataRow].selected = true;
           selectedRowCount++;
         } else {
-          $checkboxRow.removeClass('macro-table-highlight');
-          $dataRow.removeClass('macro-table-highlight');
+          $checkboxRow.removeClass('macro-table-highlight macro-table-selected-row');
+          $dataRow.removeClass('macro-table-highlight macro-table-selected-row');
           tableData[dataRow].selected = false;
           selectedRowCount--;
         }
@@ -1132,10 +1132,27 @@
      * @private
      */
     _setOption: function(key, value) {
+      // In jQuery UI 1.8, you have to manually invoke the _setOption method from the base widget
+      $.Widget.prototype._setOption.apply( this, arguments );
+      // In jQuery UI 1.9 and above, you use the _super method instead
+      //this._super( "_setOption", key, value );
+
       var options = this.options;
 
       //handle specific option cases here
       switch(key) {
+
+        case 'width':
+        case 'height':
+          this.resizeTable(options.height, options.width);
+          break;
+
+        case 'rowHeight':
+          break;
+
+        case 'rowBuffer':
+          break;
+
         case 'disabled':
           break;
 
@@ -1149,21 +1166,33 @@
           this.scrollToRow(scrollPositionTop);
           break;
 
+        case 'defaultColumnWidth':
+          break;
+
+        case 'reorderable':
+          break;
+
+        case 'onColumnReorder':
+          break;
+
+        case 'onColumnResize':
+          break;
+
+        case 'tableData':
+          this._init(); //causes currentColumn and currentRow to reset to 0
+          break;
+
         case 'rowsSelectable':
           //TODO add class managment for macro-table-rwos-selectable too
           if(value === true) {
             this.element.addClass('macro-table-static-column-enabled');
           } else {
             this.element.removeClass('macro-table-static-column-enabled');
+            //$('tr.macro-table-selected-row', this.element).removeClass('macro-table-highlight macro-table-selected-row'); //deselect any selected rows
           }
           this.resizeTable(options.height, options.width);
           break;
       }
-
-      // In jQuery UI 1.8, you have to manually invoke the _setOption method from the base widget
-      $.Widget.prototype._setOption.apply( this, arguments );
-      // In jQuery UI 1.9 and above, you use the _super method instead
-      //this._super( "_setOption", key, value );
     },
 
     /**
@@ -1194,14 +1223,25 @@
      */
     getSelectedRows: function() {
       var selectedRows = [],
-        tableData = this.options.tableData;
+        options = this.options,
+        tableData = options.tableData;
 
-      if(this.options.rowsSelectable === true && selectedRowCount != 0) {
+      if(options.rowsSelectable === true && selectedRowCount != 0) {
 
         for(var i = 0, len = tableData.length; i < len; i++) {
 
           if(tableData[i].selected) {
             selectedRows.push(tableData[i]);
+          }
+
+          if(typeof tableData.subRows !== 'undefined') {
+
+            for(var j = 0, subLen = tableData.subRows.length; j < subLen; j++) {
+
+              if(tableData[i].subRows[j].selected) {
+                selectedRows.push(tableData[i].subRows[j]);
+              }
+            }
           }
 
         }
