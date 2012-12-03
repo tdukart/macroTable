@@ -61,8 +61,23 @@
   box-shadow: 0 0 2px 2px #ccc, inset 0 0 2px #ccc;
 }
 */
+
+/* summary row in header */
+
+.macro-table .macro-table-static-summary-row,
+.macro-table .macro-table-summary-row {
+  display: none;
+  background-color: rgba(0, 0, 0, .1);
+}
+
+.macro-table.macro-table-display-summary-row .macro-table-static-summary-row,
+.macro-table.macro-table-display-summary-row .macro-table-summary-row {
+  display: table-row;
+}
+
+
 .macro-table tr.macro-table-row:nth-child(odd) {
-  background: rgba(0, 0, 0, .1);
+  background: rgba(0, 0, 0, .05);
 }
 
 .macro-table.macro-table-static-column-enabled tr.macro-table-selected-row.macro-table-highlight {
@@ -274,7 +289,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -1px -4px 0 0;
+  margin: -2px -4px 0 0;
 }
 
 .macro-table-expand-toggle + .macro-table-expand-toggle-label::after {
@@ -285,7 +300,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -4px -1px 0 0;
+  margin: -5px -1px 0 0;
 }
 
 .macro-table-expand-toggle:checked + .macro-table-expand-toggle-label::after {
@@ -302,7 +317,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -3px -3px 0 0;
+  margin: -4px -3px 0 0;
 }
 
 .macro-table-arrow-down::before {
@@ -315,7 +330,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -2px -3px 0 0;
+  margin: -3px -3px 0 0;
 }
 
 .macro-table-subrow-hierarchy-vertical-line-top-half::before {

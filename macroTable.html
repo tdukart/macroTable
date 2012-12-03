@@ -18,6 +18,8 @@
       <li><button id="scroll-to-row">Scroll to Row</button><input id="scroll-to-row-input" value="177" /></li>
       <li><button id="table-data-standard">Load Standard Table Data</button></li>
       <li><button id="table-data-edge">Load Edgecase Table Data</button></li>
+      <li><button id="summary-row-disable">Disable Summary Row</button></li>
+      <li><button id="summary-row-enable">Enable Summary Row</button></li>
     </ul>
 
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.js"></script>
@@ -103,6 +105,7 @@
         }
 
         $('#table').macroTable({
+          summaryRow: generateTableData(1)[0].data,
           tableData: generateTableData(100),
           rowsSelectable: true,
           columns: [{
@@ -110,38 +113,38 @@
             field: 'column1',
             sortable: false,
             formatter: function(text) {
-                return text+' blah';
+              return text+' blah';
             }
           },{
             title: 'Col 2',
             field: 'column2',
             resizable: false,
             formatter: function(text) {
-                return text+' barf';
+              return text+' barf';
             }
           },{
             title: 'Col 3',
             field: 'column3',
             formatter: function(text) {
-                return text+' bum';
+              return text+' bum';
             }
           },{
             title: 'Col 4',
             field: 'column4',
             formatter: function(text) {
-                return text+' bum';
+              return text+' bum';
             }
           },{
             title: 'Col 5',
             field: 'column5',
             formatter: function(text) {
-                return text+' bum';
+              return text+' bum';
             }
           },{
             title: 'Col 6',
             field: 'column6',
             formatter: function(text) {
-                return text+' bum';
+              return text+' bum';
             }
           }],
           onColumnReorder: function(columns) {
@@ -233,6 +236,22 @@
                 1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
               }
             })
+          });
+        });
+
+        $('#summary-row-disable').click(function(e) {
+          e.preventDefault();
+
+          $('#table').macroTable('option', { 
+            summaryRow: false
+          });
+        });
+
+        $('#summary-row-enable').click(function(e) {
+          e.preventDefault();
+
+          $('#table').macroTable('option', {
+            summaryRow: generateTableData(1)[0].data
           });
         });
 
