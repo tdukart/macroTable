@@ -73,12 +73,13 @@
 
 (function( $, undefined ) {
 
-  var rowSelectColumnWidth = 20, //the static width of the checkbox row for selecting rows
+  var rowSelectColumnWidth =16, //the static width of the checkbox column for selecting rows
+    expanderColumnWidth = 16, //the static width of the expand/collapse sub rows column
     scrollBarWidth = 12,
     resizeColumnMinWidth = 30,
     defaultTableHeight = 200, //default the table to this height
     displayRowWindow, //the max number of rows that will show in the provided table height
-    replaceRowWindow, //when a row swap is triggered, this many rows will be removed and replaced at the other end of the table
+    replaceRowWindow, //when a DOM row swap is triggered, this many rows will be removed and replaced at the other end of the table
 
     //columns
     maxTotalDomColumns, //TODO
@@ -89,13 +90,16 @@
     //rows
     maxTotalDomRows, //real DOM row count would only be less than this if the amount of data is less than this number (don't need the extra DOM rows to display total data)
     scrollTop = 0, //default to top of table
-    lastRow = 0,
     currentRow = 0, //0-indexed, describes the top-most, visible data row (direct correlation with array index). default to first row
     currentDomRow = 0, //0-indexed, describes the top-most, visible DOM row. default to first row
     triggerUpDomRow, //when scrolling up, when on this DOM row, a row swap will trigger
     triggerDownDomRow, //when scrolling down, when on this DOM row, a row swap will trigger
 
-    selectedRowCount = 0; //counter to keep track of selected rows, used to optimize selecting behavior comparing currently selected to length of total rows
+    selectedRowCount = 0, //counter to keep track of selected rows, used to optimize selecting behavior comparing currently selected to length of total rows
+    expandedRowCount = 0, //counter to keep track of expanded rows, used to optimize selecting behavior comparing currently selected to length of total rows
+    rowsWithChildrenCount = 0, //counter for the total number of rows that can be expanded 
+    expandedTableData, //data structure directly translating to the rows that are displayed in the table (flat, rather than hierarchical)
+    expandedRowIndexes = []; //keep track of the rows that are expanded for the onRowExpand callback
 
   /** Truly Private functions */
 
@@ -111,11 +115,14 @@
       $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
       $tableContainer = $tableContentWrapper.find('div.macro-table-data-container'),
       $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
-      $tableBody = $tableContainer.find('table.macro-table-column-content'),
-      $staticTableBody = $staticTableContainer.find('table.macro-table-static-column-content'),
+
+      $tableBody = $tableContainer.find('tbody.macro-table-column-content'),
+      $staticTableBody = $staticTableContainer.find('tbody.macro-table-static-column-content'),
+
       $rows,
       $staticRows,
       renderCount = 0,
+      rowData,
       rowElements,
       staticHeight,
       dynamicHeight;
@@ -123,16 +130,16 @@
     direction = direction || 0; //default to "no scroll" for complete re-render
 
     //detach the table from the DOM for impending manipulation ideally, but need to know row heights, so can't...
-    $rows = $tableBody.find('tbody');
-    $tableBody.find('tbody').remove();
-    $staticRows = $staticTableBody.find('tbody');
-    $staticTableBody.find('tbody').remove();
+    $rows = $tableBody.find('tr').remove();
+    $staticRows = $staticTableBody.find('tr').remove();
 
     //append all new rows to the table, since we've exhausted the ones we can reuse already in the DOM
     while(startRowIndex + renderCount != endRowIndex) {
-      if(typeof tableData[startRowIndex + renderCount] !== 'undefined') {
+      rowData = expandedTableData[startRowIndex + renderCount];
 
-        rowElements = renderRow.call(this, tableData[startRowIndex + renderCount], startRowIndex + renderCount);
+      if(typeof rowData !== 'undefined') {
+
+        rowElements = renderRow.call(this, rowData, (startRowIndex + renderCount));
         
         //append new rows to table
         $tableBody.append(rowElements.dynamicRow);
@@ -143,10 +150,12 @@
         dynamicHeight = rowElements.dynamicRow.height();
         if(staticHeight > dynamicHeight) {
           rowElements.dynamicRow.height(staticHeight);
-        } else {
+        } else if(staticHeight < dynamicHeight) {
           rowElements.staticRow.height(dynamicHeight);
         }
 
+        renderCount += (endRowIndex > startRowIndex ? 1 : -1);
+      
       //reached beginning or end of table
       } else {
 
@@ -156,17 +165,15 @@
         break;
 
       }
-
-      renderCount += (endRowIndex > startRowIndex ? 1 : -1);
     }
 
     //add back previous selection of rows
     if(direction < 0) {
-      $tableBody.append($rows.filter('tbody:lt('+(maxTotalDomRows - renderCount)+')'));
-      $staticTableBody.append($staticRows.filter('tbody:lt('+(maxTotalDomRows - renderCount)+')'));
+      $tableBody.append($rows.filter(':lt('+(maxTotalDomRows - renderCount)+')'));
+      $staticTableBody.append($staticRows.filter(':lt('+(maxTotalDomRows - renderCount)+')'));
     } else if(direction > 0) {
-      $tableBody.find('colgroup').after($rows.filter('tbody:gt('+(renderCount - 1)+')'));
-      $staticTableBody.find('colgroup').after($staticRows.filter('tbody:gt('+(renderCount - 1)+')'));
+      $tableBody.prepend($rows.filter(':gt('+(renderCount - 1)+')'));
+      $staticTableBody.prepend($staticRows.filter(':gt('+(renderCount - 1)+')'));
     }
 
     return Math.abs(renderCount);
@@ -184,10 +191,11 @@
       $macroTable = this.element,
       $tableContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
       $tableContainer = $tableContainerWrapper.find('div.macro-table-data-container'),
-      $tableRows = $tableContainer.find('table.macro-table-column-content tr'),
+      $tableRows = $tableContainer.find('tbody.macro-table-column-content tr'),
       $tableScrollSpacer = $macroTable.find('div.macro-table-scroll-spacer'),
       $tableScrollWrappers = $tableContainerWrapper.find('div.macro-table-scroll-wrapper'),
       $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
+
       tableContainerHeight = $tableContainer.height();
 
     //loop through rows backwards to find the new, truly last row that will allow the last row to show
@@ -215,14 +223,17 @@
     var rowBuffer = this.options.rowBuffer,
       tableData = this.options.tableData,
 
-      finalDomRowWindow = tableData.length - rowBuffer - rowBuffer - displayRowWindow, //the final row window render starts at this row
+      rowNumber = currentRow,
+      visibleRowCount = expandedTableData.length,
+
+      finalDomRowWindow = visibleRowCount - rowBuffer - rowBuffer - displayRowWindow, //the final row window render starts at this row
       isInFinalDomWindow = currentRow > finalDomRowWindow,
       
       $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
-      $tableContainer = $tableContentWrapper.find('div.macro-table-data-container')
+      $tableContainer = $tableContentWrapper.find('div.macro-table-data-container'),
 
       $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
-      $tableBody = $tableContainer.find('table.macro-table-column-content'),
+      $tableBody = $tableContainer.find('tbody.macro-table-column-content'),
       $tableRows = $tableBody.find('tr'),
       newRenderCount = 0; //number of new rows we need to remove and re-add with new values
 
@@ -232,19 +243,19 @@
       //final dom window should always render the maxTotalDomRows number of rows
       if(isInFinalDomWindow) {
 
-        rebuildRows.call(this, tableData.length - maxTotalDomRows, tableData.length);
-        currentDomRow = maxTotalDomRows - (tableData.length - currentRow);
+        rebuildRows.call(this, visibleRowCount - maxTotalDomRows, visibleRowCount);
+        currentDomRow = maxTotalDomRows - (visibleRowCount - rowNumber);
         calculateAndApplyBottomMargin.call(this); //at the bottom, make sure the scroll margins are in place
 
       //not in final dom window, proceed as normal
       } else {
 
-        var topRowBuffer = currentRow < rowBuffer ? currentRow : rowBuffer; //account for when on the first rowBuffer number of rows
-        rebuildRows.call(this, currentRow - topRowBuffer, currentRow - topRowBuffer + maxTotalDomRows);
+        var topRowBuffer = rowNumber < rowBuffer ? rowNumber : rowBuffer; //account for when on the first rowBuffer number of rows
+        rebuildRows.call(this, rowNumber - topRowBuffer, rowNumber - topRowBuffer + maxTotalDomRows);
         currentDomRow = topRowBuffer;
       }
 
-      //console.log('re-render',currentRow,'(DOM row)',currentDomRow);
+      //console.log('re-render',rowNumber,'(DOM row)',currentDomRow);
 
       $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
 
@@ -254,24 +265,27 @@
       //scrolling down
       if(direction > 0) { 
 
-        currentDomRow = Math.min(currentDomRow + direction, tableData.length - maxTotalDomRows); //the DOM row that the table would be at, if a detach weren't about to happen
+        currentDomRow = Math.min(currentDomRow + direction, visibleRowCount - maxTotalDomRows); //the DOM row that the table would be at, if a detach weren't about to happen
 
-        //convenience variables to make debuggin gthe logic easier
-        var remainingDomRows = $tableRows.filter(':gt('+(currentDomRow - 1)+')').length;
-          moreRowRenderingNeeded = tableData.length - currentRow > remainingDomRows && remainingDomRows <= maxTotalDomRows - rowBuffer - 1;
+        //convenience variables to make debugging the logic easier
+        var remainingDomRows = $tableRows.filter(':gt('+(currentDomRow - 1)+')').length,
+          moreRowRenderingNeeded = visibleRowCount - rowNumber > remainingDomRows && remainingDomRows <= maxTotalDomRows - rowBuffer - 1;
 
         //render new rows appropriate to current DOM possition, or if a big jump landed into the final DOM window and need the remaining rows fleshed out
         if(!isInFinalDomWindow || (isInFinalDomWindow && moreRowRenderingNeeded)) {
 
-          newRenderCount = currentDomRow - rowBuffer;
-          if(newRenderCount <= 0) {
-            console.warn('newRenderCount should never be less than 1 but it is',newRenderCount,'Probably due to overloaded scroll listener');
-          } else {
+          if(currentDomRow >= triggerDownDomRow) {
 
-            currentDomRow -= rebuildRows.call(this, currentRow + maxTotalDomRows - currentDomRow, currentRow + maxTotalDomRows - currentDomRow + newRenderCount, direction);
-            //console.log('scrolling down',currentRow,'(DOM row)',currentDomRow);
+            newRenderCount = currentDomRow - rowBuffer;
+            if(newRenderCount <= 0) {
+              console.warn('newRenderCount should never be less than 1 but it is',newRenderCount,'Probably due to overloaded scroll listener');
+            } else {
 
-            $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
+              currentDomRow -= rebuildRows.call(this, rowNumber + maxTotalDomRows - currentDomRow, rowNumber + maxTotalDomRows - currentDomRow + newRenderCount, direction);
+              //console.log('scrolling down',rowNumber,'(DOM row)',currentDomRow);
+
+              $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
+            }
           }
 
         //in the finalDomRowWindow, add margin to bottom of wrapper to allow scrolling the last row completely into the visible window
@@ -286,15 +300,15 @@
 
         currentDomRow = Math.max(currentDomRow + direction, 0); //the DOM row that the table would be at, if a detach weren't about to happen
         
-        if(currentDomRow <= triggerUpDomRow && currentRow > replaceRowWindow) {
+        if(currentDomRow <= triggerUpDomRow && rowNumber > replaceRowWindow) {
 
           newRenderCount = maxTotalDomRows - currentDomRow - displayRowWindow - rowBuffer;
           if(newRenderCount <= 0) {
             console.warn('newRenderCount should never be less than 1 but it is',newRenderCount,'Probably due to overloaded scroll listener');
           } else {
 
-            currentDomRow += rebuildRows.call(this, currentRow - currentDomRow - 1 - newRenderCount, currentRow - currentDomRow, direction);
-            //console.log('scrolling up',currentRow,'(DOM row)',currentDomRow);
+            currentDomRow += rebuildRows.call(this, rowNumber - currentDomRow - 1 - newRenderCount, rowNumber - currentDomRow, direction);
+            //console.log('scrolling up',rowNumber,'(DOM row)',currentDomRow);
 
             $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
           }
@@ -304,7 +318,7 @@
     } //else
 
     var scrollTop = $tableRows.eq(currentDomRow).offset().top - $tableBody.offset().top;
-    //console.log('current dom row (top visible row)',currentDomRow,'currentRow',currentRow,'from top',scrollTop);
+    console.log('current dom row (top visible row)',currentDomRow,'currentRow',currentRow,'row index',expandedTableData[currentRow].index,'from top',scrollTop);
     $tableContainer.scrollTop(scrollTop);
     $staticTableContainer.scrollTop(scrollTop);
   }
@@ -363,77 +377,86 @@
   /**
    * Build a table row containing a column for each field
    * @param {Object} data A row of data to be rendered by field
-   * @param {Number} index The row number being rendered
+   * @param {Number} index The row number being rendered in the expandedTableData datastructure
    */
-  function renderRow(data, index) {
+  function renderRow(row, index) {
     var columns = this.options.columns,
       isRowsSelectable = this.options.rowsSelectable === true,
+      rowHasChildren = typeof row.subRows !== 'undefined' && row.subRows.length,
       rowData,
-      dynamicRowColumns,
-      staticRowColumns,
-      $dynamicTBody = $(document.createElement('tbody')),
-      $staticTBody = $(document.createElement('tbody')),
-      $dynamicRow,
-      $staticRow;
-
-    //build row group of main row and sub rows
-    for(var i = 0, rowGroupLen = 1 + (typeof data.subRows !== 'undefined' ? data.subRows.length : 0); i < rowGroupLen; i++) {
-
-      rowData = rowGroupLen > 1 ? data.subRows[i - 1] : data;
-
-      $dynamicRow = $(document.createElement('tr'));
+      expanderCellClass = '',
+      dynamicRowColumns = '',
+      staticRowColumns = '',
+      $dynamicRow = $(document.createElement('tr')),
       $staticRow = $(document.createElement('tr'));
-      dynamicRowColumns = ''
-      staticRowColumns = '';
 
-      if(rowGroupLen > 1) {
-        $dynamicRow.addClass('macro-table-sub-row');
-        $staticRow.addClass('macro-table-sub-row');
-      }
-
-      //if selecting rows is enabled and this row has already been selected, style appropriately
-      if(isRowsSelectable && rowData.selected) {
-        $dynamicRow.addClass('macro-table-highlight macro-table-selected-row');
-        $staticRow.addClass('macro-table-highlight  macro-table-selected-row');
-      }
-
-      //give even rows a stripe color
-      if(index % 2 == 0) {
-        $dynamicRow.addClass('macro-table-row-stripe');
-        $staticRow.addClass('macro-table-row-stripe');
-      }
-
-      //build dynamically left-scrollable row
-      for(var j = 0, len = columns.length; j < len; j++) {
-        var columnContent = rowData[columns[j].field];
-        if(typeof columns[j].formatter === 'function') {
-          columnContent = columns[j].formatter(columnContent);
-        }
-        dynamicRowColumns += '<td'+(columns[j].resizable !== false ? ' class="macro-table-column-resizable"' : '')+'>'+columnContent+'</td>';
-      }
-
-      //build static row
-      if(isRowsSelectable) {
-        staticRowColumns += '<td><input type="checkbox" class="macro-table-checkbox" data-row-index="'+index+'" '+(rowData.selected ? 'checked="checked"' : '')+'/></td>';
-      }
-
-      //build row expand column
-      staticRowColumns += '<td>' + (rowGroupLen > 1 ? '<span class="macro-table-icon macro-table-arrow-' + (true /* TODO: figure out the saved toggle state of this row*/ ? 'right' : 'down') + '"></span>' : '') + '</td>'; 
-
-      $dynamicRow.html(dynamicRowColumns);
-      $staticRow.html(staticRowColumns);
-
-      $dynamicTBody.append($dynamicRow);
-      $staticTBody.append($staticRow);
+    //give even rows a stripe color
+    if(index % 2 == 0) {
+      $dynamicRow.addClass('macro-table-row-stripe');
+      $staticRow.addClass('macro-table-row-stripe');
     }
 
+    $dynamicRow.addClass('macro-table-row macro-table-row-'+index);
+    $staticRow.addClass('macro-table-row macro-table-row'+index);
+
+    //if selecting rows is enabled and this row has already been selected, style appropriately
+    if(isRowsSelectable && row.selected) {
+      $dynamicRow.addClass('macro-table-highlight macro-table-selected-row');
+      $staticRow.addClass('macro-table-highlight  macro-table-selected-row');
+    }
+
+    if(row.expanded === true) {
+      $dynamicRow.addClass('macro-table-row-expanded');
+      $staticRow.addClass('macro-table-row-expanded');
+    } else {
+      $dynamicRow.addClass('macro-table-row-collapsed');
+      $staticRow.addClass('macro-table-row-collapsed');
+    }
+
+    //build dynamically left-scrollable row
+    for(var i = 0, len = columns.length; i < len; i++) {
+      var columnContent = row.data[columns[i].field];
+      if(typeof columns[i].formatter === 'function') {
+        columnContent = columns[i].formatter(columnContent);
+      }
+      dynamicRowColumns += '<td'+(columns[i].resizable !== false ? ' class="macro-table-column-resizable"' : '')+'>'+columnContent+'</td>';
+    }
+
+    //build static row
+    if(isRowsSelectable) {
+      staticRowColumns += '<td><input type="checkbox" class="macro-table-checkbox macro-table-row-selector" data-row-index="'+index+'" '+(row.selected === true ? 'checked="checked"' : '')+'/></td>';
+    }
+
+    //build row expand column
+    if(rowHasChildren && row.expanded) {
+      expanderCellClass = 'macro-table-subrow-hierarchy-vertical-line-bottom-half';
+    } else if(typeof row.parentIndex !== 'undefined') {
+      expanderCellClass = 'macro-table-subrow-hierarchy-line-right '; //TODO: macro-table-subrow-hierarchy-line-right should be conditionally removed for subRows of subRows
+      if(this.options.tableData[row.parentIndex].subRows.length - 1 > row.index) { //FIXME: this will break for a subRow of a subRow, because we're looking directly at tableData (which is only top level rows)
+        expanderCellClass += 'macro-table-subrow-hierarchy-vertical-line-full';
+      } else {
+        expanderCellClass += 'macro-table-subrow-hierarchy-vertical-line-top-half'
+      }
+    }
+    
+    staticRowColumns += '<td class="macro-table-row-expander-cell' + (expanderCellClass != '' ? ' '+expanderCellClass : '') + '">' + 
+      (rowHasChildren ? 
+        '<label class="macro-table-row-expander-label macro-table-icon macro-table-arrow-' + (row.expanded === true ? 'down' : 'right') + '">' +
+          '<input type="checkbox" class="macro-table-checkbox macro-table-row-expander" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
+        '</label>' : 
+        '') + 
+    '</td>'; 
+
+    $dynamicRow.html(dynamicRowColumns);
+    $staticRow.html(staticRowColumns);
+
     return {
-      dynamicRow: $dynamicTBody,
-      staticRow: $staticTBody
+      dynamicRow: $dynamicRow,
+      staticRow: $staticRow,
     };
   }
 
-  $.widget( "n.macroTable", {
+  $.widget('n.macroTable', {
 
     /**
      * The prefix to use for events.
@@ -475,6 +498,12 @@
        * could be used for storing users preferences, etc.
        */
       onColumnResize: undefined,
+      /**
+       * Callback run when a row is expanded or collapsed
+       * called with an array of the row indexes that are expanded
+       * could be used for storing users preferences, etc.
+       */
+      onRowExpand: undefined,
       tableData: [],
       rowsSelectable: false,
     },
@@ -489,20 +518,22 @@
     _create: function() {
       var self = this,
         $macroTable = this.element,
-        rowHeight = this.options.rowHeight;
+        rowHeight = this.options.rowHeight,
+        breakTableScroll = false,
+        forceTableScrollRender = false;
 
       $macroTable.hide()
       .empty()
       .html('<div class="macro-table-header-wrapper">'+
         '<div class="macro-table-static-header">'+
-          '<table>'+
+          '<table class="macro-table-static">'+
             '<colgroup class="macro-table-static-column-sizer"></colgroup>'+
             '<tr class="macro-table-static-header-row"></tr>'+
           '</table>'+
         '</div>'+
         '<div class="macro-table-header">'+
           '<div class="macro-table-scroll-wrapper">'+
-            '<table>'+
+            '<table class="macro-table-dynamic">'+
               '<colgroup class="macro-table-column-sizer"></colgroup>'+
               '<tr class="macro-table-header-row"></tr>'+
             '</table>'+
@@ -513,17 +544,17 @@
       '<div class="macro-table-data-container-wrapper">'+
         '<div class="macro-table-static-data-container">'+
           '<div class="macro-table-scroll-wrapper">'+
-            '<table class="macro-table-static-column-content">'+
+            '<table class="macro-table-static">'+
               '<colgroup class="macro-table-static-column-sizer"></colgroup>'+
-              //'<tbody class="macro-table-static-column-content"></tbody>'+
+              '<tbody class="macro-table-static-column-content"></tbody>'+
             '</table>'+
           '</div>'+
         '</div>'+
         '<div class="macro-table-data-container">'+
           '<div class="macro-table-scroll-wrapper">'+
-            '<table class="macro-table-column-content">'+
+            '<table class="macro-table-dynamic">'+
               '<colgroup class="macro-table-column-sizer"></colgroup>'+
-              //'<tbody class="macro-table-column-content"></tbody>'+
+              '<tbody class="macro-table-column-content"></tbody>'+
             '</table>'+
             '<div class="macro-table-reorder-guide"></div>'+
           '</div>'+
@@ -541,8 +572,9 @@
         $resizer = $macroTable.find('div.macro-table-resize-guide'),
         $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
         $header = $macroTable.find('div.macro-table-header table'),
+        $dynamicTableBody = $macroTable.find('tbody.macro-table-column-content'),
         $staticHeaderRow = $macroTable.find('div.macro-table-static-header tr.macro-table-static-header-row'),
-        $staticTableBody = $macroTable.find('table.macro-table-static-column-content'),
+        $staticTableBody = $macroTable.find('tbody.macro-table-static-column-content'),
         $columnToResize;
 
       //shortcut function to remove styling for when hovering over the resizer handle
@@ -554,6 +586,42 @@
         $resizer.removeClass('macro-table-highlight');
       }
 
+      //shortcut function for handling data structure changes when expanding or collapsing a row
+      function handleRowExpandToggle(index, isExpanded) {
+        var $selectAllHeaderCheckbox = $staticHeaderRow.find('input.macro-table-select-toggle');
+
+        expandedTableData[index].expanded = !!isExpanded;
+
+        if(isExpanded) {
+          expandedRowCount++;
+          //apply + concat the subRows to remove to the argument array provides one-line solution to an otherwise loop-related solution
+          expandedTableData.splice.apply(expandedTableData, [index + 1, 0].concat(expandedTableData[index].subRows)); 
+
+          //newly expanded rows are never selected, so if the select all header checkbox is checked, put it into indeterminate state
+          if($selectAllHeaderCheckbox.attr('checked')) {
+            $selectAllHeaderCheckbox.attr('checked', false); //click the box again and it will select the newly expanded rows
+            $selectAllHeaderCheckbox[0].indeterminate = true;
+          }
+
+        } else {
+          expandedRowCount--;
+          var removedRows = expandedTableData.splice(index + 1, expandedTableData[index].subRows.length);
+
+          //clean up selected count from removed rows
+          for(var i = 0, len = removedRows.length; i < len; i++) {
+            if(removedRows[i].selected) {
+              removedRows[i].selected = false;
+              selectedRowCount--;
+            }
+          }
+
+          //by hiding the sub rows, all remaining rows are selected, so make select toggle checkbox reflect that
+          if(selectedRowCount == expandedTableData.length) {
+            $selectAllHeaderCheckbox.attr('checked', true); //click the box again and it will deselect all rows
+            $selectAllHeaderCheckbox[0].indeterminate = false;
+          }
+        }
+      }
 
       /* Wire column sort events */
 
@@ -566,74 +634,203 @@
       });
 
 
-      /* Wire row selector events */
+      /* Wire row selector and expander events */
 
-       //wire toggle all rows behavior
-      $staticHeaderRow.delegate('input.macro-table-select-toggle', 'click', function(e) {
+      //wire toggle all rows behavior (select and expand)
+      $staticHeaderRow.delegate('input.macro-table-checkbox', 'click', function(e) {
         var tableData = self.options.tableData,
-          $checkboxes = $staticTableBody.find('input.macro-table-checkbox'),
-          $tableRows = $staticTableBody.find('tr').add($tableBody.find('tr')),
-          isToggled;
+          $checkbox = $(this),
+          $checkboxes, $tableRows, isToggled, thisCurrentRow;
 
-        //header checkbox selected or indeterminate (rows have already been individually selected)
-        if(this.indeterminate === true || $(this).is(':checked')) {
+        //select/deselect all rows
+        if($checkbox.hasClass('macro-table-select-toggle')) {
+          $checkboxes = $staticTableBody.find('input.macro-table-row-selector');
+          $tableRows = $staticTableBody.find('tr').add($dynamicTableBody.find('tr'));
 
-          isToggled = true;
-          $checkboxes.attr('checked', true);
-          $tableRows.addClass('macro-table-highlight macro-table-selected-row');
-          selectedRowCount = tableData.length;
+          //header checkbox selected or indeterminate (rows have already been individually selected)
+          if(this.indeterminate === true || $checkbox.is(':checked')) {
 
-        //header checkbox deselected
-        } else {
+            isToggled = true;
+            $checkboxes.attr('checked', true);
+            $tableRows.addClass('macro-table-highlight macro-table-selected-row');
+            selectedRowCount = expandedTableData.length;
 
-          isToggled = false;
-          $checkboxes.attr('checked', false);
-          $tableRows.removeClass('macro-table-highlight macro-table-selected-row');
-          selectedRowCount = 0;
-        }
+          //header checkbox deselected
+          } else {
 
-        //set the row data structure to the appropriate selected state
-        for(var i = 0, len = tableData.length; i < len; i++) {
-          tableData[i].selected = isToggled;
+            isToggled = false;
+            $checkboxes.attr('checked', false);
+            $tableRows.removeClass('macro-table-highlight macro-table-selected-row');
+            selectedRowCount = 0;
+          }
+
+          //set the row data structure to the appropriate selected state
+          for(var i = 0, len = expandedTableData.length; i < len; i++) {
+            expandedTableData[i].selected = isToggled;
+          }
+
+        //expand/collapse all rows
+        } else if($checkbox.hasClass('macro-table-expand-toggle')) {
+          $checkboxes = $staticTableBody.find('input.macro-table-row-expander');
+
+          //header checkbox selected or indeterminate (rows have already been individually selected)
+          if(this.indeterminate === true || $checkbox.is(':checked')) {
+
+            isToggled = true;
+            $checkboxes.attr('checked', true);
+
+          //header checkbox deselected
+          } else {
+
+            isToggled = false;
+            $checkboxes.attr('checked', false);
+          }
+
+          thisCurrentRow = expandedTableData[currentRow];
+
+          //set the row data structure to the appropriate selected state
+          expandedRowIndexes = [];
+          for(var i = 0, subRowsModified = 0, len = expandedTableData.length; i < len + subRowsModified; i++) {
+            
+            if(typeof expandedTableData[i].subRows !== 'undefined' && expandedTableData[i].subRows.length) {
+
+              if(isToggled) {
+                expandedRowIndexes.push(expandedTableData[i].index);
+              }
+
+              if(expandedTableData[i].expanded != isToggled) {
+                handleRowExpandToggle(i, isToggled);
+                subRowsModified += (isToggled ? 1 : -1) * expandedTableData[i].subRows.length; //expandedTableData is changing, so need to modify the loop length
+              }
+
+              //(optimization) all expandable rows accounted for, stop the loop
+              if(expandedRowCount == rowsWithChildrenCount) {
+                break;
+              }
+            }
+          }
+
+          //handle the resizing of the scroll spacer, and make sure the row position doesn't change
+          thisCurrentRow = expandedTableData.indexOf(thisCurrentRow) != -1 ? 
+            expandedTableData.indexOf(thisCurrentRow) : //scroll to the original row
+            expandedTableData.indexOf(tableData[thisCurrentRow.index]); //scroll to the row's parent
+
+          breakTableScroll = true; //when resizing the scroll spacer, a scroll even may be triggered (and we don't want it to)
+          $macroTable.find('div.macro-table-scroll-spacer')
+          .height(rowHeight * (expandedTableData.length + 1));
+
+          //nested setTimeouts to allow for scroll event to trigger for the scroll-spacer resize, then re-render the current position
+          setTimeout(function() {
+            breakTableScroll = false;
+            forceTableScrollRender = true;
+            self.scrollToRow(thisCurrentRow);
+
+            //reset the force re-render flag
+            setTimeout(function() {
+              forceTableScrollRender = false;
+              if(typeof self.options.onRowExpand === 'function') {
+                self.options.onRowExpand(expandedRowIndexes);
+              }
+            },0);
+          },0);
         }
       });
 
-      //wire row select checkbox event behavior 
+      //wire row select and row expand checkbox event behavior 
       $staticDataContainer.delegate('input.macro-table-checkbox', 'click', function(e) {
         var tableData = self.options.tableData,
-          $headerCheckbox = $staticHeaderRow.find('input.macro-table-select-toggle'),
+          $selectAllHeaderCheckbox = $staticHeaderRow.find('input.macro-table-select-toggle'),
+          $expandAllHeaderCheckbox = $staticHeaderRow.find('input.macro-table-expand-toggle'),
           $checkbox = $(this),
-          $checkboxRow = $checkbox.parent().parent(), //tr
-          domRow = $staticTableBody.find('tr').index($checkboxRow), //index of $checkboxRow among all rows in $staticTableBody
-          dataRow = $checkbox.data('row-index'),
-          $dataRow = $macroTable.find('table.macro-table-column-content tr').eq(domRow);
+          $checkboxRow = $checkbox.closest('tr'),
+          domRowIndex = $checkboxRow.index(),
+          dataRowIndex = $checkbox.data('row-index'),
+          $dataRow = $dynamicTableBody.find('tr').eq(domRowIndex);
 
-        if($checkbox.is(':checked')) {
-          $checkboxRow.addClass('macro-table-highlight macro-table-selected-row');
-          $dataRow.addClass('macro-table-highlight macro-table-selected-row');
-          tableData[dataRow].selected = true;
-          selectedRowCount++;
-        } else {
-          $checkboxRow.removeClass('macro-table-highlight macro-table-selected-row');
-          $dataRow.removeClass('macro-table-highlight macro-table-selected-row');
-          tableData[dataRow].selected = false;
-          selectedRowCount--;
-        }
+        //select/deselect a row
+        if($checkbox.hasClass('macro-table-row-selector')) {
 
-        //set header checkbox state
-        if(selectedRowCount == 0) { //no rows selected
+          if($checkbox.is(':checked')) {
+            $checkboxRow.addClass('macro-table-highlight macro-table-selected-row');
+            $dataRow.addClass('macro-table-highlight macro-table-selected-row');
+            expandedTableData[dataRowIndex].selected = true;
+            selectedRowCount++;
+          } else {
+            $checkboxRow.removeClass('macro-table-highlight macro-table-selected-row');
+            $dataRow.removeClass('macro-table-highlight macro-table-selected-row');
+            expandedTableData[dataRowIndex].selected = false;
+            selectedRowCount--;
+          }
 
-          $headerCheckbox.attr('checked', false);
-          $headerCheckbox[0].indeterminate = false;
+          //set header checkbox state
+          if(selectedRowCount == 0) { //no rows selected
 
-        } else if(selectedRowCount == tableData.length) { //all rows selected
+            $selectAllHeaderCheckbox.attr('checked', false);
+            $selectAllHeaderCheckbox[0].indeterminate = false;
 
-          $headerCheckbox.attr('checked', true);
-          $headerCheckbox[0].indeterminate = false;
+          } else if(selectedRowCount == expandedTableData.length) { //all rows selected
 
-        } else { //at least one row selected, but not all
+            $selectAllHeaderCheckbox.attr('checked', true);
+            $selectAllHeaderCheckbox[0].indeterminate = false;
 
-          $headerCheckbox[0].indeterminate = true;
+          } else { //at least one row selected, but not all
+
+            $selectAllHeaderCheckbox[0].indeterminate = true;
+          }
+        
+        //expand/collapse a row
+        } else if($checkbox.hasClass('macro-table-row-expander')) {
+
+          if($checkbox.is(':checked')) {
+            $dataRow.removeClass('macro-table-row-collapsed')
+            .addClass('macro-table-row-expanded');
+
+            $checkboxRow.removeClass('macro-table-row-collapsed')
+            .addClass('macro-table-row-expanded');
+
+            handleRowExpandToggle(dataRowIndex, true);
+
+            //add the expanded row index to the array for the onRowExpand callback
+            if(expandedRowIndexes.indexOf(dataRowIndex) == -1) {
+              expandedRowIndexes.push(dataRowIndex);
+            }
+          } else {
+            $dataRow.removeClass('macro-table-row-expanded')
+            .addClass('macro-table-row-collapsed');
+
+            $checkboxRow.removeClass('macro-table-row-expanded')
+            .addClass('macro-table-row-collapsed');
+
+            handleRowExpandToggle(dataRowIndex, false);
+
+            //remove the collapsed row index from the array for the onRowExpand callback
+            expandedRowIndexes.splice(expandedRowIndexes.indexOf(dataRowIndex), 1);
+          }
+
+          self._refreshRows();
+          
+          //set header checkbox state
+          if(expandedRowCount == 0) { //no rows expanded
+
+            $expandAllHeaderCheckbox.attr('checked', false);
+            $expandAllHeaderCheckbox[0].indeterminate = false;
+
+          } else if(expandedRowCount == rowsWithChildrenCount) { //all expandable rows expanded
+
+            $expandAllHeaderCheckbox.attr('checked', true);
+            $expandAllHeaderCheckbox[0].indeterminate = false;
+
+          } else { //at least one row expanded, but not all
+
+            $expandAllHeaderCheckbox[0].indeterminate = true;
+          }
+
+          $macroTable.find('div.macro-table-scroll-spacer')
+          .height(rowHeight * (expandedTableData.length + 1));
+
+          if(typeof self.options.onRowExpand === 'function') {
+            self.options.onRowExpand(expandedRowIndexes.sort());
+          }
         }
       });
 
@@ -645,7 +842,7 @@
         e.preventDefault();
         if(deltaY < 0) {
           $scroll.scrollTop(scrollTop + rowHeight);
-        } else {
+        } else if(deltaY > 0) {
           $scroll.scrollTop(scrollTop - rowHeight);
         }
 
@@ -677,24 +874,27 @@
       $scroll.scroll(function(e) {
         var lastScrollTop = scrollTop,
           lastTableScrollLeft = tableScrollLeft;
+
         scrollTop = $(this).scrollTop();
         tableScrollLeft = $(this).scrollLeft();
 
         var rowsToScroll = Math.abs(~~(scrollTop / rowHeight) - ~~(lastScrollTop / rowHeight));
         if(rowsToScroll > 0) {
-          lastRow = currentRow;
           if(lastScrollTop < scrollTop) {
-            if(currentRow < self.options.tableData.length - 1) {
-              currentRow += rowsToScroll;
+            
+            currentRow += rowsToScroll;
+            if(!breakTableScroll) {
+              scrollTableVertical.call(self, rowsToScroll, forceTableScrollRender);
+              //console.log('scrolling down to row',currentRow,'by',rowsToScroll,'rows');
             }
-            scrollTableVertical.call(self, rowsToScroll);
-            //console.log('scrolling down to row',currentRow,'by',rowsToScroll,'rows');
+
           } else if (lastScrollTop > scrollTop){
-            if(currentRow > 0) {
-              currentRow -= rowsToScroll;
+
+            currentRow -= rowsToScroll;
+            if(!breakTableScroll) {
+              scrollTableVertical.call(self, -rowsToScroll, forceTableScrollRender);
+              //console.log('scrolling up to row',currentRow,'by',rowsToScroll,'rows');
             }
-            scrollTableVertical.call(self, -rowsToScroll);
-            //console.log('scrolling up to row',currentRow,'by',rowsToScroll,'rows');
           }
         }
 
@@ -756,7 +956,7 @@
             $columnSizers.width(newWidth);
 
             //TODO reconcile all the static row heights to match the possibly new heights of dynamic rows after this resize
-            scrollTableVertical.call(self, 0, true);
+            self._refreshRows();
             /*for(i = $dynamicRows.length; i >= 1; i--) {
 
               staticHeight = $staticRows.filter(':nth-child('+i+')').css('height','auto').height();
@@ -1017,7 +1217,6 @@
         tableData = options.tableData,
         columns = options.columns,
         totalColumns = columns.length,
-        totalRows = tableData.length,
         $macroTable = this.element,
 
         $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
@@ -1032,9 +1231,10 @@
 
         $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
         $leftScrollWrapperBody = $dataContainerWrapper.find('div.macro-table-data-container div.macro-table-scroll-wrapper'),
-        $tableBody = $dataContainerWrapper.find('table.macro-table-column-content'),
-        $staticTableBody = $dataContainerWrapper.find('table.macro-table-static-column-content'),
+        $tableBody = $dataContainerWrapper.find('tbody.macro-table-column-content'),
+        $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content'),
 
+        maxRenderCount,
         totalColumnWidth = 0,
         tableViewportWidth = $macroTable.parent().width() - scrollBarWidth,
         marginAdded;
@@ -1043,9 +1243,12 @@
       scrollTop = 0;
       currentColumn = 0;
       currentDomColumn = 0;
-      lastRow = 0;
       currentRow = 0;
       currentDomRow = 0;
+
+      selectedRowCount = 0;
+      expandedRowCount = 0;
+      expandedTableData = [];
 
       $headerWrapper.hide();
       $dataContainerWrapper.hide();
@@ -1053,38 +1256,23 @@
       $headerRow.empty();
       $columnSizers.empty();
       $staticColumnSizers.empty();
-      $tableBody.find('tbody').remove();
-      $staticTableBody.find('tbody').remove();
+      $staticHeaderRow.empty();
+      $tableBody.empty();
+      $staticTableBody.empty();
 
       $scrollContainer.scrollTop(0);
-
-      if(options.rowsSelectable === true /*|| other.settings.that.enable.static.column */) {
-        $macroTable.addClass('macro-table-static-column-enabled');
-      } else {
-        $macroTable.removeClass('macro-table-static-column-enabled');
-      }
-
-      //set up table for rows to have checkbox columns, sizing handled in .resizeTable()
-      if(options.rowsSelectable === true) {
-        var $checboxColumnSizer = $(document.createElement('col')).width(rowSelectColumnWidth),
-          $checkboxColumn = $(document.createElement('th')).html('<input type="checkbox" class="macro-table-checkbox macro-table-select-toggle" />');
-
-        $staticColumnSizers.append($checboxColumnSizer);
-        $staticHeaderRow.append($checkboxColumn);
-
-        $macroTable.addClass('macro-table-rows-selectable');
-      } else {
-        $macroTable.removeClass('macro-table-rows-selectable');
-      }
 
       this.resizeTable(options.height, options.width);
 
       replaceRowWindow = options.rowBuffer / 2;
       maxTotalDomRows = displayRowWindow + (options.rowBuffer * 2);
+      maxRenderCount = maxTotalDomRows;
       maxTotalDomColumns = 100;
       middleDomRow = ~~(maxTotalDomRows / 2);
       triggerUpDomRow = middleDomRow - ~~(displayRowWindow / 2) - replaceRowWindow;
       triggerDownDomRow = middleDomRow - ~~(displayRowWindow / 2) + replaceRowWindow;
+
+      console.log('replaceRowWindow',replaceRowWindow,'maxTotalDomRows',maxTotalDomRows,'maxTotalDomColumns',maxTotalDomColumns,'middleDomRow',middleDomRow,'triggerUpDomRow',triggerUpDomRow,'triggerDownDomRow',triggerDownDomRow);
 
       //build the column headers
       $headerWrapper.show(); ////needs to be visible so column width calculation can be performed
@@ -1121,36 +1309,89 @@
         }
       }
 
+      //populate table data into the table's DOM (and check for the presence of sub rows)
+      $dataContainerWrapper.show(); //needs to be visible so row height calculation can be performed
+      for(var i = 0, renderCount = 0, len = tableData.length; i < len; i++) {
+        var row = tableData[i];
+
+        //check all rows to see if any have sub rows, because if they do, we want to show the expander cell in the static header
+        if(typeof row.subRows !== 'undefined' && row.subRows.length) {
+          rowsWithChildrenCount++;
+        }
+
+        for(var j = 0, rowGroupLen = 1 + (row.expanded && typeof row.subRows !== 'undefined' ? row.subRows.length : 0); j < rowGroupLen; j++) {
+          var rowData = rowGroupLen > 1 && j > 0 ? row.subRows[j - 1] : row;
+
+          expandedTableData.push(rowData);
+
+          //render the rows as long as we haven't gone over the DOM row threshold
+          if(i < maxTotalDomRows && renderCount < maxTotalDomRows && j < maxRenderCount) {
+            var staticHeight, dynamicHeight,
+              rowElements = renderRow.call(this, rowData, expandedTableData.length - 1);//i + (rowGroupLen > 1 && j > 0 ? '-'+(j - 1) : ''));
+
+            //append row to table
+            $tableBody.append(rowElements.dynamicRow);
+            $staticTableBody.append(rowElements.staticRow);
+
+            //reconcile possible different heights between static and dynamic rows
+            staticHeight = rowElements.staticRow.height();
+            dynamicHeight = rowElements.dynamicRow.height();
+            if(staticHeight > dynamicHeight) {
+              rowElements.dynamicRow.height(staticHeight);
+            } else if(staticHeight < dynamicHeight) {
+              rowElements.staticRow.height(dynamicHeight);
+            }
+
+            renderCount++; //a row or subrow was rendered
+          }
+        }
+      }
+
       //size the scroll spacer to the theoretical max height of all the data
       $macroTable.find('div.macro-table-scroll-spacer')
-      .height(rowHeight * (totalRows + 1))
+      .height(rowHeight * (expandedTableData.length + 1))
       .width(totalColumnWidth + marginAdded);
 
       $leftScrollWrapperBody.width(totalColumnWidth + marginAdded)
       $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + scrollBarWidth);
 
-      //populate table data into the table's DOM
-      $dataContainerWrapper.show(); //needs to be visible so row height calculation can be performed
-      for(var i = 0; i < totalRows; i++) {
-        if(i < maxTotalDomRows) {
-          var staticHeight, dynamicHeight,
-            rowElements = renderRow.call(this, tableData[i], i);
 
-          //append row to table
-          $tableBody.append(rowElements.dynamicRow);
-          $staticTableBody.append(rowElements.staticRow);
+      //set up table for rows to have checkbox columns, sizing handled in .resizeTable()
+      if(options.rowsSelectable === true) {
+        var $checboxColumnSizer = $(document.createElement('col')).addClass('macro-table-row-selector-column')
+          .width(rowSelectColumnWidth),
+          $checkboxColumn = $(document.createElement('th')).html('<input type="checkbox" class="macro-table-checkbox macro-table-select-toggle" />');
 
-          //reconcile possible different heights between static and dynamic rows
-          staticHeight = rowElements.staticRow.height();
-          dynamicHeight = rowElements.dynamicRow.height();
-          if(staticHeight > dynamicHeight) {
-            rowElements.dynamicRow.height(staticHeight);
-          } else if(staticHeight < dynamicHeight) {
-            rowElements.staticRow.height(dynamicHeight);
-          }
-        } else {
-          break;
-        }
+        $staticColumnSizers.append($checboxColumnSizer);
+        $staticHeaderRow.append($checkboxColumn);
+
+        $macroTable.addClass('macro-table-rows-selectable');
+      } else {
+        $macroTable.removeClass('macro-table-rows-selectable');
+      }
+
+      //set up table for rows with expandable children
+      if(rowsWithChildrenCount > 0) {
+        var timestamp = +new Date(),
+          $expanderColumnSizer = $(document.createElement('col')).addClass('macro-table-row-expander-column')
+          .width(expanderColumnWidth),
+          $expanderColumn = $(document.createElement('th')).addClass('macro-table-row-expander-cell')
+          .html('<input type="checkbox" id="macro-table-expand-toggle-'+timestamp+'" class="macro-table-checkbox macro-table-expand-toggle" />'+
+          '<label for="macro-table-expand-toggle-'+timestamp+'" class="macro-table-expand-toggle-label"></label>');
+
+        $staticColumnSizers.append($expanderColumnSizer);
+        $staticHeaderRow.append($expanderColumn);
+
+        $macroTable.addClass('macro-table-rows-expandable');
+      } else {
+        $macroTable.removeClass('macro-table-rows-expandable');
+      }
+
+      //enable/disable static columns depending on settings
+      if(options.rowsSelectable === true || rowsWithChildrenCount > 0 /*|| other.settings.that.enable.static.column */) {
+        $macroTable.addClass('macro-table-static-column-enabled');
+      } else {
+        $macroTable.removeClass('macro-table-static-column-enabled');
       }
     },
 
@@ -1185,13 +1426,7 @@
           break;
 
         case 'columns':
-          var scrollPositionLeft = currentColumn,
-            scrollPositionTop = currentRow;
-
-          this._init(); //causes currentColumn and currentRow to reset to 0
-
-          this.scrollToColumn(scrollPositionLeft)
-          this.scrollToRow(scrollPositionTop);
+          this._reRender();
           break;
 
         case 'defaultColumnWidth':
@@ -1213,12 +1448,13 @@
         case 'rowsSelectable':
           //TODO add class managment for macro-table-rwos-selectable too
           if(value === true) {
-            this.element.addClass('macro-table-static-column-enabled');
+            this.element.addClass('macro-table-rows-selectable');
           } else {
-            this.element.removeClass('macro-table-static-column-enabled');
+            this.element.removeClass('macro-table-rows-selectable');
             //$('tr.macro-table-selected-row', this.element).removeClass('macro-table-highlight macro-table-selected-row'); //deselect any selected rows
           }
-          this.resizeTable(options.height, options.width);
+          this._reRender();
+          this.resizeTable(options.height, options.width); //fill space for hidden column / remove space for shown column
           break;
       }
     },
@@ -1242,6 +1478,30 @@
       }
     },
 
+    /**
+     * @method _reRender
+     * @description re-render the entire table and restore it to the original scroll position
+     * @private
+     */
+    _reRender: function() {
+      var scrollPositionLeft = currentColumn,
+        scrollPositionTop = currentRow; //FIXME: this will be broken if looking at a subRow
+
+      this._init(); //causes currentColumn and currentRow to reset to 0
+
+      this.scrollToColumn(scrollPositionLeft)
+      this.scrollToRow(scrollPositionTop);
+    },
+
+    /**
+     * @method _refreshRows
+     * @description removes all table rows and re-renders them
+     * @private
+     */
+    _refreshRows: function() {
+      scrollTableVertical.call(this, 0, true);
+    },
+
     /** Public methods */
 
     /**
@@ -1250,32 +1510,57 @@
      * @returns {Array} ordered list of selected rows
      */
     getSelectedRows: function() {
-      var selectedRows = [],
-        options = this.options,
-        tableData = options.tableData;
+      var selectedRows = [];
 
-      if(options.rowsSelectable === true && selectedRowCount != 0) {
+      if(this.options.rowsSelectable === true && selectedRowCount != 0) {
 
-        for(var i = 0, len = tableData.length; i < len; i++) {
+        for(var i = 0, len = expandedTableData.length; i < len; i++) {
 
-          if(tableData[i].selected) {
-            selectedRows.push(tableData[i]);
+          if(expandedTableData[i].selected) {
+            selectedRows.push(expandedTableData[i]);
           }
 
-          if(typeof tableData.subRows !== 'undefined') {
-
-            for(var j = 0, subLen = tableData.subRows.length; j < subLen; j++) {
-
-              if(tableData[i].subRows[j].selected) {
-                selectedRows.push(tableData[i].subRows[j]);
-              }
-            }
+          if(selectedRows.length == selectedRowCount) {
+            break;
           }
-
         }
       }
 
       return selectedRows;
+    },
+
+    /**
+     * @method getTableSnapshot
+     * @description fetch all rows in the table with the column layout reflective of what is shown in the table
+     * @returns {Array} ordered list of selected rows
+     */
+    getTableSnapshot: function() {
+      var tableRows = [],
+        options = this.options,
+        columns = options.columns,
+        tableData = options.tableData,
+        rowTraverseCount = 0;
+
+      for(var i = 0, len = tableData.length; i < len; i++) {
+        var row = tableData[i];
+
+        //loop the main row and its sub rows if it has any
+        for(var j = 0, rowGroupLen = 1 + (typeof row.subRows !== 'undefined' ? row.subRows.length : 0); j < rowGroupLen; j++) {
+          var rowData = rowGroupLen > 1 && j > 0 ? row.subRows[j - 1] : row;
+
+          tableRows[rowTraverseCount] = [];
+
+          //loop through the ordered columns datastructure so that order can be maintained in this output
+          for(var k = 0, columnLen = columns.length; k < columnLen; k++) {
+            tableRows[rowTraverseCount][k] = {};
+            tableRows[rowTraverseCount][k][columns[k].field] = rowData.data[columns[k].field]; 
+          }
+
+          rowTraverseCount++;
+        }
+      }
+
+      return tableRows;
     },
 
     /**
@@ -1301,7 +1586,7 @@
 
       //size the data container wrapper
       $macroTable.find('div.macro-table-data-container-wrapper')
-      .height(height - rowHeight - scrollBarWidth - 2) //-2 to account for top and bottom border of header
+      .height(height - rowHeight - scrollBarWidth - 1) //-1 to account for bottom border of header
       .width(width - scrollBarWidth - 1); //-1 to account for left border
 
       //size the data container
@@ -1310,18 +1595,38 @@
 
       //size the scroll container
       $macroTable.find('div.macro-table-scroll-container')
-      .height(height - rowHeight - 2);
+      .height(height - rowHeight - 1);
 
       //size the vertical drop guide for the resizing functionality
       $macroTable.find('div.macro-table-resize-guide')
       .height(height - scrollBarWidth);
     },
 
-    scrollToRow: function(scrollToRow) {
+    /**
+     * Scroll the table to the desired row
+     * @param scrollToRow {Number} the row or row index to scroll the table to
+     * @param byIndex {Boolean} true if scrolling to the row index number rather 
+     *  than the true row number (which may differ if any sub rows are expanded)
+     */
+    scrollToRow: function(scrollToRow, byIndex) {
+      var options = this.options,
+        tableData = options.tableData;
+
+      if(byIndex && typeof tableData[scrollToRow] !== 'undefined') {
+        scrollToRow = expandedTableData.indexOf(tableData[scrollToRow]);
+      } else if(typeof scrollToRow === 'undefined') {
+        scrollToRow = 0;
+      }
+
       console.log('scroll to row',scrollToRow);
 
       var rowsToScroll = scrollToRow - currentRow;
-      this.element.find('div.macro-table-scroll-container').scrollTop(scrollTop + (rowsToScroll * this.options.rowHeight));
+      if(rowsToScroll != 0) {
+        this.element.find('div.macro-table-scroll-container').scrollTop(scrollTop + (rowsToScroll * options.rowHeight));
+      
+      } else {
+        this._refreshRows();
+      }
     },
 
     scrollToColumn: function(scrollToColumn) {

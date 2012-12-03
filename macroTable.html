@@ -14,7 +14,10 @@
     <ul>
       <li><button id="toggle-selectable-rows">Toggle Selectable Rows</button></li>
       <li><button id="get-selected-rows">Get Selected Rows</button></li>
+      <li><button id="get-all-rows">Get Table Snapshot</button></li>
       <li><button id="scroll-to-row">Scroll to Row</button><input id="scroll-to-row-input" value="177" /></li>
+      <li><button id="table-data-standard">Load Standard Table Data</button></li>
+      <li><button id="table-data-edge">Load Edgecase Table Data</button></li>
     </ul>
 
     <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.js"></script>
@@ -24,39 +27,95 @@
     <script type="text/javascript">//<![CDATA[ 
       $(function() {
 
-        var tableData = [];
-        //populate fake data
-        for(var i = 0, len = 200; i < len; i++) {
-          tableData.push({
-            index: i,
-            column1: i+'(1)',
-            column2: i+'(2)'+(i == 10 ? 'jhgfjhgfjhgf' : ''),
-            column3: i+'(3)',
-            column4: i+'(4)',
-            column5: i+'(5)',
-            column6: i+'(6)',
-          });
+        /**
+         * generate test table data
+         * @param numRows {Integer} number of main rows to display
+         * @param subRowsIndexes {Object} a map of { indexOfMainRow: numberOfSubRows }
+         * @param columnValyeOverrides {Object} a map of {
+         *   indexOfMainRow: {
+         *      numberofColumn: appendedTextValue
+         *      ""
+         *      subRows: {
+         *          numberofColumn: appendedTextValue
+         *          ""
+         *      }
+         *   }
+         * }
+         * @returns Array of table rows
+         */
+        function generateTableData(numRows, subRowsIndexes, columnValueOverrides) {
+          var tableData = [];
+
+          subRowsIndexes = subRowsIndexes || {};
+          columnValueOverrides = columnValueOverrides || {};
+
+          //populate fake data
+          for(var i = 0, len = numRows; i < len; i++) {
+            tableData.push({
+              index: i,
+              data: {
+                column1: i+'(1)'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                  typeof columnValueOverrides[i][1] !== 'undefined' ? columnValueOverrides[i][1] : ''),
+                column2: i+'(2)'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                  typeof columnValueOverrides[i][2] !== 'undefined' ? columnValueOverrides[i][2] : ''),
+                column3: i+'(3)'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                  typeof columnValueOverrides[i][3] !== 'undefined' ? columnValueOverrides[i][3] : ''),
+                column4: i+'(4)'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                  typeof columnValueOverrides[i][4] !== 'undefined' ? columnValueOverrides[i][4] : ''),
+                column5: i+'(5)'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                  typeof columnValueOverrides[i][5] !== 'undefined' ? columnValueOverrides[i][5] : ''),
+                column6: i+'(6)'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                  typeof columnValueOverrides[i][6] !== 'undefined' ? columnValueOverrides[i][6] : ''),
+              }
+            });
+            if(typeof subRowsIndexes['all'] !== 'undefined' || typeof subRowsIndexes[i] !== 'undefined') {
+              tableData[i].subRows = [];
+              for(var j = 0, sublen = subRowsIndexes['all'] || subRowsIndexes[i]; j < sublen; j++) {
+                tableData[i].subRows.push({
+                  parentIndex: i,
+                  index: j,
+                  data: {
+                    column1: i+'-'+j+'<1>'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                      typeof columnValueOverrides[i].subRows !== 'undefined' &&
+                                      typeof columnValueOverrides[i].subRows[1] !== 'undefined' ? columnValueOverrides[i].subRows[1] : ''),
+                    column2: i+'-'+j+'<2>'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                      typeof columnValueOverrides[i].subRows !== 'undefined' &&
+                                      typeof columnValueOverrides[i].subRows[2] !== 'undefined' ? columnValueOverrides[i].subRows[2] : ''),
+                    column3: i+'-'+j+'<3>'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                      typeof columnValueOverrides[i].subRows !== 'undefined' &&
+                                      typeof columnValueOverrides[i].subRows[3] !== 'undefined' ? columnValueOverrides[i].subRows[3] : ''),
+                    column4: i+'-'+j+'<4>'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                      typeof columnValueOverrides[i].subRows !== 'undefined' &&
+                                      typeof columnValueOverrides[i].subRows[4] !== 'undefined' ? columnValueOverrides[i].subRows[4] : ''),
+                    column5: i+'-'+j+'<5>'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                      typeof columnValueOverrides[i].subRows !== 'undefined' &&
+                                      typeof columnValueOverrides[i].subRows[5] !== 'undefined' ? columnValueOverrides[i].subRows[5] : ''),
+                    column6: i+'-'+j+'<6>'+(typeof columnValueOverrides[i] !== 'undefined' && 
+                                      typeof columnValueOverrides[i].subRows !== 'undefined' &&
+                                      typeof columnValueOverrides[i].subRows[6] !== 'undefined' ? columnValueOverrides[i].subRows[6] : ''),
+                  }
+                });
+              }
+            }
+          }
+
+          return tableData;
         }
-        tableData[192].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
-        tableData[193].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
-        tableData[194].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
-        tableData[195].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
-        tableData[196].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
-        tableData[197].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
-        tableData[198].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
-        tableData[199].column1 = 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ';
+
         $('#table').macroTable({
-          tableData: tableData,
+          tableData: generateTableData(100),
           rowsSelectable: true,
           columns: [{
             title: 'Col 1',
             field: 'column1',
+            sortable: false,
             formatter: function(text) {
                 return text+' blah';
             }
           },{
             title: 'Col 2',
             field: 'column2',
+            resizable: false,
             formatter: function(text) {
                 return text+' barf';
             }
@@ -90,10 +149,13 @@
           },
           onColumnResize: function(columnIndex, width) {
             alert(columnIndex+', '+width);
+          },
+          onRowExpand: function(expandedRows) {
+            console.log('Expanded rows:',expandedRows);
           }
         });
         //$('div.some-data').macroTable('scrollToColumn',0);
-        $('#table').macroTable('scrollToRow',177);
+        //$('#table').macroTable('scrollToRow',177);
         //$('#table').macroTable('scrollToRow',199); //FIXME: doesn't work because the rows are too tall...
         $(window).resize(function() {
           $('#table').macroTable('resizeTable');
@@ -108,7 +170,7 @@
         $('#scroll-to-row').click(function(e) {
           e.preventDefault();
 
-          $('#table').macroTable('scrollToRow',$('#scroll-to-row-input').val());
+          $('#table').macroTable('scrollToRow',$('#scroll-to-row-input').val(), true);
         })
 
         $('#get-selected-rows').click(function(e) {
@@ -116,6 +178,62 @@
 
           var selectedRows = $('#table').macroTable('getSelectedRows');
           console.log('Currently Selected Rows:',selectedRows);
+        });
+
+        $('#get-all-rows').click(function(e) {
+          e.preventDefault();
+
+          var viewableData = $('#table').macroTable('getTableSnapshot');
+          console.log('Currently Viewable Data:',viewableData);
+        });
+
+        $('#table-data-standard').click(function(e) {
+          e.preventDefault();
+
+          $('#table').macroTable('option', {
+            tableData: generateTableData(100, {
+              'all': 3
+            })
+          });
+        });
+
+        $('#table-data-edge').click(function(e) {
+          e.preventDefault();
+
+          $('#table').macroTable('option', {
+            tableData: generateTableData(200, {
+              1: 9,
+              10: 30
+            }, {
+              10: {
+                2: 'jhgfjhgfjhgf'
+              },
+              192: {
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+              },
+              193: {
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+              },
+              194: {
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+              },
+              195: {
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+              },
+              196: {
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+              },
+              197: {
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+              },
+              198: {
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
+              },
+              199: {
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
+              }
+            })
+          });
         });
 
       });//]]>  

@@ -16,17 +16,20 @@
   background: rgba(0, 0, 0, .1);
 }
 
-.macro-table table {
+.macro-table .macro-table-dynamic,
+.macro-table .macro-table-static {
   table-layout: fixed;
+  border-collapse: separate;
+  border-style: none;
   border-spacing: 0;
   width: 0;
   background: #fff;
-  -moz-box-shadow: 2px 2px 2px #ccc;
-  -webkit-box-shadow: 2px 2px 2px #ccc;
-  box-shadow: 2px 2px 2px #ccc;
+  -moz-box-shadow: 0 0 2px 2px #ccc;
+  -webkit-box-shadow: 0 0 2px 2px #ccc;
+  box-shadow: 0 0 2px 2px #ccc;
 }
 
-.macro-table tr.macro-table-row-stripe {
+.macro-table tr.macro-table-row:nth-child(odd) {
   background: rgba(0, 0, 0, .1);
 }
 
@@ -34,7 +37,7 @@
   background: rgba(0, 0, 0, .2);
 }
 
-.macro-table.macro-table-static-column-enabled tr.macro-table-selected-row.macro-table-row-stripe.macro-table-highlight {
+.macro-table.macro-table-static-column-enabled tr.macro-table-row:nth-child(odd).macro-table-selected-row.macro-table-highlight {
   background: rgba(0, 0, 0, .3);
 }
 
@@ -52,9 +55,20 @@
   padding: 0 3px;
   overflow: hidden;
   text-overflow: ellipsis;
-  -moz-box-shadow: inset -1px 0px 0px #fff;
-  -webkit-box-shadow: inset -1px 0px 0px #fff;
-  box-shadow: inset -1px 0px 0px #fff;
+  border-bottom: 1px #ccc solid;
+}
+
+.macro-table .macro-table-static td,
+.macro-table .macro-table-static th {
+  padding: 0;
+}
+
+.macro-table .macro-table-dynamic td {
+  border-left: 1px #ccc solid;
+}
+
+.macro-table .macro-table-dynamic th {
+  border-left: 1px #ccc solid;
 }
 
 .macro-table .macro-table-column-sizer th {
@@ -189,6 +203,139 @@
   display: block;
 }
 
+/* expanded rows dotted line hierarchy */
+
+.macro-table-row-expander-cell {
+  position: relative;
+  overflow: hidden;
+}
+
+.macro-table-expand-toggle,
+.macro-table-row-expander {
+  position: absolute;
+  left: -200%;
+}
+
+.macro-table-expand-toggle-label
+.macro-table-icon.macro-table-arrow-right,
+.macro-table-icon.macro-table-arrow-down {
+  display: inline-block;
+}
+
+.macro-table-expand-toggle + .macro-table-expand-toggle-label,
+.macro-table-row-expander-label {
+  -webkit-appearance: checkbox;
+  height: 12px;
+  width: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.macro-table-expand-toggle + .macro-table-expand-toggle-label::before {
+  content: "";
+  width: 8px; 
+  height: 2px; 
+  background-color: #666; 
+  position: absolute;
+  top: 50%;
+  right: 50%;
+  margin: -1px -4px 0 0;
+}
+
+.macro-table-expand-toggle + .macro-table-expand-toggle-label::after {
+  content: "";
+  width: 2px; 
+  height: 8px;
+  background-color: #666; 
+  position: absolute;
+  top: 50%;
+  right: 50%;
+  margin: -4px -1px 0 0;
+}
+
+.macro-table-expand-toggle:checked + .macro-table-expand-toggle-label::after {
+  width: 0;
+}
+
+.macro-table-arrow-right::before {
+  content: "";
+  width: 0; 
+  height: 0; 
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  border-left: 5px solid #666;
+  position: absolute;
+  top: 50%;
+  right: 50%;
+  margin: -3px -3px 0 0;
+}
+
+.macro-table-arrow-down::before {
+  content: "";
+  width: 0; 
+  height: 0; 
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 5px solid #666;
+  position: absolute;
+  top: 50%;
+  right: 50%;
+  margin: -2px -3px 0 0;
+}
+
+.macro-table-subrow-hierarchy-vertical-line-top-half::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 50%;
+  right: 50%;
+  border-left: 1px dotted rgba(0, 0, 0, .3);
+}
+
+.macro-table-subrow-hierarchy-vertical-line-bottom-half::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  bottom: 0;
+  right: 50%;
+  border-left: 1px dotted rgba(0, 0, 0, .3);
+}
+
+.macro-table-subrow-hierarchy-vertical-line-full::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 50%;
+  border-left: 1px dotted rgba(0, 0, 0, .3);
+}
+
+.macro-table-subrow-hierarchy-line-right::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  right: 0;
+  border-top: 1px dotted rgba(0, 0, 0, .3);
+}
+
+/* Webkit doesn't yet support "visibility: collapse;" on <col> */
+/*
+col.macro-table-row-expander-column,
+col.macro-table-row-selector-column  {
+  visibility: collapse;
+}
+
+.macro-table-static-column-enabled.macro-table-rows-expandable .macro-table-row-expander-column,
+.macro-table-static-column-enabled.macro-table-rows-selectable .macro-table-row-selector-column {
+  visibility: visible;
+}
+*/
+
+
+
+/* I don't think we need this for the static columns, the col widths handle it, right? */
+/*
 .macro-table-static-column-enabled.macro-table-rows-selectable .macro-table-static-header,
 .macro-table-static-column-enabled.macro-table-rows-selectable .macro-table-static-data-container,
 .macro-table-static-column-enabled.macro-table-rows-collapsible .macro-table-static-header,
@@ -200,6 +347,18 @@
 .macro-table-static-column-enabled.macro-table-rows-collapsible.macro-table-rows-collapsible .macro-table-static-data-container {
   width: 40px;
 }
+*/
+
+/* Expanded / Collapsed rows rules */
+
+.macro-table-sub-row {
+  display: none;
+}
+
+.macro-table-row-expanded .macro-table-sub-row {
+  display: table-row;
+}
+
 
 /* scrollbar styling */
 
