@@ -1028,44 +1028,51 @@
       if(this.options.reorderable === true) {
         $header.delegate('th.macro-table-column-reorderable', 'mousedown', function(e) {
           e.preventDefault();
-          var $element = $(e.target),
-            thumbPosition = ($element.offset().left - $macroTable.offset().left) - //relative start position to macroTable container
-                            Math.ceil($resizer.outerWidth() / 2); //end position of the cell with resize guide compensation
 
-          //trigger reordering mode if holding down for 1 second
-          mouseDownTimeout = setTimeout(function() {
-            $macroTable.addClass('macro-table-column-moving');
-            
-            columnGrabOffset = e.pageX - $element.offset().left;
+          if(e.which == 1) { //left click only
 
-            $reorderGuide.width($element.outerWidth())
-            .css('left', $dataContainer.scrollLeft() + $element.position().left);
-            
-            $resizer.css('left', thumbPosition + 'px');
-            
-            $macroTable.find('colgroup.macro-table-column-sizer col').filter(':nth-child('+($element.index() + 1)+')')
-            .addClass('macro-table-selected-column');
-            
-            console.log('offset column',$element.offset().left,'position column',$element.position().left,'resizer',$dataContainer.scrollLeft() + $element.position().left - ($resizer.outerWidth() / 2));
-          }, 1000);
+            var $element = $(e.target),
+              thumbPosition = ($element.offset().left - $macroTable.offset().left) - //relative start position to macroTable container
+                              Math.ceil($resizer.outerWidth() / 2); //end position of the cell with resize guide compensation
 
+            //trigger reordering mode if holding down for 1 second
+            mouseDownTimeout = setTimeout(function() {
+              $macroTable.addClass('macro-table-column-moving');
+              
+              columnGrabOffset = e.pageX - $element.offset().left;
+
+              $reorderGuide.width($element.outerWidth())
+              .css('left', $dataContainer.scrollLeft() + $element.position().left);
+              
+              $resizer.css('left', thumbPosition + 'px');
+              
+              $macroTable.find('colgroup.macro-table-column-sizer col').filter(':nth-child('+($element.index() + 1)+')')
+              .addClass('macro-table-selected-column');
+              
+              console.log('offset column',$element.offset().left,'position column',$element.position().left,'resizer',$dataContainer.scrollLeft() + $element.position().left - ($resizer.outerWidth() / 2));
+            }, 1000);
+          }
         });
 
         $header.delegate('th', 'mouseup', function(e) {
-          clearTimeout(mouseDownTimeout);
 
-          var newIndex = $(e.target).index(),
-            $selectedColumn = $macroTable.find('col.macro-table-selected-column');
+          if(e.which == 1) { //left click only
 
-          if($selectedColumn.length > 0) {
+            clearTimeout(mouseDownTimeout);
 
-            var columnToReorderIndex = $selectedColumn.removeClass('macro-table-selected-column')
-            .filter(':first').index();
+            var newIndex = $(e.target).index(),
+              $selectedColumn = $macroTable.find('col.macro-table-selected-column');
 
-            $macroTable.removeClass('macro-table-column-moving');
+            if($selectedColumn.length > 0) {
 
-            if(columnToReorderIndex != newIndex) {
-              self._moveColumn(columnToReorderIndex, newIndex);
+              var columnToReorderIndex = $selectedColumn.removeClass('macro-table-selected-column')
+              .filter(':first').index();
+
+              $macroTable.removeClass('macro-table-column-moving');
+
+              if(columnToReorderIndex != newIndex) {
+                self._moveColumn(columnToReorderIndex, newIndex);
+              }
             }
           }
         });
@@ -1201,8 +1208,8 @@
 
             //position the resizer guide to the boundary of the column to act as an indicator for where the column would be dropped
             $resizer.css('left', (
-              newColumnPosition + //account for potential static row offset
-              (newIndex > currentColumnIndex ? newColumnWidth - $resizer.outerWidth() - 1 : 0)
+              newColumnPosition + 1 + //account for potential static row offset
+              (newIndex > currentColumnIndex ? newColumnWidth : 0)
             ) + 'px');
           }, 0);
         }
