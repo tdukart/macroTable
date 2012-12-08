@@ -88,6 +88,7 @@
     //processedColumns = [], //once columns processed from options.columns, the elements and real widths go in here
 
     //rows
+    sortedRows = {}, //object of sorted combinations of the table data, key 'default' contains the data ordered as it was initialized
     maxTotalDomRows, //real DOM row count would only be less than this if the amount of data is less than this number (don't need the extra DOM rows to display total data)
     scrollTop = 0, //default to top of table
     currentRow = 0, //0-indexed, describes the top-most, visible data row (direct correlation with array index). default to first row
@@ -223,7 +224,6 @@
    */
   function scrollTableVertical(direction, rerender) {
     var rowBuffer = this.options.rowBuffer,
-      tableData = this.options.tableData,
 
       rowNumber = currentRow,
       visibleRowCount = expandedTableData.length,
@@ -458,6 +458,46 @@
     };
   }
 
+  /**
+   * Loop through defined columns and verify the proposed sort by column exists
+   * @param columnField {String} field name of column to potentially sort by
+   * @return the index of the column if it is sortable, -1 otherwise
+   */
+  function validateSortByColumn(columnField) {
+    var columns = this.options.columns;
+
+    if(columnField == '') {
+      return -1;
+    }
+
+    for(var i = columns.length - 1; i >= 0; i--) {
+
+      if(columns[i].field == columnField && columns[i].sortable) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
+
+  /**
+   * Loop through tableData and count the rows with sub rows
+   * @return the count of rows with sub rows
+   */
+  function countRowsWithChildren() {
+    var tableData = this.options.tableData,
+      count = 0;
+
+    for(var i = tableData.length - 1; i >= 0; i--) {
+
+      if(typeof tableData[i].subRows !== 'undefined' && tableData[i].subRows.length) {
+        count++;
+      }
+    }
+
+    return count;
+  }
+
   $.widget('n.macroTable', {
 
     /**
@@ -480,7 +520,8 @@
        * @field formatter {Function} (optional) formats the provided data to be displayed in a row's column
        * @field className {String} (optional) class to be added to the column title element
        * @field resizable {Boolean} allow column to be resized. default true
-       * @field sortable {Boolean} allow column to be sorted. default true
+       * @field sortable {Boolean/Function} if true allow column to be sorted via .sort() on a row's column value, 
+       *    if a function, the column will be sorted using .sort() with this function passed as a parameter. default true
        */
       columns: [],
       defaultColumnWidth: 100,
@@ -511,10 +552,90 @@
        */
       summaryRow: false,
       tableData: [],
+      /**
+       * Field name of the column by which to sort the tableData.
+       * If not set (''), the original order of the data as it was initialized is shown
+       */
+      sortByColumn: '',
       rowsSelectable: false,
     },
 
     /** "Private" methods */
+
+    /**
+     * @method _setOption
+     * @description Called when an option is changed via jQuery widget factory
+     * @private
+     */
+    _setOption: function(key, value) {
+      // In jQuery UI 1.8, you have to manually invoke the _setOption method from the base widget
+      $.Widget.prototype._setOption.apply( this, arguments );
+      // In jQuery UI 1.9 and above, you use the _super method instead
+      //this._super( "_setOption", key, value );
+
+      var options = this.options,
+        columnIndex;
+
+      //handle specific option cases here
+      switch(key) {
+
+        case 'width':
+        case 'height':
+          this.resizeTable(options.height, options.width);
+          break;
+
+        case 'rowHeight':
+          break;
+
+        case 'rowBuffer':
+          break;
+
+        case 'disabled':
+          break;
+
+        case 'columns':
+          this._reRender();
+          break;
+
+        case 'defaultColumnWidth':
+          break;
+
+        case 'sortByColumn':
+          columnIndex = validateSortByColumn.call(this, value);
+          if(columnIndex < 0) {
+            options.sortByColumn = '';
+          }
+          this._sortTable(columnIndex);
+
+        case 'reorderable':
+          break;
+
+        case 'onColumnReorder':
+          break;
+
+        case 'onColumnResize':
+          break;
+
+        case 'tableData':
+          rowsWithChildrenCount = countRowsWithChildren.call(this);
+          sortedRows = {};
+        case 'summaryRow':
+          this._init(); //causes currentColumn and currentRow to reset to 0
+          break;
+
+        case 'rowsSelectable':
+          //TODO add class managment for macro-table-rwos-selectable too
+          if(value === true) {
+            this.element.addClass('macro-table-rows-selectable');
+          } else {
+            this.element.removeClass('macro-table-rows-selectable');
+            //$('tr.macro-table-selected-row', this.element).removeClass('macro-table-highlight macro-table-selected-row'); //deselect any selected rows
+          }
+          this._reRender();
+          this.resizeTable(options.height, options.width); //fill space for hidden column / remove space for shown column
+          break;
+      }
+    },
 
     /**
      * @method _create
@@ -635,9 +756,8 @@
 
       //row sorting listener
       $header.delegate('th.macro-table-column-sortable', 'click', function(e) {
-        if(!$macroTable.hasClass('macro-table-column-moving')) {
-           console.log('sort column');
-           //TODO
+        if(!$macroTable.hasClass('macro-table-column-moving')) {          
+          self._sortTable($(this).index());
         }
       });
 
@@ -746,10 +866,9 @@
 
       //wire row select and row expand checkbox event behavior 
       $staticDataContainer.delegate('input.macro-table-checkbox', 'click', function(e) {
-        var tableData = self.options.tableData,
+        var $checkbox = $(this),
           $selectAllHeaderCheckbox = $staticHeaderRow.find('input.macro-table-select-toggle'),
           $expandAllHeaderCheckbox = $staticHeaderRow.find('input.macro-table-expand-toggle'),
-          $checkbox = $(this),
           $checkboxRow = $checkbox.closest('tr'),
           domRowIndex = $checkboxRow.index(),
           dataRowIndex = $checkbox.data('row-index'),
@@ -1226,65 +1345,61 @@
      * @private
      */
     _init: function() {
+      var options = this.options;
+
+      //validate sortByColumn
+      if(validateSortByColumn.call(this, options.sortByColumn) < 0) {
+        options.sortByColumn = '';
+      }
+
+      //initialize the global count for rows with children
+      rowsWithChildrenCount = countRowsWithChildren.call(this);
+
+      this._renderTableHeader();
+      this._renderHeaderRowControls();
+
+      //resize the table, re-calculate the global variables and populate the data rows
+      this.resizeTable(options.height, options.width);
+
+      console.log('replaceRowWindow',replaceRowWindow,'maxTotalDomRows',maxTotalDomRows,'maxTotalDomColumns',maxTotalDomColumns,'middleDomRow',~~(maxTotalDomRows / 2),'triggerUpDomRow',triggerUpDomRow,'triggerDownDomRow',triggerDownDomRow);
+    },
+
+    /**
+     * @method _renderTableHeader
+     * @description initialize the table's header section, i.e. summary row, column headers
+     * @param tableData {Array} ordered table data, could be sorted or could be the initialized data
+     * @private
+     */
+    _renderTableHeader: function() {
       var options = this.options,
-        rowHeight = options.rowHeight,
-        tableData = options.tableData,
         summaryRow = options.summaryRow,
         columns = options.columns,
-        totalColumns = columns.length,
+
         $macroTable = this.element,
-
         $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
-        $staticColumnSizers = $macroTable.find('colgroup.macro-table-static-column-sizer'), //one in header, one in body
-        $resizer = $macroTable.find('div.macro-table-resize-guide'),
-        $scrollContainer = $macroTable.find('div.macro-table-scroll-container'),
-
         $headerWrapper = $macroTable.find('div.macro-table-header-wrapper'),
         $headerRow = $headerWrapper.find('div.macro-table-header tr.macro-table-header-row'),
-        $staticHeaderRow = $headerWrapper.find('div.macro-table-static-header tr.macro-table-static-header-row'),
         $leftScrollWrapperHeader = $headerWrapper.find('div.macro-table-header div.macro-table-scroll-wrapper'),
-
-        $staticSummaryRow = $headerWrapper.find('div.macro-table-static-header tr.macro-table-static-summary-row'),
+        $leftScrollWrapperBody = $macroTable.find('div.macro-table-data-container div.macro-table-scroll-wrapper'),
         $summaryRow = $headerWrapper.find('div.macro-table-header tr.macro-table-summary-row'),
 
-        $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
-        $leftScrollWrapperBody = $dataContainerWrapper.find('div.macro-table-data-container div.macro-table-scroll-wrapper'),
-        $tableBody = $dataContainerWrapper.find('tbody.macro-table-column-content'),
-        $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content'),
-
-        maxRenderCount,
         totalColumnWidth = 0,
         tableViewportWidth = $macroTable.parent().width() - scrollBarWidth,
         marginAdded;
 
       //initialize global variables, reinitialize in case table is being re-rendered
-      scrollTop = 0;
       currentColumn = 0;
       currentDomColumn = 0;
-      currentRow = 0;
-      currentDomRow = 0;
-
-      selectedRowCount = 0;
-      expandedRowCount = 0;
-      expandedTableData = [];
 
       $headerWrapper.hide();
-      $dataContainerWrapper.hide();
 
       $headerRow.empty();
       $summaryRow.empty();
       $columnSizers.empty();
-      $staticColumnSizers.empty();
-      $staticHeaderRow.empty();
-      $staticSummaryRow.empty();
-      $tableBody.empty();
-      $staticTableBody.empty();
-
-      $scrollContainer.scrollTop(0);
 
       //build the column headers
       $headerWrapper.show(); ////needs to be visible so column width calculation can be performed
-      for(var i = totalColumns - 1; i >= 0; i--) {
+      for(var i = columns.length - 1; i >= 0; i--) {
         var columnWidth = typeof columns[i].width !== 'undefined' ? parseInt(columns[i].width) : this.options.defaultColumnWidth;
 
         if(i < maxTotalDomColumns) { //TODO: right now, this is always true because we show all columns in the DOM, always
@@ -1331,71 +1446,36 @@
         }
       }
 
-      //summary row visibility toggle, checked here because height of header affects resizeTable() call
       if(typeof summaryRow === 'object') {
         $macroTable.addClass('macro-table-display-summary-row');
       } else {
         $macroTable.removeClass('macro-table-display-summary-row');
       }
 
-      //resize the table, re-calculate the global variables and populate the data rows
-
-      this.resizeTable(options.height, options.width);
-
-      replaceRowWindow = options.rowBuffer / 2;
-      maxTotalDomRows = displayRowWindow + (options.rowBuffer * 2);
-      maxRenderCount = maxTotalDomRows;
-      middleDomRow = ~~(maxTotalDomRows / 2);
-      triggerUpDomRow = middleDomRow - ~~(displayRowWindow / 2) - replaceRowWindow;
-      triggerDownDomRow = middleDomRow - ~~(displayRowWindow / 2) + replaceRowWindow;
-
-      console.log('replaceRowWindow',replaceRowWindow,'maxTotalDomRows',maxTotalDomRows,'maxTotalDomColumns',maxTotalDomColumns,'middleDomRow',middleDomRow,'triggerUpDomRow',triggerUpDomRow,'triggerDownDomRow',triggerDownDomRow);
-
-      //populate table data into the table's DOM (and check for the presence of sub rows)
-      $dataContainerWrapper.show(); //needs to be visible so row height calculation can be performed
-      for(var i = 0, renderCount = 0, len = tableData.length; i < len; i++) {
-        var row = tableData[i];
-
-        //check all rows to see if any have sub rows, because if they do, we want to show the expander cell in the static header
-        if(typeof row.subRows !== 'undefined' && row.subRows.length) {
-          rowsWithChildrenCount++;
-        }
-
-        for(var j = 0, rowGroupLen = 1 + (row.expanded && typeof row.subRows !== 'undefined' ? row.subRows.length : 0); j < rowGroupLen; j++) {
-          var rowData = rowGroupLen > 1 && j > 0 ? row.subRows[j - 1] : row;
-
-          expandedTableData.push(rowData);
-
-          //render the rows as long as we haven't gone over the DOM row threshold
-          if(i < maxTotalDomRows && renderCount < maxTotalDomRows && j < maxRenderCount) {
-            var staticHeight, dynamicHeight,
-              rowElements = renderRow.call(this, rowData, expandedTableData.length - 1);//i + (rowGroupLen > 1 && j > 0 ? '-'+(j - 1) : ''));
-
-            //append row to table
-            $tableBody.append(rowElements.dynamicRow);
-            $staticTableBody.append(rowElements.staticRow);
-
-            //reconcile possible different heights between static and dynamic rows
-            staticHeight = rowElements.staticRow.height();
-            dynamicHeight = rowElements.dynamicRow.height();
-            if(staticHeight > dynamicHeight) {
-              rowElements.dynamicRow.height(staticHeight);
-            } else if(staticHeight < dynamicHeight) {
-              rowElements.staticRow.height(dynamicHeight);
-            }
-
-            renderCount++; //a row or subrow was rendered
-          }
-        }
-      }
-
-      //size the scroll spacer to the theoretical max height of all the data
+      //size the scroll spacer to the theoretical max width of all the data + spacing margin
       $macroTable.find('div.macro-table-scroll-spacer')
-      .height(rowHeight * (expandedTableData.length + 1))
       .width(totalColumnWidth + marginAdded);
 
       $leftScrollWrapperBody.width(totalColumnWidth + marginAdded)
       $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + scrollBarWidth);
+    },
+
+    /**
+     * @method _renderHeaderRowControls
+     * @description puts the static column header into the appropriate state for the tableData
+     * @private
+     */
+    _renderHeaderRowControls: function() {
+      var options = this.options,
+        summaryRow = options.summaryRow,
+        $macroTable = this.element,
+        $staticColumnSizers = $macroTable.find('colgroup.macro-table-static-column-sizer'), //one in header, one in body
+        $staticHeaderRow = $macroTable.find('div.macro-table-static-header tr.macro-table-static-header-row'),
+        $staticSummaryRow = $macroTable.find('div.macro-table-static-header tr.macro-table-static-summary-row');
+
+      $staticColumnSizers.empty();
+      $staticHeaderRow.empty();
+      $staticSummaryRow.empty();
 
       //set up table for rows to have checkbox columns, sizing handled in .resizeTable()
       if(options.rowsSelectable === true) {
@@ -1413,6 +1493,8 @@
       } else {
         $macroTable.removeClass('macro-table-rows-selectable');
       }
+
+      //WARNING: assuming at this point rowsWithChildrenCount has been initialized and is up to date
 
       //set up table for rows with expandable children
       if(rowsWithChildrenCount > 0) {
@@ -1443,68 +1525,74 @@
     },
 
     /**
-     * @method _setOption
-     * @description Called when an option is changed via jQuery widget factory
+     * @method _renderTableRows
+     * @description initialize the table's data (rows) section and size the scroller appropriately
+     * @param tableData {Array} ordered table data, could be sorted or could be the initialized data
      * @private
      */
-    _setOption: function(key, value) {
-      // In jQuery UI 1.8, you have to manually invoke the _setOption method from the base widget
-      $.Widget.prototype._setOption.apply( this, arguments );
-      // In jQuery UI 1.9 and above, you use the _super method instead
-      //this._super( "_setOption", key, value );
+    _renderTableRows: function(tableData) {
+      var options = this.options,
+        rowHeight = options.rowHeight,
+        maxRenderCount = maxTotalDomRows,
+        $macroTable = this.element,
+        $scrollContainer = $macroTable.find('div.macro-table-scroll-container'),
+        $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
+        $leftScrollWrapperBody = $dataContainerWrapper.find('div.macro-table-data-container div.macro-table-scroll-wrapper'),
+        $tableBody = $dataContainerWrapper.find('tbody.macro-table-column-content'),
+        $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content');
 
-      var options = this.options;
+      //initialize global variables, reinitialize in case table is being re-rendered
+      scrollTop = 0;
+      currentRow = 0;
+      currentDomRow = 0;
+      selectedRowCount = 0;
+      expandedRowCount = 0;
+      expandedTableData = [];
 
-      //handle specific option cases here
-      switch(key) {
+      $dataContainerWrapper.hide();
 
-        case 'width':
-        case 'height':
-          this.resizeTable(options.height, options.width);
-          break;
+      $tableBody.empty();
+      $staticTableBody.empty();
 
-        case 'rowHeight':
-          break;
+      $scrollContainer.scrollTop(0);
 
-        case 'rowBuffer':
-          break;
+      //populate table data into the table's DOM (and check for the presence of sub rows)
+      $dataContainerWrapper.show(); //needs to be visible so row height calculation can be performed
+      for(var i = 0, renderCount = 0, len = tableData.length; i < len; i++) {
+        var row = tableData[i];
 
-        case 'disabled':
-          break;
+        //loop through the main row and any sub rows it has if it's expanded
+        for(var j = 0, rowGroupLen = 1 + (row.expanded && typeof row.subRows !== 'undefined' ? row.subRows.length : 0); j < rowGroupLen; j++) {
+          var rowData = rowGroupLen > 1 && j > 0 ? row.subRows[j - 1] : row;
 
-        case 'columns':
-          this._reRender();
-          break;
+          expandedTableData.push(rowData);
 
-        case 'defaultColumnWidth':
-          break;
+          //render the rows as long as we haven't gone over the DOM row threshold
+          if(i < maxTotalDomRows && renderCount < maxTotalDomRows && j < maxRenderCount) {
+            var staticHeight, dynamicHeight,
+              rowElements = renderRow.call(this, rowData, expandedTableData.length - 1);//i + (rowGroupLen > 1 && j > 0 ? '-'+(j - 1) : ''));
 
-        case 'reorderable':
-          break;
+            //append row to table
+            $tableBody.append(rowElements.dynamicRow);
+            $staticTableBody.append(rowElements.staticRow);
 
-        case 'onColumnReorder':
-          break;
+            //reconcile possible different heights between static and dynamic rows
+            staticHeight = rowElements.staticRow.height();
+            dynamicHeight = rowElements.dynamicRow.height();
+            if(staticHeight > dynamicHeight) {
+              rowElements.dynamicRow.height(staticHeight);
+            } else if(staticHeight < dynamicHeight) {
+              rowElements.staticRow.height(dynamicHeight);
+            }
 
-        case 'onColumnResize':
-          break;
-
-        case 'summaryRow':
-        case 'tableData':
-          this._init(); //causes currentColumn and currentRow to reset to 0
-          break;
-
-        case 'rowsSelectable':
-          //TODO add class managment for macro-table-rwos-selectable too
-          if(value === true) {
-            this.element.addClass('macro-table-rows-selectable');
-          } else {
-            this.element.removeClass('macro-table-rows-selectable');
-            //$('tr.macro-table-selected-row', this.element).removeClass('macro-table-highlight macro-table-selected-row'); //deselect any selected rows
+            renderCount++; //a row or subrow was rendered
           }
-          this._reRender();
-          this.resizeTable(options.height, options.width); //fill space for hidden column / remove space for shown column
-          break;
+        }
       }
+
+      //size the scroll spacer to the theoretical max height of all the data
+      $macroTable.find('div.macro-table-scroll-spacer')
+      .height(rowHeight * (expandedTableData.length + 1));
     },
 
     /**
@@ -1523,6 +1611,41 @@
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
       if(typeof this.options.onColumnReorder === 'function') {
         this.options.onColumnReorder(columns);
+      }
+    },
+
+    /**
+     * @method _sortTable
+     * @description sort the table by a particular column
+     * @param columnToSort {Number|String} the column to sort by's index or field name
+     * @private
+     */
+    _sortTable: function(columnToSort) {
+      var options = this.options,
+        columnData, sortedTableData;
+
+      //columnToSort is an array index
+      if(parseInt(columnToSort).length == columnToSort.length) {
+        if(columnIndex >= 0) {
+          columnData = options.columns[columnIndex];
+          options.sortByColumn = columnData.field;
+          sortedTableData = sortedTableData[options.sortByColumn];
+        } else {
+          options.sortByColumn = '';
+          sortedTableData = options.tableData;
+        }
+      
+      //columnToSort is a column field name
+      } else {
+        options.sortByColumn = columnToSort;
+        sortedTableData = columnToSort != '' ? sortedTableData[columnToSort] : options.tableData;
+      }
+
+      //initialize the ordered tableData to use
+      if(false && typeof sortedTableData === 'undefined') {
+        //spawn webworker to do the sorting
+      } else {
+        this._renderTableRows(sortedTableData);
       }
     },
 
@@ -1617,9 +1740,11 @@
      */
     resizeTable: function(height, width) {
       var $macroTable = this.element,
-        rowHeight = this.options.rowHeight,
+        options = this.options,
+        rowHeight = options.rowHeight,
         headerHeight = $macroTable.find('div.macro-table-scroll-shim').outerHeight() - 1,
-        rowSelectorOffset = this.options.rowsSelectable === true ? rowSelectColumnWidth : 0;
+        rowSelectorOffset = options.rowsSelectable === true ? rowSelectColumnWidth : 0,
+        middleDomRow;
 
       //initialized undefined dimensions with parent dimensions
       height = height || $macroTable.parent().height();
@@ -1628,9 +1753,9 @@
       //determine how many rows will fit in the provided height
       displayRowWindow = height < rowHeight ? ~~(defaultTableHeight / rowHeight) : ~~((height - rowHeight - scrollBarWidth) / rowHeight);
 
-      if(this.options.rowBuffer < displayRowWindow) {
-        console.error('options.rowBuffer',this.options.rowBuffer,'cannot be less than displayRowWindow',displayRowWindow,'. rowBuffer value being changed to',displayRowWindow);
-        this.options.rowBuffer = displayRowWindow;
+      if(options.rowBuffer < displayRowWindow) {
+        console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',displayRowWindow,'. rowBuffer value being changed to',displayRowWindow);
+        options.rowBuffer = displayRowWindow;
       }
 
       //size the data container wrapper
@@ -1649,6 +1774,16 @@
       //size the vertical drop guide for the resizing functionality
       $macroTable.find('div.macro-table-resize-guide')
       .height(height - scrollBarWidth);
+
+      //set globals based on new table dimensions
+      replaceRowWindow = options.rowBuffer / 2;
+      maxTotalDomRows = displayRowWindow + (options.rowBuffer * 2);
+      middleDomRow = ~~(maxTotalDomRows / 2);
+      triggerUpDomRow = middleDomRow - ~~(displayRowWindow / 2) - replaceRowWindow;
+      triggerDownDomRow = middleDomRow - ~~(displayRowWindow / 2) + replaceRowWindow;
+
+      //maxTotalDomRows and the trigger rows have changed, so the table rows need to be re-rendered so that scrolling doesn't break
+      this._sortTable(options.sortByColumn);
     },
 
     /**
