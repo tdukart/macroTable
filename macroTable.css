@@ -1,12 +1,5 @@
-.wrapper {
-  position: relative;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
-  width: 300px;
-  height: 300px;
-}
+/* Basic table styles and shadows */
+
 .macro-table {
   overflow: hidden;
   z-index: 0;
@@ -47,11 +40,23 @@
   box-shadow: 0 0 2px 2px #ccc;
 }
 
+.macro-table.macro-table-loading .macro-table-static-data-container .macro-table-static {
+  -moz-box-shadow: -2px 0 2px 2px #ccc;
+  -webkit-box-shadow: -2px 0 2px 2px #ccc;
+  box-shadow: -2px 0 2px 2px #ccc;
+}
+
 .macro-table .macro-table-header .macro-table-dynamic {
   margin-bottom: 2px; /* allow space for box-shadow */
   -moz-box-shadow: 1px -1px 2px 2px #ccc;
   -webkit-box-shadow: 1px -1px 2px 2px #ccc;
   box-shadow: 1px -1px 2px 2px #ccc;
+}
+
+.macro-table.macro-table-loading .macro-table-header .macro-table-dynamic {
+  -moz-box-shadow: 1px -2px 2px 2px #ccc;
+  -webkit-box-shadow: 1px -2px 2px 2px #ccc;
+  box-shadow: 1px -2px 2px 2px #ccc;
 }
 
 /*
@@ -76,7 +81,9 @@
 }
 
 
-.macro-table tr.macro-table-row:nth-child(odd) {
+/* Table row styles (striped, selected, highlighted) */
+
+.macro-table tr.macro-table-row.macro-table-row-stripe {
   background: rgba(0, 0, 0, .05);
 }
 
@@ -84,7 +91,7 @@
   background: rgba(0, 0, 0, .2);
 }
 
-.macro-table.macro-table-static-column-enabled tr.macro-table-row:nth-child(odd).macro-table-selected-row.macro-table-highlight {
+.macro-table.macro-table-static-column-enabled tr.macro-table-row.macro-table-row-stripe.macro-table-selected-row.macro-table-highlight {
   background: rgba(0, 0, 0, .3);
 }
 
@@ -95,6 +102,9 @@
 .macro-table tr.macro-table-highlight .macro-table-selected-column {
   background: rgba(0, 0, 255, .4);
 }
+
+
+/* Table cell styles TODO: remove td and th in favor of classes */
 
 .macro-table td,
 .macro-table th {
@@ -120,6 +130,24 @@
 
 .macro-table .macro-table-column-sizer th {
   height: 0;
+}
+
+
+/* Actionable styles (resizing, moving, etc.) */
+
+.macro-table .macro-table-data-veil {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 12px;
+  bottom: 12px;
+  left: 0;
+  background-color: rgba(0, 0, 0, .5);
+  z-index: 3;
+}
+
+.macro-table.macro-table-loading .macro-table-data-veil {
+  display: block;
 }
 
 .macro-table.macro-table-resizing {
@@ -174,6 +202,9 @@
   -ms-user-select: none;
   user-select: none;
 }
+
+
+/* Structural styling (catch all) */
 
 .macro-table-static-header,
 .macro-table-header,
@@ -240,6 +271,7 @@
   margin: 0;
 }
 
+
 /* static column rules */
 
 .macro-table .macro-table-static-header,
@@ -252,6 +284,7 @@
 .macro-table.macro-table-static-column-enabled .macro-table-static-data-container {
   display: block;
 }
+
 
 /* expanded rows dotted line hierarchy */
 
@@ -266,19 +299,23 @@
   left: -200%;
 }
 
-.macro-table-expand-toggle-label
-.macro-table-icon.macro-table-arrow-right,
-.macro-table-icon.macro-table-arrow-down {
-  display: inline-block;
-}
-
 .macro-table-expand-toggle + .macro-table-expand-toggle-label,
-.macro-table-row-expander-label {
+.macro-table-row-expander + .macro-table-row-expander-label {
   -webkit-appearance: checkbox;
   height: 12px;
   width: 12px;
-  position: relative;
-  z-index: 1;
+}
+
+.macro-table-expand-toggle:disabled + .macro-table-expand-toggle-label,
+.macro-table-row-expander:disabled + .macro-table-row-expander-label {
+  opacity: .55;
+}
+
+.macro-table-expand-toggle:disabled + .macro-table-expand-toggle-label::before,
+.macro-table-expand-toggle:disabled + .macro-table-expand-toggle-label::after,
+.macro-table-row-expander:disabled + .macro-table-row-expander-label::before,
+.macro-table-row-expander:disabled + .macro-table-row-expander-label::after {
+  opacity: .8;
 }
 
 .macro-table-expand-toggle + .macro-table-expand-toggle-label::before {
@@ -307,7 +344,7 @@
   width: 0;
 }
 
-.macro-table-arrow-right::before {
+.macro-table-row-expander + .macro-table-row-expander-label:before {
   content: "";
   width: 0; 
   height: 0; 
@@ -320,7 +357,7 @@
   margin: -4px -3px 0 0;
 }
 
-.macro-table-arrow-down::before {
+.macro-table-row-expander:checked + .macro-table-row-expander-label::before {
   content: "";
   width: 0; 
   height: 0; 

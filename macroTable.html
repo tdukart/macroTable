@@ -5,6 +5,19 @@
 
     <link rel="stylesheet" type="text/css" href="macroTable.css">
 
+    <style>
+      .wrapper {
+        position: relative;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        width: 300px;
+        height: 300px;
+      }
+    </style>
+
+
   </head>
   <body>
     <div class="wrapper">
@@ -119,8 +132,14 @@
             title: 'Col 2',
             field: 'column2',
             resizable: false,
+            sortable: function(a, b) {
+              var aValue = parseInt(a.data[sortByField]),
+                bValue = parseInt(b.data[sortByField]);
+              return aValue == bValue ? 0 : (aValue > bValue ? 1 : -1);
+            },
             formatter: function(text) {
-              return text+' barf';
+              //class added at random to try and screw up sorting
+              return '<span class="'+~~((Math.random()*1000)+1)+'">'+text+'</span>';
             }
           },{
             title: 'Col 3',

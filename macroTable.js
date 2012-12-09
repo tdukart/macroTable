@@ -441,11 +441,11 @@
       }
     }
     
+    var timestamp = +new Date();
     staticRowColumns += '<td class="macro-table-row-expander-cell' + (expanderCellClass != '' ? ' '+expanderCellClass : '') + '">' + 
       (rowHasChildren ? 
-        '<label class="macro-table-row-expander-label macro-table-icon macro-table-arrow-' + (row.expanded === true ? 'down' : 'right') + '">' +
-          '<input type="checkbox" class="macro-table-checkbox macro-table-row-expander" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
-        '</label>' : 
+        '<input type="checkbox" id="macro-table-row-expander-'+timestamp+'" class="macro-table-checkbox macro-table-row-expander" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
+        '<label for="macro-table-row-expander-'+timestamp+'" class="macro-table-row-expander-label"></label>' : 
         '') + 
     '</td>'; 
 
@@ -692,7 +692,8 @@
       '<div class="macro-table-scroll-container">'+
         '<div class="macro-table-scroll-spacer"></div>'+
       '</div>'+
-      '<div class="macro-table-resize-guide"></div>')
+      '<div class="macro-table-resize-guide"></div>'+
+      '<div class="macro-table-data-veil"></div>')
       .addClass('macro-table');
 
       var $scroll = $macroTable.find('div.macro-table-scroll-container'),
@@ -756,7 +757,7 @@
 
       //row sorting listener
       $header.delegate('th.macro-table-column-sortable', 'click', function(e) {
-        if(!$macroTable.hasClass('macro-table-column-moving')) {          
+        if(!$macroTable.hasClass('macro-table-column-moving')) {
           self._sortTable($(this).index());
         }
       });
@@ -964,8 +965,10 @@
 
       /* Wire table scrolling events */
 
-      //mousewheel for table scrolling, wrapper for scrolling the scroll container
-      $dataContainer.bind('mousewheel', function(e, delta, deltaX, deltaY) {
+      //mousewheel for table scrolling, wrapper for scrolling the scroll container, attached to .macro-table-data-container-wrapper
+      $dataContainer.parent()
+      .add($macroTable.find('div.macro-table-data-veil'))
+      .bind('mousewheel', function(e, delta, deltaX, deltaY) {
         e.preventDefault();
         if(deltaY < 0) {
           $scroll.scrollTop(scrollTop + rowHeight);
@@ -1621,31 +1624,93 @@
      * @private
      */
     _sortTable: function(columnToSort) {
-      var options = this.options,
-        columnData, sortedTableData;
+      var self = this,
+        options = this.options,
+        $veil = $('div.macro-table-data-veil', this.element),
+        columnData, sortedTableData, sortWorker, columnSorter;
 
       //columnToSort is an array index
       if(parseInt(columnToSort).length == columnToSort.length) {
-        if(columnIndex >= 0) {
-          columnData = options.columns[columnIndex];
+
+        if(columnToSort >= 0) {
+        
+          columnData = options.columns[columnToSort];
           options.sortByColumn = columnData.field;
-          sortedTableData = sortedTableData[options.sortByColumn];
+
+          sortedTableData = sortedRows[options.sortByColumn];
+
         } else {
+
           options.sortByColumn = '';
           sortedTableData = options.tableData;
+        
         }
       
       //columnToSort is a column field name
       } else {
+
         options.sortByColumn = columnToSort;
-        sortedTableData = columnToSort != '' ? sortedTableData[columnToSort] : options.tableData;
+        
+        if(columnToSort != '') {
+
+          for(var i = options.columns.length - 1; i >= 0; i--) { //TODO: make this a helper function?
+            if(options.columns[i].field == columnToSort) {
+              columnData = options.columns[i];
+              break;
+            }
+          }
+
+          sortedTableData = sortedTableData[columnToSort];
+        
+        } else {
+
+          sortedTableData = options.tableData;
+          self._renderTableRows(sortedTableData);
+          return;
+        }
       }
 
+      //spawn webworker to do the sorting
+      $veil.show();
+
+      sortWorker = new Worker('macroTableSort.js');
+      /*sortWorker.onerror = function(e) {
+        console.error(e.message);
+      };*/
+      sortWorker.onmessage = function(e) {
+        var sortedTableData = e.data;
+        sortedRows[options.sortByColumn] = sortedTableData;
+        self._renderTableRows(sortedTableData);
+        $veil.hide();
+
+        //console.log('sorted data',sortedTableData);
+      };
+
       //initialize the ordered tableData to use
-      if(false && typeof sortedTableData === 'undefined') {
-        //spawn webworker to do the sorting
+      if(typeof sortedTableData === 'undefined') {
+
+        //console.log('pre-sorted data',options.tableData);
+
+        if(typeof columnData.sortable === 'function') {
+          columnSorter = columnData.sortable.toString();
+        }
+
+        sortWorker.postMessage({
+          action: 'sort',
+          tableData: options.tableData,
+          sortByField: options.sortByColumn,
+          columnSorter: columnSorter
+        });
+
       } else {
-        this._renderTableRows(sortedTableData);
+
+        //console.log('pre-sorted data',sortedTableData);
+        
+        sortWorker.postMessage({
+          action: 'order',
+          tableData: sortedTableData
+        });
+        
       }
     },
 
