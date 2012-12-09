@@ -1665,7 +1665,7 @@
         } else {
 
           sortedTableData = options.tableData;
-          self._renderTableRows(sortedTableData);
+          this._renderTableRows(sortedTableData);
           return;
         }
       }
@@ -1674,15 +1674,19 @@
       $veil.show();
 
       sortWorker = new Worker('macroTableSort.js');
-      /*sortWorker.onerror = function(e) {
-        console.error(e.message);
-      };*/
+      
+      sortWorker.onerror = function(e) {
+        sortWorker.terminate();
+        this._renderTableRows(options.tableData);
+      };
+
       sortWorker.onmessage = function(e) {
         var sortedTableData = e.data;
         sortedRows[options.sortByColumn] = sortedTableData;
         self._renderTableRows(sortedTableData);
         $veil.hide();
 
+        sortWorker.terminate();
         //console.log('sorted data',sortedTableData);
       };
 
