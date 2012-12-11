@@ -135,6 +135,15 @@
 
 /* Actionable styles (resizing, moving, etc.) */
 
+.macro-table .macro-table-column-sortable {
+  cursor: pointer;
+}
+
+.macro-table.macro-table-column-moving .macro-table-column-sortable {
+  cursor: -webkit-grabbing;
+  cursor: -moz-grabbing;
+}
+
 .macro-table .macro-table-data-veil {
   display: none;
   position: absolute;
@@ -166,6 +175,43 @@
 
 .macro-table-column-moving .macro-table-resize-guide {
   cursor: inherit;
+}
+
+.macro-table-reorder-handle {
+  display: none;
+  top: 4px;
+  position: absolute;
+  height: 20px;
+  width: 10px;
+  cursor: -webkit-grab;
+  cursor: -moz-grab;
+}
+
+.macro-table-header-active .macro-table-reorder-handle {
+  display: block;
+}
+
+.macro-table.macro-table-column-moving .macro-table-reorder-handle {
+  display: none;
+}
+
+.macro-table-reorder-handle::before,
+.macro-table-reorder-handle::after {
+  content: "";
+  position: absolute;
+  height: 20px;
+  width: 2px;
+  background-color: rgba(0, 0, 0, .1);
+  margin-left: 2px;
+}
+
+.macro-table-reorder-handle::after {
+  margin-left: 6px;
+}
+
+.macro-table-reorder-handle:hover::before,
+.macro-table-reorder-handle:hover::after {
+  background-color: rgba(0, 0, 0, .3);
 }
 
 .macro-table-reorder-guide {

@@ -91,6 +91,7 @@
     sortedRows = {}, //object of sorted combinations of the table data, key 'default' contains the data ordered as it was initialized
     maxTotalDomRows, //real DOM row count would only be less than this if the amount of data is less than this number (don't need the extra DOM rows to display total data)
     scrollTop = 0, //default to top of table
+    scrollLeft = 0,//default to left of table
     currentRow = 0, //0-indexed, describes the top-most, visible data row (direct correlation with array index). default to first row
     currentDomRow = 0, //0-indexed, describes the top-most, visible DOM row. default to first row
     triggerUpDomRow, //when scrolling up, when on this DOM row, a row swap will trigger
@@ -498,6 +499,71 @@
     return count;
   }
 
+  /**
+   * Spawn a web worker to perform the table sorting and renders the result when complete
+   * @param sortedTableData {Array} the current data structure for the table data sorted by this column.
+   *  if it is undefined, it means the table has not yet been sorted by this column. if defined, it should
+   *  simply be reversed (no need to full sort again, we're just changing direction of the sort)
+   * @param columnData {Object} the definition of the column by which the table data is to be sorted
+   * @param $columnHeader {jQuery} column header for the sorted column
+   */
+  function workerSortRow(sortedTableData, columnData, $columnHeader) {
+    var self = this,
+      options = this.options,
+      $veil = $('div.macro-table-data-veil', this.element),
+      columnSorter;
+
+    $veil.show();
+
+    sortWorker = new Worker('macroTableSort.js');
+    
+    sortWorker.onerror = function(e) {
+      sortWorker.terminate();
+      self._renderTableRows(options.tableData);
+    };
+
+    sortWorker.onmessage = function(e) {
+      var sortedTableData = e.data;
+      sortedRows[options.sortByColumn] = sortedTableData;
+      self._renderTableRows(sortedTableData);
+
+      $columnHeader.removeClass('macro-table-sort-loading')
+      .addClass(columnData.direction > 0 ? 'macro-table-sort-ascending' : 'macro-table-sort-descending');
+
+      $veil.hide();
+
+      sortWorker.terminate();
+      //console.log('sorted data',sortedTableData);
+    };
+
+    //initialize the ordered tableData to use
+    if(typeof sortedTableData === 'undefined') {
+
+      //console.log('pre-sorted data',options.tableData);
+
+      if(typeof columnData.sortable === 'function') {
+        columnSorter = columnData.sortable.toString();
+      }
+
+      sortWorker.postMessage({
+        action: 'sort',
+        tableData: options.tableData,
+        sortByField: options.sortByColumn,
+        columnSorter: columnSorter
+      });
+
+    } else {
+
+      //console.log('pre-sorted data',sortedTableData);
+      
+      sortWorker.postMessage({
+        action: 'order',
+        tableData: sortedTableData
+      });
+      
+    }
+  }
+
   $.widget('n.macroTable', {
 
     /**
@@ -667,6 +733,7 @@
               '<tr class="macro-table-summary-row"></tr>'+
             '</table>'+
           '</div>'+
+          '<div class="macro-table-reorder-handle"></div>'+
         '</div>'+
         '<div class="macro-table-scroll-shim"></div>'+
       '</div>'+
@@ -700,8 +767,10 @@
         $dataContainer = $macroTable.find('div.macro-table-data-container'),
         $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
         $resizer = $macroTable.find('div.macro-table-resize-guide'),
+        $reorderHandle = $macroTable.find('div.macro-table-reorder-handle'),
         $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
-        $header = $macroTable.find('div.macro-table-header table'),
+        $headerWrapper = $macroTable.find('div.macro-table-header'),
+        $header = $headerWrapper.find('table'),
         $dynamicTableBody = $macroTable.find('tbody.macro-table-column-content'),
         $staticHeaderRow = $macroTable.find('div.macro-table-static-header tr.macro-table-static-header-row'),
         $staticTableBody = $macroTable.find('tbody.macro-table-static-column-content'),
@@ -752,6 +821,48 @@
           }
         }
       }
+
+      /* Wire column header events */
+
+      var columnMouseoverPid;
+      $header.delegate('tr.macro-table-header-row th', 'mouseover', function(e) {
+        var $columnHeader = $(this);
+
+        /* Handle reorder columns functionality */
+        if(self.options.reorderable === true) {
+
+          /* position reorder handle */
+
+          $header.find('th.macro-table-header-active-cell').removeClass('macro-table-header-active-cell');
+
+          if($columnHeader.hasClass('macro-table-column-reorderable')) {
+
+            clearTimeout(columnMouseoverPid);
+
+            $headerWrapper.addClass('macro-table-header-active');
+            $columnHeader.addClass('macro-table-header-active-cell');
+            $reorderHandle.css({
+              top: (($columnHeader.height() - $reorderHandle.height()) / 2) + 'px',
+              left: $headerWrapper.scrollLeft() + $columnHeader.position().left + 2 + 'px'
+            });
+          } else {
+            $headerWrapper.removeClass('macro-table-header-active');
+          }
+
+        }
+      })
+
+      //provide delay to hiding of reorder handle when mouseout'ing of header cell
+      .delegate('tr.macro-table-header-row th', 'mouseout', function(e) {
+        if(!$(e.relatedTarget).hasClass('macro-table-reorder-handle')) { //don't deselect column if hovering over the reorder handle
+          columnMouseoverPid = setTimeout(function() {
+            $headerWrapper.removeClass('macro-table-header-active');
+            $(e.target).removeClass('macro-table-header-active-cell');
+          }, 500);
+        }
+      });
+      //$header.delegate('th.macro-table-column-sortable', 'click', function(e) {
+
 
       /* Wire column sort events */
 
@@ -963,78 +1074,6 @@
       });
 
 
-      /* Wire table scrolling events */
-
-      //mousewheel for table scrolling, wrapper for scrolling the scroll container, attached to .macro-table-data-container-wrapper
-      $dataContainer.parent()
-      .add($macroTable.find('div.macro-table-data-veil'))
-      .bind('mousewheel', function(e, delta, deltaX, deltaY) {
-        e.preventDefault();
-        if(deltaY < 0) {
-          $scroll.scrollTop(scrollTop + rowHeight);
-        } else if(deltaY > 0) {
-          $scroll.scrollTop(scrollTop - rowHeight);
-        }
-
-        if(deltaX != 0) {
-          var $domColumns = $header.find('th'),
-            offset = Math.abs($domColumns.eq(0).position().left);
-
-          if(deltaX < 0 && currentColumn > 0) {
-            var lastOffset = Math.abs($domColumns.eq(currentColumn - 1).position().left);
-            console.log('left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',currentColumn);
-            $scroll.scrollLeft(
-              offset
-              -lastOffset
-            );
-          } else if(deltaX > 0 && currentColumn < $domColumns.length - 1) {
-            var nextOffset = Math.abs($domColumns.eq(currentColumn + 1).position().left);
-            console.log('right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',currentColumn);
-            $scroll.scrollLeft(
-              offset +
-              nextOffset
-            );
-          }
-        }
-        //console.log('Mousewheel .macro-table-data-container', scrollTop, rowHeight,$scroll);
-      });
-
-      //scroll function for the scroll container, using the scrollbars
-      var tableScrollLeft;
-      $scroll.scroll(function(e) {
-        var lastScrollTop = scrollTop,
-          lastTableScrollLeft = tableScrollLeft;
-
-        scrollTop = $(this).scrollTop();
-        tableScrollLeft = $(this).scrollLeft();
-
-        var rowsToScroll = Math.abs(~~(scrollTop / rowHeight) - ~~(lastScrollTop / rowHeight));
-        if(rowsToScroll > 0) {
-          if(lastScrollTop < scrollTop) {
-            
-            currentRow += rowsToScroll;
-            if(!breakTableScroll) {
-              scrollTableVertical.call(self, rowsToScroll, forceTableScrollRender);
-              //console.log('scrolling down to row',currentRow,'by',rowsToScroll,'rows');
-            }
-
-          } else if (lastScrollTop > scrollTop){
-
-            currentRow -= rowsToScroll;
-            if(!breakTableScroll) {
-              scrollTableVertical.call(self, -rowsToScroll, forceTableScrollRender);
-              //console.log('scrolling up to row',currentRow,'by',rowsToScroll,'rows');
-            }
-          }
-        }
-
-        if(tableScrollLeft != lastTableScrollLeft) {
-          scrollTableHorizontal.call(self);
-        }
-        //console.log('Scrolling .macro-table-scroll-container: lastScrollTop',lastScrollTop,'scrollTop',scrollTop,'calculatedRow',calculatedRow,'lastCalculatedRow',lastCalculatedRow,'rowsToScroll',rowsToScroll);
-      });
-
-
       /* Wire resize column events */
 
       //helper function to return the width to resize a column to based on current cursor position
@@ -1145,60 +1184,32 @@
       /* Wire column reorder events */
 
       //mousedown, mouseup on the column headers, used for column ordering
-      var mouseDownTimeout,
-        columnGrabOffset;
-      if(this.options.reorderable === true) {
-        $header.delegate('th.macro-table-column-reorderable', 'mousedown', function(e) {
-          e.preventDefault();
+      var columnGrabOffset;
+      $reorderHandle.bind('mousedown', function(e) {
+        e.preventDefault();
 
-          if(e.which == 1) { //left click only
+        if(e.which == 1) { //left click only
 
-            var $element = $(e.target),
-              thumbPosition = ($element.offset().left - $macroTable.offset().left) - //relative start position to macroTable container
-                              Math.ceil($resizer.outerWidth() / 2); //end position of the cell with resize guide compensation
+          var $selectedColumn = $header.find('th.macro-table-header-active-cell'),
+            thumbPosition = ($selectedColumn.offset().left - $macroTable.offset().left) - //relative start position to macroTable container
+                            Math.ceil($resizer.outerWidth() / 2); //end position of the cell with resize guide compensation
 
-            //trigger reordering mode if holding down for 1 second
-            mouseDownTimeout = setTimeout(function() {
-              $macroTable.addClass('macro-table-column-moving');
-              
-              columnGrabOffset = e.pageX - $element.offset().left;
+          //trigger reordering mode
+          $macroTable.addClass('macro-table-column-moving');
+          
+          columnGrabOffset = e.pageX - $selectedColumn.offset().left;
 
-              $reorderGuide.width($element.outerWidth())
-              .css('left', $dataContainer.scrollLeft() + $element.position().left);
-              
-              $resizer.css('left', thumbPosition + 'px');
-              
-              $macroTable.find('colgroup.macro-table-column-sizer col').filter(':nth-child('+($element.index() + 1)+')')
-              .addClass('macro-table-selected-column');
-              
-              console.log('offset column',$element.offset().left,'position column',$element.position().left,'resizer',$dataContainer.scrollLeft() + $element.position().left - ($resizer.outerWidth() / 2));
-            }, 1000);
-          }
-        });
+          $reorderGuide.width($selectedColumn.outerWidth())
+          .css('left', $dataContainer.scrollLeft() + $selectedColumn.position().left);
 
-        $header.delegate('th', 'mouseup', function(e) {
+          $resizer.css('left', thumbPosition + 'px');
 
-          if(e.which == 1) { //left click only
+          $macroTable.find('colgroup.macro-table-column-sizer col').filter(':nth-child('+($selectedColumn.index() + 1)+')')
+          .addClass('macro-table-selected-column');
 
-            clearTimeout(mouseDownTimeout);
-
-            var newIndex = $(e.target).index(),
-              $selectedColumn = $macroTable.find('col.macro-table-selected-column');
-
-            if($selectedColumn.length > 0) {
-
-              var columnToReorderIndex = $selectedColumn.removeClass('macro-table-selected-column')
-              .filter(':first').index();
-
-              $macroTable.removeClass('macro-table-column-moving');
-
-              if(columnToReorderIndex != newIndex) {
-                self._moveColumn(columnToReorderIndex, newIndex);
-              }
-            }
-          }
-        });
-      }
+          console.log('offset column',$selectedColumn.offset().left,'position column',$selectedColumn.position().left,'resizer',$dataContainer.scrollLeft() + $selectedColumn.position().left - ($resizer.outerWidth() / 2));
+        }
+      });
 
 
       //mousemove event on the table root element, handling movement for column reordering and column resizing
@@ -1209,7 +1220,8 @@
           resizerWidth = $resizer.outerWidth(),
           cursorOffset = e.pageX - $macroTable.offset().left;
 
-        //process enabling/disabling the resize handle when hovering
+        /* process enabling/disabling the resize handle when hovering */
+
         if(!$macroTable.hasClass('macro-table-resizing') && !$macroTable.hasClass('macro-table-column-moving')) {
 
           if($element.hasClass('macro-table-column-resizable')) {
@@ -1236,7 +1248,7 @@
           } else if(!$element.hasClass('macro-table-resize-guide')) {
 
             deselectResizeHandle();
-          
+
           }
         //the handle is grabbed and being dragged around
         } else if($macroTable.hasClass('macro-table-resizing')) {
@@ -1246,6 +1258,9 @@
           setTimeout(function() {
             $resizer.css('left', calculateReiszeColumnWidth(e.pageX, $columnToResize) + 'px'); 
           }, 0);
+
+
+        /* process reordering columns */
 
         } else if($macroTable.hasClass('macro-table-column-moving')) {
           e.stopPropagation();
@@ -1271,13 +1286,17 @@
               }
             });
 
+            $macroTable.find('colgroup.macro-table-column-sizer col').removeClass('macro-table-target-column')
+            .filter(':nth-child('+(newIndex + 1)+')')
+            .addClass('macro-table-target-column');
+
             //handle scrolling the columns if dragging the guide to the edges of the container
             var newColumnWidth = $newColumn.outerWidth(),
               newColumnPosition = $newColumn.position().left + dataContainerOffset,
               isScrollingRight = newColumnPosition + newColumnWidth > $dataContainer.outerWidth(),
               isScrollingLeft = newColumnPosition - dataContainerOffset == 0 && scrollOffset != 0;
 
-            if(isScrollingLeft || isScrollingRight) {
+            if((isScrollingLeft || isScrollingRight) && $macroTable.hasClass('macro-table-column-moving')) {
               if(typeof scrollColumnTimer === 'undefined') {
                 scrollColumnTimer = setTimeout(function() {
                   scrollColumnTimer = undefined;
@@ -1337,6 +1356,101 @@
         }
 
         lastPageX = e.pageX;
+      })
+
+      .bind('mouseup', function(e) {
+        var columnToReorderIndex, newIndex, $selectedColumn;
+
+        if(e.which == 1) { //left click only
+
+          $selectedColumn = $macroTable.find('col.macro-table-selected-column');
+
+          if($selectedColumn.length > 0) {
+
+            columnToReorderIndex = $selectedColumn.removeClass('macro-table-selected-column')
+            .filter(':first').index();
+
+            newIndex = $header.find('col.macro-table-target-column')
+            .removeClass('macro-table-target-column').index();
+
+            if(columnToReorderIndex != newIndex && newIndex >= 0) {
+              self._moveColumn(columnToReorderIndex, newIndex);
+            }
+
+            $macroTable.removeClass('macro-table-column-moving');
+          }
+        }
+      });
+
+
+      /* Wire table scrolling events */
+
+      //mousewheel for table scrolling, wrapper for scrolling the scroll container, attached to .macro-table-data-container-wrapper
+      //$dataContainer.parent()
+      $macroTable.add($macroTable.find('div.macro-table-data-veil'))
+      .bind('mousewheel', function(e, delta, deltaX, deltaY) {
+        e.preventDefault();
+        if(deltaY < 0) {
+          $scroll.scrollTop(scrollTop + rowHeight);
+        } else if(deltaY > 0) {
+          $scroll.scrollTop(scrollTop - rowHeight);
+        }
+
+        if(deltaX != 0) {
+          var $domColumns = $header.find('th'),
+            offset = Math.abs($domColumns.eq(0).position().left);
+
+          if(deltaX < 0 && currentColumn > 0) {
+            var lastOffset = Math.abs($domColumns.eq(currentColumn - 1).position().left);
+            console.log('left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',currentColumn);
+            $scroll.scrollLeft(
+              offset
+              -lastOffset
+            );
+          } else if(deltaX > 0 && currentColumn < $domColumns.length - 1) {
+            var nextOffset = Math.abs($domColumns.eq(currentColumn + 1).position().left);
+            console.log('right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',currentColumn);
+            $scroll.scrollLeft(
+              offset +
+              nextOffset
+            );
+          }
+        }
+        //console.log('Mousewheel .macro-table-data-container', scrollTop, rowHeight,$scroll);
+      });
+
+      //scroll function for the scroll container, using the scrollbars
+      $scroll.scroll(function(e) {
+        var lastScrollTop = scrollTop,
+          lastTableScrollLeft = scrollLeft;
+
+        scrollTop = $(this).scrollTop();
+        scrollLeft = $(this).scrollLeft();
+
+        var rowsToScroll = Math.abs(~~(scrollTop / rowHeight) - ~~(lastScrollTop / rowHeight));
+        if(rowsToScroll > 0) {
+          if(lastScrollTop < scrollTop) {
+            
+            currentRow += rowsToScroll;
+            if(!breakTableScroll) {
+              scrollTableVertical.call(self, rowsToScroll, forceTableScrollRender);
+              //console.log('scrolling down to row',currentRow,'by',rowsToScroll,'rows');
+            }
+
+          } else if (lastScrollTop > scrollTop){
+
+            currentRow -= rowsToScroll;
+            if(!breakTableScroll) {
+              scrollTableVertical.call(self, -rowsToScroll, forceTableScrollRender);
+              //console.log('scrolling up to row',currentRow,'by',rowsToScroll,'rows');
+            }
+          }
+        }
+
+        if(scrollLeft != lastTableScrollLeft) {
+          scrollTableHorizontal.call(self);
+        }
+        //console.log('Scrolling .macro-table-scroll-container: lastScrollTop',lastScrollTop,'scrollTop',scrollTop,'calculatedRow',calculatedRow,'lastCalculatedRow',lastCalculatedRow,'rowsToScroll',rowsToScroll);
       });
 
       $macroTable.show();
@@ -1357,6 +1471,14 @@
 
       //initialize the global count for rows with children
       rowsWithChildrenCount = countRowsWithChildren.call(this);
+
+      scrollTop = 0;
+      currentRow = 0;
+      currentDomRow = 0;
+      currentColumn = 0;
+      currentDomColumn = 0;
+      selectedRowCount = 0;
+      expandedRowCount = 0;
 
       this._renderTableHeader();
       this._renderHeaderRowControls();
@@ -1381,18 +1503,15 @@
         $macroTable = this.element,
         $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
         $headerWrapper = $macroTable.find('div.macro-table-header-wrapper'),
-        $headerRow = $headerWrapper.find('div.macro-table-header tr.macro-table-header-row'),
-        $leftScrollWrapperHeader = $headerWrapper.find('div.macro-table-header div.macro-table-scroll-wrapper'),
+        $header = $headerWrapper.find('div.macro-table-header'),
+        $headerRow = $header.find('tr.macro-table-header-row'),
+        $leftScrollWrapperHeader = $header.find('div.macro-table-scroll-wrapper'),
         $leftScrollWrapperBody = $macroTable.find('div.macro-table-data-container div.macro-table-scroll-wrapper'),
-        $summaryRow = $headerWrapper.find('div.macro-table-header tr.macro-table-summary-row'),
+        $summaryRow = $header.find('tr.macro-table-summary-row'),
 
         totalColumnWidth = 0,
         tableViewportWidth = $macroTable.parent().width() - scrollBarWidth,
         marginAdded;
-
-      //initialize global variables, reinitialize in case table is being re-rendered
-      currentColumn = 0;
-      currentDomColumn = 0;
 
       $headerWrapper.hide();
 
@@ -1401,7 +1520,7 @@
       $columnSizers.empty();
 
       //build the column headers
-      $headerWrapper.show(); ////needs to be visible so column width calculation can be performed
+      $headerWrapper.show(); //needs to be visible so column width calculation can be performed
       for(var i = columns.length - 1; i >= 0; i--) {
         var columnWidth = typeof columns[i].width !== 'undefined' ? parseInt(columns[i].width) : this.options.defaultColumnWidth;
 
@@ -1461,6 +1580,10 @@
 
       $leftScrollWrapperBody.width(totalColumnWidth + marginAdded)
       $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + scrollBarWidth);
+
+      $header.scrollLeft(
+        $headerRow.find('th').filter(':nth-child('+(currentColumn + 1)+')').position().left //scroll position of old column
+      );
     },
 
     /**
@@ -1530,6 +1653,7 @@
     /**
      * @method _renderTableRows
      * @description initialize the table's data (rows) section and size the scroller appropriately
+     *  the table will return to whatever scroll state it was in prior to this function being called
      * @param tableData {Array} ordered table data, could be sorted or could be the initialized data
      * @private
      */
@@ -1538,26 +1662,18 @@
         rowHeight = options.rowHeight,
         maxRenderCount = maxTotalDomRows,
         $macroTable = this.element,
-        $scrollContainer = $macroTable.find('div.macro-table-scroll-container'),
         $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
-        $leftScrollWrapperBody = $dataContainerWrapper.find('div.macro-table-data-container div.macro-table-scroll-wrapper'),
+        $dataContainer = $dataContainerWrapper.find('div.macro-table-data-container'),
+        $leftScrollWrapperBody = $dataContainer.find('div.macro-table-scroll-wrapper'),
         $tableBody = $dataContainerWrapper.find('tbody.macro-table-column-content'),
         $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content');
 
-      //initialize global variables, reinitialize in case table is being re-rendered
-      scrollTop = 0;
-      currentRow = 0;
-      currentDomRow = 0;
-      selectedRowCount = 0;
-      expandedRowCount = 0;
       expandedTableData = [];
 
       $dataContainerWrapper.hide();
 
       $tableBody.empty();
       $staticTableBody.empty();
-
-      $scrollContainer.scrollTop(0);
 
       //populate table data into the table's DOM (and check for the presence of sub rows)
       $dataContainerWrapper.show(); //needs to be visible so row height calculation can be performed
@@ -1571,9 +1687,9 @@
           expandedTableData.push(rowData);
 
           //render the rows as long as we haven't gone over the DOM row threshold
-          if(i < maxTotalDomRows && renderCount < maxTotalDomRows && j < maxRenderCount) {
+          if(i >= currentRow - currentDomRow && renderCount < maxTotalDomRows && j < maxRenderCount) {
             var staticHeight, dynamicHeight,
-              rowElements = renderRow.call(this, rowData, expandedTableData.length - 1);//i + (rowGroupLen > 1 && j > 0 ? '-'+(j - 1) : ''));
+              rowElements = renderRow.call(this, rowData, expandedTableData.length - 1);
 
             //append row to table
             $tableBody.append(rowElements.dynamicRow);
@@ -1596,6 +1712,11 @@
       //size the scroll spacer to the theoretical max height of all the data
       $macroTable.find('div.macro-table-scroll-spacer')
       .height(rowHeight * (expandedTableData.length + 1));
+
+      //return table to the old scoll position
+      $dataContainer.scrollTop(
+        $tableBody.find('tr').filter(':nth-child('+(currentDomRow + 1)+')').position().top //scroll position of old DOM row
+      );
     },
 
     /**
@@ -1626,7 +1747,7 @@
     _sortTable: function(columnToSort) {
       var self = this,
         options = this.options,
-        $veil = $('div.macro-table-data-veil', this.element),
+        $columnHeader = $('div.macro-table-header tr.macro-table-header-row th', this.element),
         columnData, sortedTableData, sortWorker, columnSorter;
 
       //columnToSort is an array index
@@ -1637,13 +1758,23 @@
           columnData = options.columns[columnToSort];
           options.sortByColumn = columnData.field;
 
+          //when this function is called with columnToSort as a Number value, we know this is a user action
+          //rather than a re-rendering. therefore we know we should change sort order direction
+          columnData.direction = typeof columnData.direction === 'undefined' ? 1 : columnData.direction * -1;
+
           sortedTableData = sortedRows[options.sortByColumn];
+
+          $columnHeader = $columnHeader.filter(':nth-child('+(columnToSort + 1)+')')
+          .removeClass('macro-table-sort-ascending macro-table-sort-descending')
+          .addClass('macro-table-sort-loading');
+
+          workerSortRow.call(this, sortedTableData,columnData, $columnHeader);
+          return;
 
         } else {
 
           options.sortByColumn = '';
           sortedTableData = options.tableData;
-        
         }
       
       //columnToSort is a column field name
@@ -1653,69 +1784,27 @@
         
         if(columnToSort != '') {
 
-          for(var i = options.columns.length - 1; i >= 0; i--) { //TODO: make this a helper function?
-            if(options.columns[i].field == columnToSort) {
-              columnData = options.columns[i];
+          for(var columnIndex = options.columns.length - 1; columnIndex >= 0; columnIndex--) { //TODO: make this a helper function?
+            if(options.columns[columnIndex].field == columnToSort) {
+              
+              columnData = options.columns[columnIndex];
+
+              //when this function is called with columnToSort as a String value, we know this is an internal
+              //re-rendering without intention of changing the sort order direction
+              
               break;
             }
           }
 
-          sortedTableData = sortedTableData[columnToSort];
-        
+          sortedTableData = sortedRows[columnToSort];
+
         } else {
 
           sortedTableData = options.tableData;
-          this._renderTableRows(sortedTableData);
-          return;
         }
       }
 
-      //spawn webworker to do the sorting
-      $veil.show();
-
-      sortWorker = new Worker('macroTableSort.js');
-      
-      sortWorker.onerror = function(e) {
-        sortWorker.terminate();
-        this._renderTableRows(options.tableData);
-      };
-
-      sortWorker.onmessage = function(e) {
-        var sortedTableData = e.data;
-        sortedRows[options.sortByColumn] = sortedTableData;
-        self._renderTableRows(sortedTableData);
-        $veil.hide();
-
-        sortWorker.terminate();
-        //console.log('sorted data',sortedTableData);
-      };
-
-      //initialize the ordered tableData to use
-      if(typeof sortedTableData === 'undefined') {
-
-        //console.log('pre-sorted data',options.tableData);
-
-        if(typeof columnData.sortable === 'function') {
-          columnSorter = columnData.sortable.toString();
-        }
-
-        sortWorker.postMessage({
-          action: 'sort',
-          tableData: options.tableData,
-          sortByField: options.sortByColumn,
-          columnSorter: columnSorter
-        });
-
-      } else {
-
-        //console.log('pre-sorted data',sortedTableData);
-        
-        sortWorker.postMessage({
-          action: 'order',
-          tableData: sortedTableData
-        });
-        
-      }
+      this._renderTableRows(sortedTableData);
     },
 
     /**
@@ -1727,7 +1816,9 @@
       var scrollPositionLeft = currentColumn,
         scrollPositionTop = currentRow; //FIXME: this will be broken if looking at a subRow
 
-      this._init(); //causes currentColumn and currentRow to reset to 0
+      //this._init(); //causes currentColumn and currentRow to reset to 0
+      this._renderTableHeader();
+      this._sortTable(this.options.sortByColumn); //re-render table rows
 
       this.scrollToColumn(scrollPositionLeft)
       this.scrollToRow(scrollPositionTop);
@@ -1885,10 +1976,12 @@
     scrollToColumn: function(scrollToColumn) {
       console.log('scroll to column',scrollToColumn);
 
-      var $column = this.element.find('tr.macro-table-header-row th:nth-child('+scrollToColumn+')'),
+      var $column = this.element.find('tr.macro-table-header-row th:nth-child('+(scrollToColumn + 1)+')'),
         columnOffset = $column.length > 0 ? $column.position().left : 0,
         $scroll = this.element.find('div.macro-table-scroll-container');
-      
+
+      scrollLeft = -1; //force a scroll
+
       $scroll.scrollLeft($scroll.scrollLeft() + columnOffset);
     },
 
