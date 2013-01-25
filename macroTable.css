@@ -148,11 +148,10 @@
   display: none;
   position: absolute;
   top: 0;
-  right: 12px;
-  bottom: 12px;
   left: 0;
   background-color: rgba(0, 0, 0, .5);
   z-index: 3;
+  /* right and bottom will be set by javascript */
 }
 
 .macro-table.macro-table-loading .macro-table-data-veil {
@@ -270,18 +269,20 @@
   border: 1px solid #ccc;
   border-right: 0;
   border-bottom: 0;
-  margin-right: 12px;
+  /* margin-right is set by javascript */
 }
 
 .macro-table-scroll-shim {
   position: absolute;
-  width: 10px;
   top: -1px;
   bottom: 0;
-  right: -12px;
   background-color: #f8f8f8;
   border: 1px solid #ccc;
   margin-bottom: 4px; /* allow space for box-shadow in header */
+
+  /* width and right offset will be set by javascript */
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 .macro-table-header-wrapper table {
@@ -294,19 +295,29 @@
   z-index: 2;
   width: 100%;
   height: 100%;
-  border-left: 1px solid #ccc;
+  border: 1px solid #ccc;
+  border-top-width: 0;
 }
 
 .macro-table-scroll-container {
   position: absolute;
   overflow: scroll;
-  border-width: 0;
   padding: 0;
   margin: 0;
   z-index: 1;
   width: 100%;
   height: 100%;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-top-width: 0;
 }
+
+.macro-table.has-styled-scrollbars .macro-table-scroll-container {
+  box-sizing: content-box;
+  border-width: 0;
+}
+
 
 .macro-table-static-column-content,
 .macro-table-static-header-row {

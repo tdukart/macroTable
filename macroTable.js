@@ -75,7 +75,9 @@
 
   var rowSelectColumnWidth =16, //the static width of the checkbox column for selecting rows
     expanderColumnWidth = 16, //the static width of the expand/collapse sub rows column
-    scrollBarWidth = 12,
+    styledScrollbarWidth = 12,
+    unStyledScrollbarWidth = 16,
+    scrollBarWidth = navigator.userAgent.indexOf(' AppleWebKit/') !== -1 ? styledScrollbarWidth : unStyledScrollbarWidth,
     resizeColumnMinWidth = 30,
     defaultTableHeight = 200, //default the table to this height
     displayRowWindow, //the max number of rows that will show in the provided table height
@@ -1453,6 +1455,8 @@
         //console.log('Scrolling .macro-table-scroll-container: lastScrollTop',lastScrollTop,'scrollTop',scrollTop,'calculatedRow',calculatedRow,'lastCalculatedRow',lastCalculatedRow,'rowsToScroll',rowsToScroll);
       });
 
+      this._initializeScrollBarOffsets();
+
       $macroTable.show();
     },
 
@@ -1487,6 +1491,27 @@
       this.resizeTable(options.height, options.width);
 
       console.log('replaceRowWindow',replaceRowWindow,'maxTotalDomRows',maxTotalDomRows,'maxTotalDomColumns',maxTotalDomColumns,'middleDomRow',~~(maxTotalDomRows / 2),'triggerUpDomRow',triggerUpDomRow,'triggerDownDomRow',triggerDownDomRow);
+    },
+
+    /**
+     * @method _initializeScrollBarOffsets
+     * convenience function for initializing element offsets for scrollbar widths
+     * @private
+     */
+    _initializeScrollBarOffsets: function() {
+      if(scrollBarWidth === styledScrollbarWidth) {
+        this.element.addClass('has-styled-scrollbars');
+      }
+
+      this.element.find('div.macro-table-header-wrapper').css('margin-right', scrollBarWidth).end()
+      .find('div.macro-table-scroll-shim').css({
+        width: scrollBarWidth,
+        right: -scrollBarWidth
+      }).end()
+      .find('div.macro-table-data-veil').css({
+        right: scrollBarWidth,
+        bottom: scrollBarWidth
+      });
     },
 
     /**
@@ -1929,7 +1954,7 @@
 
       //size the scroll container
       $macroTable.find('div.macro-table-scroll-container')
-      .height(height - headerHeight - 1);
+      .outerHeight(height - headerHeight - 1); //may have box-sizing: border-box; set (if not webkit)
 
       //size the vertical drop guide for the resizing functionality
       $macroTable.find('div.macro-table-resize-guide')
