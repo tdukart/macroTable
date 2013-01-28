@@ -1689,6 +1689,7 @@
         $macroTable = this.element,
         $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
         $dataContainer = $dataContainerWrapper.find('div.macro-table-data-container'),
+        $staticDataContainer = $dataContainerWrapper.find('div.macro-table-static-data-container'),
         $leftScrollWrapperBody = $dataContainer.find('div.macro-table-scroll-wrapper'),
         $tableBody = $dataContainerWrapper.find('tbody.macro-table-column-content'),
         $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content');
@@ -1739,7 +1740,8 @@
       .height(rowHeight * (expandedTableData.length + 1));
 
       //return table to the old scoll position
-      $dataContainer.scrollTop(
+      $dataContainer.add($staticDataContainer)
+      .scrollTop(
         $tableBody.find('tr').filter(':nth-child('+(currentDomRow + 1)+')').position().top //scroll position of old DOM row
       );
     },
@@ -1793,7 +1795,7 @@
           .removeClass('macro-table-sort-ascending macro-table-sort-descending')
           .addClass('macro-table-sort-loading');
 
-          workerSortRow.call(this, sortedTableData,columnData, $columnHeader);
+          workerSortRow.call(this, sortedTableData, columnData, $columnHeader);
           return;
 
         } else {
