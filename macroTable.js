@@ -789,6 +789,7 @@
       .addClass('macro-table');
 
       var $scroll = $macroTable.find('div.macro-table-scroll-container'),
+        $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
         $dataContainer = $macroTable.find('div.macro-table-data-container'),
         $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
         $resizer = $macroTable.find('div.macro-table-resize-guide'),
