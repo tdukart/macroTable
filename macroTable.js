@@ -392,8 +392,8 @@
       expanderCellClass = '',
       dynamicRowColumns = '',
       staticRowColumns = '',
-      $dynamicRow = $(document.createElement('tr')),
-      $staticRow = $(document.createElement('tr'));
+      $dynamicRow = $(document.createElement('tr')).attr('data-row-index', index),
+      $staticRow = $(document.createElement('tr')).attr('data-row-index', index);
 
     //give even rows a stripe color
     if(index % 2 == 0) {
@@ -766,6 +766,7 @@
       .addClass('macro-table');
 
       var $scroll = $macroTable.find('div.macro-table-scroll-container'),
+        $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
         $dataContainer = $macroTable.find('div.macro-table-data-container'),
         $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
         $resizer = $macroTable.find('div.macro-table-resize-guide'),
@@ -873,6 +874,12 @@
         if(!$macroTable.hasClass('macro-table-column-moving')) {
           self._sortTable($(this).index());
         }
+      });
+
+
+      /* Wire row focus events */
+      $dataContainerWrapper.delegate('tr', 'click', function(e) {
+        console.log('clicking this row',$(this).attr('data-row-index'));
       });
 
 
