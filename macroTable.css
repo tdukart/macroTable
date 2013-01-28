@@ -12,7 +12,7 @@
 .macro-table .macro-table-dynamic,
 .macro-table .macro-table-static {
   table-layout: fixed;
-  border-collapse: separate;
+  /*border-collapse: separate; this is default behavior */
   border-style: none;
   border-spacing: 0;
   width: 0;
@@ -81,24 +81,46 @@
 }
 
 
-/* Table row styles (striped, selected, highlighted) */
+/* Table row styles (striped, selected, focused, highlighted) */
 
+/* striped row */
 .macro-table tr.macro-table-row.macro-table-row-stripe {
   background: rgba(0, 0, 0, .05);
 }
 
+/* focused, striped row */
+.macro-table tr.macro-table-row.macro-table-row-stripe.macro-table-row-focused {
+  background: rgba(82, 146, 247, .2);
+}
+
+/* selected row */
 .macro-table.macro-table-static-column-enabled tr.macro-table-selected-row.macro-table-highlight {
   background: rgba(0, 0, 0, .2);
 }
 
-.macro-table.macro-table-static-column-enabled tr.macro-table-row.macro-table-row-stripe.macro-table-selected-row.macro-table-highlight {
+/* focused, selected row */
+.macro-table.macro-table-static-column-enabled tr.macro-table-selected-row.macro-table-highlight.macro-table-row-focused {
+  background: rgba(82, 146, 247, .3);
+}
+
+/* selected, striped row */
+.macro-table.macro-table-static-column-enabled tr.macro-table-row-stripe.macro-table-selected-row.macro-table-highlight {
   background: rgba(0, 0, 0, .3);
 }
 
-.macro-table .macro-table-selected-column {
-  background: rgba(0, 0, 255, .2);
+/* focused, selected, striped row */
+.macro-table.macro-table-static-column-enabled tr.macro-table-row-stripe.macro-table-selected-row.macro-table-highlight.macro-table-row-focused {
+  background: rgba(82, 146, 247, .4);
 }
 
+/* focused row or selected column */
+.macro-table .macro-table-row-focused,
+.macro-table .macro-table-selected-column {
+  /*background: rgba(0, 0, 255, .2);*/
+  background: rgba(82, 146, 247, .1);
+}
+
+/* selected, striped column */
 .macro-table tr.macro-table-highlight .macro-table-selected-column {
   background: rgba(0, 0, 255, .4);
 }
