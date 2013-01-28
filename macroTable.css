@@ -90,7 +90,7 @@
 
 /* focused, striped row */
 .macro-table tr.macro-table-row.macro-table-row-stripe.macro-table-row-focused {
-  background: rgba(82, 146, 247, .2);
+  background: rgba(82, 146, 247, .15);
 }
 
 /* selected row */
