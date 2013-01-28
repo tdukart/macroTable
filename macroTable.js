@@ -768,7 +768,6 @@
       .addClass('macro-table');
 
       var $scroll = $macroTable.find('div.macro-table-scroll-container'),
-        $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
         $dataContainer = $macroTable.find('div.macro-table-data-container'),
         $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
         $resizer = $macroTable.find('div.macro-table-resize-guide'),
@@ -880,8 +879,34 @@
 
 
       /* Wire row focus events */
-      $dataContainerWrapper.delegate('tr', 'click', function(e) {
-        console.log('clicking this row',$(this).attr('data-row-index'));
+
+      function toggleRowFocus($rows) {
+        console.log('clicking this dynaimc row',$rows.attr('data-row-index'));
+        if($rows.hasClass('macro-table-row-focused')) {
+          $rows.removeClass('macro-table-row-focused')
+        } else {
+          $rows.addClass('macro-table-row-focused')
+        }
+      }
+
+      //rows in the static container
+      $staticDataContainer.delegate('tr', 'click', function(e) {
+        var $staticRow = $(this),
+          $rows = $staticRow.add(
+            $dataContainer.find('tr').eq($staticRow.index())
+          );
+
+        toggleRowFocus($rows);
+      });
+
+      //rows in the dynamic container
+      $dataContainer.delegate('tr', 'click', function(e) {
+        var $dynamicRow = $(this),
+          $rows = $dynamicRow.add(
+            $staticDataContainer.find('tr').eq($dynamicRow.index())
+          );
+
+        toggleRowFocus($rows);
       });
 
 
