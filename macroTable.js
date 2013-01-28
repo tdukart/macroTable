@@ -392,8 +392,8 @@
       expanderCellClass = '',
       dynamicRowColumns = '',
       staticRowColumns = '',
-      $dynamicRow = $(document.createElement('tr')).attr('data-row-index', index),
-      $staticRow = $(document.createElement('tr')).attr('data-row-index', index);
+      $dynamicRow = $(document.createElement('tr')).data('row-index', index),
+      $staticRow = $(document.createElement('tr')).data('row-index', index);
 
     //give even rows a stripe color
     if(index % 2 == 0) {
@@ -408,6 +408,11 @@
     if(isRowsSelectable && row.selected) {
       $dynamicRow.addClass('macro-table-highlight macro-table-selected-row');
       $staticRow.addClass('macro-table-highlight  macro-table-selected-row');
+    }
+
+    if(row.focused) {
+      $dynamicRow.addClass('macro-table-row-focused');
+      $staticRow.addClass('macro-table-row-focused');
     }
 
     if(row.expanded === true) {
@@ -881,11 +886,21 @@
       /* Wire row focus events */
 
       function toggleRowFocus($rows) {
-        console.log('clicking this dynaimc row',$rows.attr('data-row-index'));
-        if($rows.hasClass('macro-table-row-focused')) {
-          $rows.removeClass('macro-table-row-focused')
-        } else {
+        console.log('clicking this dynaimc row',$rows.data('row-index'));
+
+        var dataRowIndex = $rows.data('row-index'),
+          isRowUnFocusing = expandedTableData[dataRowIndex].focused; //row is focused and was clicked again to unfocus
+
+        for(var i = expandedTableData.length - 1; i >= 0; i--) {
+          expandedTableData[i].focused = false;
+        }
+
+        $staticDataContainer.find('tr.macro-table-row-focused').removeClass('macro-table-row-focused');
+        $dataContainer.find('tr.macro-table-row-focused').removeClass('macro-table-row-focused');
+
+        if(!isRowUnFocusing) {
           $rows.addClass('macro-table-row-focused')
+          expandedTableData[dataRowIndex].focused = true;
         }
       }
 
