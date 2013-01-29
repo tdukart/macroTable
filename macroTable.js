@@ -421,6 +421,8 @@
     //build dynamically left-scrollable row
     for(var i = 0, len = columns.length; i < len; i++) {
       var columnContent = row.data[columns[i].field];
+      columnContent = typeof columnContent === 'undefined' ? '' : columnContent;
+
       if(typeof columns[i].formatter === 'function') {
         columnContent = columns[i].formatter(columnContent);
       }
