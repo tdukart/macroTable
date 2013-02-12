@@ -85,44 +85,44 @@
 
 /* striped row */
 .macro-table tr.macro-table-row.macro-table-row-stripe {
-  background: rgba(0, 0, 0, .05);
+  background: rgba(0, 0, 0, .05); /* gray */
 }
 
 /* focused, striped row */
 .macro-table tr.macro-table-row.macro-table-row-stripe.macro-table-row-focused {
-  background: rgba(82, 146, 247, .15);
+  background: rgba(82, 146, 247, .15); /* blue */
 }
 
 /* selected row */
 .macro-table.macro-table-static-column-enabled tr.macro-table-selected-row.macro-table-highlight {
-  background: rgba(0, 0, 0, .2);
+  background: rgba(0, 0, 0, .2); /* gray */
 }
 
 /* focused, selected row */
 .macro-table.macro-table-static-column-enabled tr.macro-table-selected-row.macro-table-highlight.macro-table-row-focused {
-  background: rgba(82, 146, 247, .3);
+  background: rgba(82, 146, 247, .3); /* blue */
 }
 
 /* selected, striped row */
 .macro-table.macro-table-static-column-enabled tr.macro-table-row-stripe.macro-table-selected-row.macro-table-highlight {
-  background: rgba(0, 0, 0, .3);
+  background: rgba(0, 0, 0, .3); /* gray */
 }
 
 /* focused, selected, striped row */
 .macro-table.macro-table-static-column-enabled tr.macro-table-row-stripe.macro-table-selected-row.macro-table-highlight.macro-table-row-focused {
-  background: rgba(82, 146, 247, .4);
+  background: rgba(82, 146, 247, .4); /* blue */
 }
 
 /* focused row or selected column */
 .macro-table .macro-table-row-focused,
 .macro-table .macro-table-selected-column {
   /*background: rgba(0, 0, 255, .2);*/
-  background: rgba(82, 146, 247, .1);
+  background: rgba(82, 146, 247, .1); /* blue */
 }
 
 /* selected, striped column */
 .macro-table tr.macro-table-highlight .macro-table-selected-column {
-  background: rgba(0, 0, 255, .4);
+  background: rgba(0, 0, 255, .4); /* blue */
 }
 
 

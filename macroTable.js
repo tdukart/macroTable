@@ -388,12 +388,12 @@
     var columns = this.options.columns,
       isRowsSelectable = this.options.rowsSelectable === true,
       rowHasChildren = typeof row.subRows !== 'undefined' && row.subRows.length,
-      rowData,
       expanderCellClass = '',
       dynamicRowColumns = '',
       staticRowColumns = '',
       $dynamicRow = $(document.createElement('tr')).data('row-index', index),
-      $staticRow = $(document.createElement('tr')).data('row-index', index);
+      $staticRow = $(document.createElement('tr')).data('row-index', index),
+      rowData, indexHierachy, tableDataSubRows;
 
     //give even rows a stripe color
     if(index % 2 == 0) {
@@ -440,12 +440,21 @@
     //build row expand column
     if(rowHasChildren && row.expanded) {
       expanderCellClass = 'macro-table-subrow-hierarchy-vertical-line-bottom-half';
-    } else if(typeof row.parentIndex !== 'undefined') {
+    } else if(row.index.toString().indexOf(',') !== -1) {
       expanderCellClass = 'macro-table-subrow-hierarchy-line-right '; //TODO: macro-table-subrow-hierarchy-line-right should be conditionally removed for subRows of subRows
-      if(this.options.tableData[row.parentIndex].subRows.length - 1 > row.index) { //FIXME: this will break for a subRow of a subRow, because we're looking directly at tableData (which is only top level rows)
+
+      indexHierachy = row.index.split(',');
+      tableDataSubRows = this.options.tableData;
+
+      //loop through entire subRows hierarchy and stop 1 level above "row"
+      for(var i = 0, len = indexHierachy.length - 1; i < len; i++) {
+        tableDataSubRows = tableDataSubRows[indexHierachy[i]].subRows;
+      }
+
+      if(tableDataSubRows.length - 1 > indexHierachy[i]) { //FIXME: this will break for a subRow of a subRow, because we're looking directly at tableData (which is only top level rows)
         expanderCellClass += 'macro-table-subrow-hierarchy-vertical-line-full';
       } else {
-        expanderCellClass += 'macro-table-subrow-hierarchy-vertical-line-top-half'
+        expanderCellClass += 'macro-table-subrow-hierarchy-vertical-line-top-half';
       }
     }
     
@@ -620,6 +629,11 @@
        * could be used for storing users preferences, etc.
        */
       onRowExpand: undefined,
+      /**
+       * callback run when a row is focused (clicked)
+       * @type {Function}
+       */
+      onRowFocus: undefined,
       /**
        * Single row data structure for displaying in the summary row section
        */
@@ -883,11 +897,12 @@
 
       /* Wire row focus events */
 
+      //main function for row focusing (when they're clicked)
       function toggleRowFocus($rows) {
         console.log('clicking this dynaimc row',$rows.data('row-index'));
 
-        var dataRowIndex = $rows.data('row-index'),
-          isRowUnFocusing = expandedTableData[dataRowIndex].focused; //row is focused and was clicked again to unfocus
+        var dataRowIndex = $rows.data('row-index');
+        var isRowUnFocusing = expandedTableData[dataRowIndex].focused; //row is focused and was clicked again to unfocus
 
         for(var i = expandedTableData.length - 1; i >= 0; i--) {
           expandedTableData[i].focused = false;
@@ -899,6 +914,11 @@
         if(!isRowUnFocusing) {
           $rows.addClass('macro-table-row-focused')
           expandedTableData[dataRowIndex].focused = true;
+        }
+
+        //TODO: callback function
+        if(typeof self.options.onRowFocus === 'function') {
+          self.options.onRowFocus(dataRowIndex, expandedTableData[dataRowIndex]);
         }
       }
 
@@ -2057,6 +2077,31 @@
       scrollLeft = -1; //force a scroll
 
       $scroll.scrollLeft($scroll.scrollLeft() + columnOffset);
+    },
+
+    /**
+     * return the row object of the currently focused row
+     * @return {Object} row object or undefined if no row is focused
+     */
+    getFocusedRow: function() {
+      for(var i = expandedTableData.length - 1; i >= 0; i--) {
+        if(expandedTableData[i].focused === true) {
+          return {
+            index: expandedTableData[i].id,
+            data: JSON.parse(JSON.stringify(expandedTableData[i].data)) //cloned object
+          };
+        }
+      }
+    },
+
+    /**
+     * change the values of a row's data columns
+     * @param  {Number} index The row id
+     * @param  {Object} data  Object corresponding to columns
+     */
+    editRow: function(index, data) {
+      expandedTableData[index].data = data;
+      this._refreshRows();
     },
 
     /**
