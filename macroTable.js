@@ -1127,6 +1127,7 @@
 
             //calculate how much the column should be resized, and resize the columns
             $columnSizers.width(newWidth);
+            self.options.columns[columnNumber].width = newWidth; //set so subsequent table rerenders keeps the width
 
             //TODO reconcile all the static row heights to match the possibly new heights of dynamic rows after this resize
             self._refreshRows();
@@ -1170,7 +1171,7 @@
 
             $macroTable.find('div.macro-table-scroll-spacer')
             .width(newTotalColumnWidth + marginAdded);
-            
+
 
             //cleanup the resizer element
             $resizer.removeClass('macro-table-highlight macro-table-active');
