@@ -426,6 +426,8 @@
     //build dynamically left-scrollable row
     for(var i = 0, len = columns.length; i < len; i++) {
       var columnContent = row.data[columns[i].field];
+      columnContent = typeof columnContent === 'undefined' ? '' : columnContent;
+
       if(typeof columns[i].formatter === 'function') {
         columnContent = columns[i].formatter(columnContent);
       }
@@ -1168,7 +1170,7 @@
           
           $resizer.addClass('macro-table-active');
           self.element.addClass('macro-table-resizing')
-          .bind('mouseup', function(e) {
+          .bind('mouseup', function resizeMouseup(e) {
             //the handle has been dragged around and has now been let go
             e.stopPropagation();
 
@@ -1187,11 +1189,12 @@
               i;
 
             //clean up the mousemove and mouseup events on the container
-            self.element.unbind('mouseup')
+            self.element.unbind('mouseup', resizeMouseup) //don't want to unbind the reorder mouseup event
             .removeClass('macro-table-resizing');
 
             //calculate how much the column should be resized, and resize the columns
             $columnSizers.width(newWidth);
+            self.options.columns[columnNumber].width = newWidth; //set so subsequent table rerenders keeps the width
 
             //TODO reconcile all the static row heights to match the possibly new heights of dynamic rows after this resize
             self._refreshRows();
@@ -1235,7 +1238,7 @@
 
             $macroTable.find('div.macro-table-scroll-spacer')
             .width(newTotalColumnWidth + marginAdded);
-            
+
 
             //cleanup the resizer element
             $resizer.removeClass('macro-table-highlight macro-table-active');
