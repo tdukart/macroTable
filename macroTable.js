@@ -903,7 +903,7 @@
 
       //main function for row focusing (when they're clicked)
       function toggleRowFocus($rows) {
-        console.log('clicking this dynaimc row',$rows.data('row-index'));
+        console.log('clicking this row',$rows.data('row-index'));
 
         var dataRowIndex = $rows.data('row-index');
         var isRowUnFocusing = expandedTableData[dataRowIndex].focused; //row is focused and was clicked again to unfocus
@@ -928,12 +928,16 @@
 
       //rows in the static container
       $staticDataContainer.delegate('tr', 'click', function(e) {
-        var $staticRow = $(this),
-          $rows = $staticRow.add(
-            $dataContainer.find('tr').eq($staticRow.index())
-          );
+        //we don't want to focus the row when trying to expand or select (TODO: or do we?)
+        if(!$(e.target).is('label, input')) {
 
-        toggleRowFocus($rows);
+          var $staticRow = $(this),
+            $rows = $staticRow.add(
+              $dataContainer.find('tr').eq($staticRow.index())
+            );
+
+          toggleRowFocus($rows);
+        }
       });
 
       //rows in the dynamic container
@@ -1051,6 +1055,8 @@
 
       //wire row select and row expand checkbox event behavior 
       $staticDataContainer.delegate('input.macro-table-checkbox', 'click', function(e) {
+        e.stopPropagation(); //prevent a delegation to the tr which triggers a focus row event
+
         var $checkbox = $(this),
           $selectAllHeaderCheckbox = $staticHeaderRow.find('input.macro-table-select-toggle'),
           $expandAllHeaderCheckbox = $staticHeaderRow.find('input.macro-table-expand-toggle'),
