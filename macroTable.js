@@ -714,12 +714,12 @@
 
         case 'rowsSelectable':
           //TODO add class managment for macro-table-rwos-selectable too
-          if(value === true) {
+          /*if(value === true) {
             this.element.addClass('macro-table-rows-selectable');
           } else {
             this.element.removeClass('macro-table-rows-selectable');
             //$('tr.macro-table-selected-row', this.element).removeClass('macro-table-highlight macro-table-selected-row'); //deselect any selected rows
-          }
+          }*/ //macro-table-rows-selectable classes handled in _reRender now
           this._reRender();
           this.resizeTable(options.height, options.width); //fill space for hidden column / remove space for shown column
           break;
@@ -1921,6 +1921,7 @@
 
       //this._init(); //causes currentColumn and currentRow to reset to 0
       this._renderTableHeader();
+      this._renderHeaderRowControls();
       this._sortTable(this.options.sortByColumn); //re-render table rows
 
       this.scrollToColumn(scrollPositionLeft)

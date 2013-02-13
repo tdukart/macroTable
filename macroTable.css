@@ -273,6 +273,15 @@
 
 /* Structural styling (catch all) */
 
+
+.macro-table-data-container {
+  margin-left: -1px;
+}
+
+.macro-table-static-column-enabled .macro-table-data-container {
+  margin-left: 0; /* renders normally unless the static column is disabled, in which case the border is hidden */
+}
+
 .macro-table-static-header,
 .macro-table-header,
 .macro-table-static-data-container,
@@ -291,7 +300,12 @@
   border: 1px solid #ccc;
   border-right: 0;
   border-bottom: 0;
+  border-left-width: 0;
   /* margin-right is set by javascript */
+}
+
+.macro-table-static-column-enabled .macro-table-header-wrapper {
+  border-left-width: 1px; /* renders with the border unless the static column is disabled */
 }
 
 .macro-table-scroll-shim {
@@ -405,7 +419,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -2px -4px 0 0;
+  margin: -3px -4px 0 0;
 }
 
 .macro-table-expand-toggle + .macro-table-expand-toggle-label::after {
@@ -416,7 +430,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -5px -1px 0 0;
+  margin: -6px -1px 0 0;
 }
 
 .macro-table-expand-toggle:checked + .macro-table-expand-toggle-label::after {
@@ -433,7 +447,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -4px -3px 0 0;
+  margin: -5px -3px 0 0;
 }
 
 .macro-table-row-expander:checked + .macro-table-row-expander-label::before {
@@ -446,7 +460,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -3px -3px 0 0;
+  margin: -4px -3px 0 0;
 }
 
 .macro-table-subrow-hierarchy-vertical-line-top-half::before {
