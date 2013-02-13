@@ -397,7 +397,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -2px -4px 0 0;
+  margin: -3px -4px 0 0;
 }
 
 .macro-table-expand-toggle + .macro-table-expand-toggle-label::after {
@@ -408,7 +408,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -5px -1px 0 0;
+  margin: -6px -1px 0 0;
 }
 
 .macro-table-expand-toggle:checked + .macro-table-expand-toggle-label::after {
@@ -425,7 +425,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -4px -3px 0 0;
+  margin: -5px -3px 0 0;
 }
 
 .macro-table-row-expander:checked + .macro-table-row-expander-label::before {
@@ -438,7 +438,7 @@
   position: absolute;
   top: 50%;
   right: 50%;
-  margin: -3px -3px 0 0;
+  margin: -4px -3px 0 0;
 }
 
 .macro-table-subrow-hierarchy-vertical-line-top-half::before {
