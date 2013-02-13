@@ -462,10 +462,12 @@
     
     var timestamp = +new Date();
     staticRowColumns += '<td class="macro-table-row-expander-cell' + (expanderCellClass != '' ? ' '+expanderCellClass : '') + '">' + 
-      (rowHasChildren ? 
-        '<input type="checkbox" id="macro-table-row-expander-'+timestamp+'" class="macro-table-checkbox macro-table-row-expander" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
-        '<label for="macro-table-row-expander-'+timestamp+'" class="macro-table-row-expander-label"></label>' : 
-        '') + 
+      '<div class="macro-table-expand-toggle-container">' +
+        (rowHasChildren ? 
+            '<input type="checkbox" id="macro-table-row-expander-'+timestamp+'" class="macro-table-checkbox macro-table-row-expander" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
+            '<label for="macro-table-row-expander-'+timestamp+'" class="macro-table-row-expander-label"></label>' : ''
+        ) + 
+      '</div>'+
     '</td>'; 
 
     $dynamicRow.html(dynamicRowColumns);
@@ -1713,7 +1715,7 @@
         $staticColumnSizers.append($checboxColumnSizer);
         $staticHeaderRow.append($checkboxColumn);
         if(typeof summaryRow === 'object') {
-          $staticSummaryRow.append($(document.createElement('th'))); //space filler
+          $staticSummaryRow.append($(document.createElement('th')).html('&nbsp;')); //space filler
         }
 
         $macroTable.addClass('macro-table-rows-selectable');
@@ -1729,13 +1731,17 @@
           $expanderColumnSizer = $(document.createElement('col')).addClass('macro-table-row-expander-column')
           .width(expanderColumnWidth),
           $expanderColumn = $(document.createElement('th')).addClass('macro-table-row-expander-cell')
-          .html('<input type="checkbox" id="macro-table-expand-toggle-'+timestamp+'" class="macro-table-checkbox macro-table-expand-toggle" />'+
-          '<label for="macro-table-expand-toggle-'+timestamp+'" class="macro-table-expand-toggle-label"></label>');
+          .html(
+            '<div class="macro-table-expand-toggle-container">'+
+              '<input type="checkbox" id="macro-table-expand-toggle-'+timestamp+'" class="macro-table-checkbox macro-table-expand-toggle" />'+
+              '<label for="macro-table-expand-toggle-'+timestamp+'" class="macro-table-expand-toggle-label"></label>'+
+            '</div>'
+          );
 
         $staticColumnSizers.append($expanderColumnSizer);
         $staticHeaderRow.append($expanderColumn);
         if(typeof summaryRow === 'object') {
-          $staticSummaryRow.append($(document.createElement('th'))); //space filler
+          $staticSummaryRow.append($(document.createElement('th')).html('&nbsp;')); //space filler
         }
 
         $macroTable.addClass('macro-table-rows-expandable');

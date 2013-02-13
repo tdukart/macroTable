@@ -381,6 +381,16 @@
 
 /* expanded rows dotted line hierarchy */
 
+.macro-table-expand-toggle-container { /* needed because firefox doesn't support relative positioning in table cells */
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.macro-table-static-header .macro-table-row-expander-cell {
+  -moz-box-sizing: border-box;
+}
+
 .macro-table-row-expander-cell {
   position: relative;
   overflow: hidden;
@@ -395,8 +405,16 @@
 .macro-table-expand-toggle + .macro-table-expand-toggle-label,
 .macro-table-row-expander + .macro-table-row-expander-label {
   -webkit-appearance: checkbox;
-  height: 12px;
-  width: 12px;
+  -moz-appearance: checkbox;
+  height: 13px;
+  width: 13px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  position: absolute;
+  top: 50%;
+  margin-top: -6.5px;
+  right: 50%;
+  margin-right: -6.5px;
 }
 
 .macro-table-expand-toggle:disabled + .macro-table-expand-toggle-label,
@@ -437,7 +455,7 @@
   width: 0;
 }
 
-.macro-table-row-expander + .macro-table-row-expander-label:before {
+.macro-table-row-expander + .macro-table-row-expander-label::before {
   content: "";
   width: 0; 
   height: 0; 
@@ -463,7 +481,7 @@
   margin: -4px -3px 0 0;
 }
 
-.macro-table-subrow-hierarchy-vertical-line-top-half::before {
+.macro-table-subrow-hierarchy-vertical-line-top-half .macro-table-expand-toggle-container::before {
   content: "";
   position: absolute;
   top: 0;
@@ -472,7 +490,7 @@
   border-left: 1px dotted rgba(0, 0, 0, 1);
 }
 
-.macro-table-subrow-hierarchy-vertical-line-bottom-half::before {
+.macro-table-subrow-hierarchy-vertical-line-bottom-half .macro-table-expand-toggle-container::before {
   content: "";
   position: absolute;
   top: 50%;
@@ -481,7 +499,7 @@
   border-left: 1px dotted rgba(0, 0, 0, 1);
 }
 
-.macro-table-subrow-hierarchy-vertical-line-full::before {
+.macro-table-subrow-hierarchy-vertical-line-full .macro-table-expand-toggle-container::before {
   content: "";
   position: absolute;
   top: 0;
@@ -490,7 +508,7 @@
   border-left: 1px dotted rgba(0, 0, 0, 1);
 }
 
-.macro-table-subrow-hierarchy-line-right::after {
+.macro-table-subrow-hierarchy-line-right .macro-table-expand-toggle-container::after {
   content: "";
   position: absolute;
   top: 50%;
