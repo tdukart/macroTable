@@ -251,6 +251,15 @@
 
 /* Structural styling (catch all) */
 
+
+.macro-table-data-container {
+  margin-left: -1px;
+}
+
+.macro-table-static-column-enabled .macro-table-data-container {
+  margin-left: 0; /* renders normally unless the static column is disabled, in which case the border is hidden */
+}
+
 .macro-table-static-header,
 .macro-table-header,
 .macro-table-static-data-container,
@@ -269,7 +278,12 @@
   border: 1px solid #ccc;
   border-right: 0;
   border-bottom: 0;
+  border-left-width: 0;
   /* margin-right is set by javascript */
+}
+
+.macro-table-static-column-enabled .macro-table-header-wrapper {
+  border-left-width: 1px; /* renders with the border unless the static column is disabled */
 }
 
 .macro-table-scroll-shim {
