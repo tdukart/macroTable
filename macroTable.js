@@ -152,12 +152,16 @@
         $staticTableBody.append(rowElements.staticRow);
 
         //reconcile possible different heights between static and dynamic rows
-        staticHeight = rowElements.staticRow.height();
-        dynamicHeight = rowElements.dynamicRow.height();
+        staticHeight = rowElements.staticRow.height()+1; //compensate for fractional pixel heights in FF
+        dynamicHeight = rowElements.dynamicRow.height()+1; //compensate for fractional pixel heights in FF
         if(staticHeight > dynamicHeight) {
           rowElements.dynamicRow.height(staticHeight);
+          rowElements.staticRow.height(staticHeight)
+          .find('div.macro-table-expand-toggle-container').css('height', staticHeight-1);
         } else if(staticHeight < dynamicHeight) {
-          rowElements.staticRow.height(dynamicHeight);
+          rowElements.dynamicRow.height(dynamicHeight);
+          rowElements.staticRow.height(dynamicHeight)
+          .find('div.macro-table-expand-toggle-container').css('height', dynamicHeight-1);
         }
 
         renderCount += (endRowIndex > startRowIndex ? 1 : -1);
@@ -1804,12 +1808,16 @@
             $staticTableBody.append(rowElements.staticRow);
 
             //reconcile possible different heights between static and dynamic rows
-            staticHeight = rowElements.staticRow.height();
-            dynamicHeight = rowElements.dynamicRow.height();
+            staticHeight = rowElements.staticRow.height()+1; //compensate for fractional pixel heights in FF
+            dynamicHeight = rowElements.dynamicRow.height()+1; //compensate for fractional pixel heights in FF
             if(staticHeight > dynamicHeight) {
               rowElements.dynamicRow.height(staticHeight);
+              rowElements.staticRow.height(staticHeight)
+              .find('div.macro-table-expand-toggle-container').css('height', staticHeight-1);
             } else if(staticHeight < dynamicHeight) {
-              rowElements.staticRow.height(dynamicHeight);
+              rowElements.dynamicRow.height(dynamicHeight);
+              rowElements.staticRow.height(dynamicHeight)
+              .find('div.macro-table-expand-toggle-container').css('height', dynamicHeight-1);
             }
 
             renderCount++; //a row or subrow was rendered
