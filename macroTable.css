@@ -127,10 +127,12 @@
 
 
 /* Table cell styles TODO: remove td and th in favor of classes */
+.macro-table tr {
+  height: 30px;
+}
 
 .macro-table td,
 .macro-table th {
-  height: 30px;
   padding: 0 3px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -383,15 +385,17 @@
 
 .macro-table-expand-toggle-container { /* needed because firefox doesn't support relative positioning in table cells */
   position: relative;
-  height: 100%;
+  height: 30px; /* chrome doesn't support height 100% for relatively positioned blocks inside table cells...*/
   width: 100%;
-}
-
-.macro-table-static-header .macro-table-row-expander-cell {
   -moz-box-sizing: border-box;
+  box-sizing: border-box;
 }
 
-.macro-table-row-expander-cell {
+.macro-table .macro-table-static-header .macro-table-expand-toggle-container {
+  height: auto;
+}
+
+.macro-table .macro-table-row-expander-cell {
   position: relative;
   overflow: hidden;
 }

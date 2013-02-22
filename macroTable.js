@@ -152,12 +152,16 @@
         $staticTableBody.append(rowElements.staticRow);
 
         //reconcile possible different heights between static and dynamic rows
-        staticHeight = rowElements.staticRow.height();
-        dynamicHeight = rowElements.dynamicRow.height();
+        staticHeight = rowElements.staticRow.height()+1; //compensate for fractional pixel heights in FF
+        dynamicHeight = rowElements.dynamicRow.height()+1; //compensate for fractional pixel heights in FF
         if(staticHeight > dynamicHeight) {
           rowElements.dynamicRow.height(staticHeight);
+          rowElements.staticRow.height(staticHeight)
+          .find('div.macro-table-expand-toggle-container').css('height', staticHeight-1);
         } else if(staticHeight < dynamicHeight) {
-          rowElements.staticRow.height(dynamicHeight);
+          rowElements.dynamicRow.height(dynamicHeight);
+          rowElements.staticRow.height(dynamicHeight)
+          .find('div.macro-table-expand-toggle-container').css('height', dynamicHeight-1);
         }
 
         renderCount += (endRowIndex > startRowIndex ? 1 : -1);
@@ -393,10 +397,10 @@
       staticRowColumns = '',
       $dynamicRow = $(document.createElement('tr')).data('row-index', index),
       $staticRow = $(document.createElement('tr')).data('row-index', index),
-      rowData, indexHierachy, tableDataSubRows;
+      rowData, indexHierachy, tableDataSubRows, i;
 
     //give even rows a stripe color
-    if(index % 2 == 0) {
+    if(index % 2 === 0) {
       $dynamicRow.addClass('macro-table-row-stripe');
       $staticRow.addClass('macro-table-row-stripe');
     }
@@ -424,7 +428,7 @@
     }
 
     //build dynamically left-scrollable row
-    for(var i = 0, len = columns.length; i < len; i++) {
+    for(i = 0, len = columns.length; i < len; i++) {
       var columnContent = row.data[columns[i].field];
       columnContent = typeof columnContent === 'undefined' ? '' : columnContent;
 
@@ -449,7 +453,7 @@
       tableDataSubRows = this.options.tableData;
 
       //loop through entire subRows hierarchy and stop 1 level above "row"
-      for(var i = 0, len = indexHierachy.length - 1; i < len; i++) {
+      for(i = 0, len = indexHierachy.length - 1; i < len; i++) {
         tableDataSubRows = tableDataSubRows[indexHierachy[i]].subRows;
       }
 
@@ -461,21 +465,21 @@
     }
     
     var timestamp = +new Date();
-    staticRowColumns += '<td class="macro-table-row-expander-cell' + (expanderCellClass != '' ? ' '+expanderCellClass : '') + '">' + 
+    staticRowColumns += '<td class="macro-table-row-expander-cell' + (expanderCellClass !== '' ? ' '+expanderCellClass : '') + '">' +
       '<div class="macro-table-expand-toggle-container">' +
-        (rowHasChildren ? 
+        (rowHasChildren ?
             '<input type="checkbox" id="macro-table-row-expander-'+timestamp+'" class="macro-table-checkbox macro-table-row-expander" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
             '<label for="macro-table-row-expander-'+timestamp+'" class="macro-table-row-expander-label"></label>' : ''
-        ) + 
+        ) +
       '</div>'+
-    '</td>'; 
+    '</td>';
 
     $dynamicRow.html(dynamicRowColumns);
     $staticRow.html(staticRowColumns);
 
     return {
       dynamicRow: $dynamicRow,
-      staticRow: $staticRow,
+      staticRow: $staticRow
     };
   }
 
@@ -1804,12 +1808,16 @@
             $staticTableBody.append(rowElements.staticRow);
 
             //reconcile possible different heights between static and dynamic rows
-            staticHeight = rowElements.staticRow.height();
-            dynamicHeight = rowElements.dynamicRow.height();
+            staticHeight = rowElements.staticRow.height()+1; //compensate for fractional pixel heights in FF
+            dynamicHeight = rowElements.dynamicRow.height()+1; //compensate for fractional pixel heights in FF
             if(staticHeight > dynamicHeight) {
               rowElements.dynamicRow.height(staticHeight);
+              rowElements.staticRow.height(staticHeight)
+              .find('div.macro-table-expand-toggle-container').css('height', staticHeight-1);
             } else if(staticHeight < dynamicHeight) {
-              rowElements.staticRow.height(dynamicHeight);
+              rowElements.dynamicRow.height(dynamicHeight);
+              rowElements.staticRow.height(dynamicHeight)
+              .find('div.macro-table-expand-toggle-container').css('height', dynamicHeight-1);
             }
 
             renderCount++; //a row or subrow was rendered
