@@ -272,7 +272,7 @@
     } else {
 
       //scrolling down
-      if(direction > 0) { 
+      if(direction > 0) {
 
         currentDomRow = Math.min(currentDomRow + direction, visibleRowCount - maxTotalDomRows); //the DOM row that the table would be at, if a detach weren't about to happen
 
@@ -281,7 +281,7 @@
           moreRowRenderingNeeded = visibleRowCount - rowNumber > remainingDomRows && remainingDomRows <= maxTotalDomRows - rowBuffer - 1;
 
         //render new rows appropriate to current DOM possition, or if a big jump landed into the final DOM window and need the remaining rows fleshed out
-        if(!isInFinalDomWindow || (isInFinalDomWindow && moreRowRenderingNeeded)) {
+        if(!isInFinalDomWindow || moreRowRenderingNeeded) {
 
           if(currentDomRow >= triggerDownDomRow) {
 
@@ -305,7 +305,7 @@
         }
 
       //scrolling up
-      } else if(direction < 0) { 
+      } else if(direction < 0) {
 
         currentDomRow = Math.max(currentDomRow + direction, 0); //the DOM row that the table would be at, if a detach weren't about to happen
         
@@ -347,13 +347,13 @@
       endColumn;
 
     //scroll right
-    if(scrollContainerScrollLeft > dataContainerScrollLeft && 
+    if(scrollContainerScrollLeft > dataContainerScrollLeft &&
         scrollContainerScrollLeft >= dataContainerScrollLeft + $currrentColumn.outerWidth()) {
       columnIterator = currentColumn + 1;
       endColumn = $domColumns.length;
 
     //scroll left
-    } else if(scrollContainerScrollLeft < dataContainerScrollLeft && 
+    } else if(scrollContainerScrollLeft < dataContainerScrollLeft &&
         scrollContainerScrollLeft <= dataContainerScrollLeft + $currrentColumn.outerWidth()) {
       columnIterator = currentColumn;
       endColumn = -1;
@@ -368,7 +368,7 @@
       var $newColumn = $domColumns.eq(columnIterator),
         newColumnScrollLeft = $newColumn.position().left + dataContainerScrollLeft;
 
-      if(scrollContainerScrollLeft >= newColumnScrollLeft && 
+      if(scrollContainerScrollLeft >= newColumnScrollLeft &&
           scrollContainerScrollLeft < newColumnScrollLeft + $newColumn.outerWidth()) {
 
         currentColumn = columnIterator;
@@ -491,7 +491,7 @@
   function validateSortByColumn(columnField) {
     var columns = this.options.columns;
 
-    if(columnField == '') {
+    if(columnField === '') {
       return -1;
     }
 
@@ -610,7 +610,7 @@
        * @field formatter {Function} (optional) formats the provided data to be displayed in a row's column
        * @field className {String} (optional) class to be added to the column title element
        * @field resizable {Boolean} allow column to be resized. default true
-       * @field sortable {Boolean/Function} if true allow column to be sorted via .sort() on a row's column value, 
+       * @field sortable {Boolean/Function} if true allow column to be sorted via .sort() on a row's column value,
        *    if a function, the column will be sorted using .sort() with this function passed as a parameter. default true
        */
       columns: [],
@@ -652,7 +652,7 @@
        * If not set (''), the original order of the data as it was initialized is shown
        */
       sortByColumn: '',
-      rowsSelectable: false,
+      rowsSelectable: false
     },
 
     /** "Private" methods */
@@ -823,7 +823,7 @@
         if(isExpanded) {
           expandedRowCount++;
           //apply + concat the subRows to remove to the argument array provides one-line solution to an otherwise loop-related solution
-          expandedTableData.splice.apply(expandedTableData, [index + 1, 0].concat(expandedTableData[index].subRows)); 
+          expandedTableData.splice.apply(expandedTableData, [index + 1, 0].concat(expandedTableData[index].subRows));
 
           //newly expanded rows are never selected, so if the select all header checkbox is checked, put it into indeterminate state
           if($selectAllHeaderCheckbox.attr('checked')) {
@@ -909,8 +909,8 @@
       function toggleRowFocus($rows) {
         console.log('clicking this row',$rows.data('row-index'));
 
-        var dataRowIndex = $rows.data('row-index');
-        var isRowUnFocusing = expandedTableData[dataRowIndex].focused; //row is focused and was clicked again to unfocus
+        var dataRowIndex = $rows.data('row-index'),
+          isRowUnFocusing = expandedTableData[dataRowIndex].focused; //row is focused and was clicked again to unfocus
 
         for(var i = expandedTableData.length - 1; i >= 0; i--) {
           expandedTableData[i].focused = false;
@@ -920,7 +920,7 @@
         $dataContainer.find('tr.macro-table-row-focused').removeClass('macro-table-row-focused');
 
         if(!isRowUnFocusing) {
-          $rows.addClass('macro-table-row-focused')
+          $rows.addClass('macro-table-row-focused');
           expandedTableData[dataRowIndex].focused = true;
         }
 
@@ -1032,7 +1032,7 @@
           }
 
           //handle the resizing of the scroll spacer, and make sure the row position doesn't change
-          thisCurrentRow = expandedTableData.indexOf(thisCurrentRow) != -1 ? 
+          thisCurrentRow = expandedTableData.indexOf(thisCurrentRow) != -1 ?
             expandedTableData.indexOf(thisCurrentRow) : //scroll to the original row
             expandedTableData.indexOf(tableData[thisCurrentRow.index]); //scroll to the row's parent
 
@@ -1057,7 +1057,7 @@
         }
       });
 
-      //wire row select and row expand checkbox event behavior 
+      //wire row select and row expand checkbox event behavior
       $staticDataContainer.delegate('input.macro-table-checkbox', 'click', function(e) {
         e.stopPropagation(); //prevent a delegation to the tr which triggers a focus row event
 
@@ -1085,7 +1085,7 @@
           }
 
           //set header checkbox state
-          if(selectedRowCount == 0) { //no rows selected
+          if(selectedRowCount === 0) { //no rows selected
 
             $selectAllHeaderCheckbox.attr('checked', false);
             $selectAllHeaderCheckbox[0].indeterminate = false;
@@ -1132,7 +1132,7 @@
           self._refreshRows();
 
           //set header checkbox state
-          if(expandedRowCount == 0) { //no rows expanded
+          if(expandedRowCount === 0) { //no rows expanded
 
             $expandAllHeaderCheckbox.attr('checked', false);
             //$expandAllHeaderCheckbox[0].indeterminate = false;
@@ -1356,7 +1356,7 @@
               dataContainerOffset = $dataContainer.position().left,
               reorderGuidePosition = $reorderGuide.position().left,
               maxReorderGuidePosition = $header.outerWidth() - $header.find('th:last').outerWidth(),
-              currentColumnIndex = $macroTable.find('col.macro-table-selected-column').first().index(),
+              selectedColumnIndex = $macroTable.find('col.macro-table-selected-column').first().index(),
               newIndex,
               $newColumn;
 
@@ -1378,15 +1378,16 @@
             var newColumnWidth = $newColumn.outerWidth(),
               newColumnPosition = $newColumn.position().left + dataContainerOffset,
               isScrollingRight = newColumnPosition + newColumnWidth > $dataContainer.outerWidth(),
-              isScrollingLeft = newColumnPosition - dataContainerOffset == 0 && scrollOffset != 0;
+              isScrollingLeft = newColumnPosition - dataContainerOffset === 0 && scrollOffset !== 0;
 
             if((isScrollingLeft || isScrollingRight) && $macroTable.hasClass('macro-table-column-moving')) {
               if(typeof scrollColumnTimer === 'undefined') {
                 scrollColumnTimer = setTimeout(function() {
+                  var currenColumnWidth = $header.find('col').eq(currentColumn).outerWidth();
                   scrollColumnTimer = undefined;
 
                   $scroll.scrollLeft(
-                    scrollOffset + (newColumnWidth * (isScrollingRight ? 1 : -1))
+                    scrollOffset + (currenColumnWidth * (isScrollingRight ? 1 : -1))
                   );
 
                   //force refresh, the recalculate position, reposition guide into new scroll window
@@ -1396,7 +1397,7 @@
                     setReorderGuidePosition();
                   }, 0);
                 }, 1000);
-                return; //no reason to continue, since setReorderGuidePosition() will be called again in this set timeout 
+                return; //no reason to continue, since setReorderGuidePosition() will be called again in this set timeout
               }
             } else {
               clearTimeout(scrollColumnTimer);
@@ -1405,7 +1406,7 @@
 
             //calculate what guide position should be, based on cursor position
             var newReorderGuidePosition;
-            if(reorderGuidePosition == 0 && cursorDataContainerOffset <= newColumnWidth / 2) {
+            if(reorderGuidePosition === 0 && cursorDataContainerOffset <= newColumnWidth / 2) {
 
               //if on the first column, don't move the reorder guide to the right until cursor position is past half the column length
               newReorderGuidePosition = 0;
@@ -1434,7 +1435,7 @@
             //position the resizer guide to the boundary of the column to act as an indicator for where the column would be dropped
             $resizer.css('left', (
               newColumnPosition + 1 + //account for potential static row offset
-              (newIndex > currentColumnIndex ? newColumnWidth : 0)
+              (newIndex > selectedColumnIndex ? newColumnWidth : 0)
             ) + 'px');
           }, 0);
         }
@@ -1480,24 +1481,18 @@
           $scroll.scrollTop(scrollTop - rowHeight);
         }
 
-        if(deltaX != 0) {
+        if(deltaX !== 0) {
           var $domColumns = $header.find('th'),
             offset = Math.abs($domColumns.eq(0).position().left);
 
           if(deltaX < 0 && currentColumn > 0) {
             var lastOffset = Math.abs($domColumns.eq(currentColumn - 1).position().left);
             console.log('left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',currentColumn);
-            $scroll.scrollLeft(
-              offset
-              -lastOffset
-            );
+            $scroll.scrollLeft(offset - lastOffset);
           } else if(deltaX > 0 && currentColumn < $domColumns.length - 1) {
             var nextOffset = Math.abs($domColumns.eq(currentColumn + 1).position().left);
             console.log('right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',currentColumn);
-            $scroll.scrollLeft(
-              offset +
-              nextOffset
-            );
+            $scroll.scrollLeft(offset + nextOffset);
           }
         }
         //console.log('Mousewheel .macro-table-data-container', scrollTop, rowHeight,$scroll);
@@ -1566,6 +1561,10 @@
       selectedRowCount = 0;
       expandedRowCount = 0;
 
+      this.element.find('div.macro-table-scroll-container, div.macro-table-data-container, div.macro-table-header')
+      .scrollTop(0)
+      .scrollLeft(0);
+
       this._renderTableHeader();
       this._renderHeaderRowControls();
 
@@ -1629,7 +1628,7 @@
       //build the column headers
       $headerWrapper.show(); //needs to be visible so column width calculation can be performed
       for(var i = columns.length - 1; i >= 0; i--) {
-        var columnWidth = typeof columns[i].width !== 'undefined' ? parseInt(columns[i].width) : this.options.defaultColumnWidth;
+        var columnWidth = typeof columns[i].width !== 'undefined' ? parseInt(columns[i].width, 10) : this.options.defaultColumnWidth;
 
         if(i < maxTotalDomColumns) { //TODO: right now, this is always true because we show all columns in the DOM, always
           var $summaryColumn,
@@ -1685,11 +1684,11 @@
       $macroTable.find('div.macro-table-scroll-spacer')
       .width(totalColumnWidth + marginAdded);
 
-      $leftScrollWrapperBody.width(totalColumnWidth + marginAdded)
+      $leftScrollWrapperBody.width(totalColumnWidth + marginAdded);
       $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + scrollBarWidth);
 
       $header.scrollLeft(
-        $headerRow.find('th').filter(':nth-child('+(currentColumn + 1)+')').position().left //scroll position of old column
+        $header.scrollLeft() + $headerRow.find('th').filter(':nth-child('+(currentColumn + 1)+')').position().left //scroll position of old column
       );
     },
 
@@ -1776,7 +1775,6 @@
         $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
         $dataContainer = $dataContainerWrapper.find('div.macro-table-data-container'),
         $staticDataContainer = $dataContainerWrapper.find('div.macro-table-static-data-container'),
-        $leftScrollWrapperBody = $dataContainer.find('div.macro-table-scroll-wrapper'),
         $tableBody = $dataContainerWrapper.find('tbody.macro-table-column-content'),
         $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content');
 
@@ -1832,7 +1830,7 @@
       //return table to the old scoll position
       $dataContainer.add($staticDataContainer)
       .scrollTop(
-        $tableBody.find('tr').filter(':nth-child('+(currentDomRow + 1)+')').position().top //scroll position of old DOM row
+        $dataContainer.scrollTop() + $tableBody.find('tr').filter(':nth-child('+(currentDomRow + 1)+')').position().top //scroll position of old DOM row
       );
     },
 
@@ -1938,7 +1936,7 @@
       this._renderHeaderRowControls();
       this._sortTable(this.options.sortByColumn); //re-render table rows
 
-      this.scrollToColumn(scrollPositionLeft)
+      this.scrollToColumn(scrollPositionLeft);
       this.scrollToRow(scrollPositionTop);
     },
 
@@ -2083,7 +2081,7 @@
       console.log('scroll to row',scrollToRow);
 
       var rowsToScroll = scrollToRow - currentRow;
-      if(rowsToScroll != 0) {
+      if(rowsToScroll !== 0) {
         this.element.find('div.macro-table-scroll-container').scrollTop(scrollTop + (rowsToScroll * options.rowHeight));
       
       } else {
