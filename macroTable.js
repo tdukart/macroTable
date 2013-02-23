@@ -192,7 +192,7 @@
   /**
    * helper to calculate the needed amount of margin to be added to the bottom of the table
    * in order to allow for scrolling into view the last row of the table
-   * whether or not this function is appropriate to run is handled by the caller 
+   * whether or not this function is appropriate to run is handled by the caller
    * (should only be called when in the last DOM window row of the table)
    */
   function calculateAndApplyBottomMargin() {
@@ -1038,7 +1038,7 @@
 
           breakTableScroll = true; //when resizing the scroll spacer, a scroll even may be triggered (and we don't want it to)
           $macroTable.find('div.macro-table-scroll-spacer')
-          .height(rowHeight * (expandedTableData.length + 1));
+          .height(rowHeight * expandedTableData.length);
 
           //nested setTimeouts to allow for scroll event to trigger for the scroll-spacer resize, then re-render the current position
           setTimeout(function() {
@@ -1148,7 +1148,7 @@
           //}
 
           $macroTable.find('div.macro-table-scroll-spacer')
-          .height(rowHeight * (expandedTableData.length + 1));
+          .height(rowHeight * expandedTableData.length);
 
           if(typeof self.options.onRowExpand === 'function') {
             self.options.onRowExpand(expandedRowIndexes.sort());
@@ -1825,7 +1825,7 @@
 
       //size the scroll spacer to the theoretical max height of all the data
       $macroTable.find('div.macro-table-scroll-spacer')
-      .height(rowHeight * (expandedTableData.length + 1));
+      .height(rowHeight * expandedTableData.length);
 
       //return table to the old scoll position
       $dataContainer.add($staticDataContainer)
