@@ -1356,7 +1356,7 @@
               dataContainerOffset = $dataContainer.position().left,
               reorderGuidePosition = $reorderGuide.position().left,
               maxReorderGuidePosition = $header.outerWidth() - $header.find('th:last').outerWidth(),
-              currentColumnIndex = $macroTable.find('col.macro-table-selected-column').first().index(),
+              selectedColumnIndex = $macroTable.find('col.macro-table-selected-column').first().index(),
               newIndex,
               $newColumn;
 
@@ -1383,10 +1383,11 @@
             if((isScrollingLeft || isScrollingRight) && $macroTable.hasClass('macro-table-column-moving')) {
               if(typeof scrollColumnTimer === 'undefined') {
                 scrollColumnTimer = setTimeout(function() {
+                  var currenColumnWidth = $header.find('col').eq(currentColumn).outerWidth();
                   scrollColumnTimer = undefined;
 
                   $scroll.scrollLeft(
-                    scrollOffset + (newColumnWidth * (isScrollingRight ? 1 : -1))
+                    scrollOffset + (currenColumnWidth * (isScrollingRight ? 1 : -1))
                   );
 
                   //force refresh, the recalculate position, reposition guide into new scroll window
@@ -1434,7 +1435,7 @@
             //position the resizer guide to the boundary of the column to act as an indicator for where the column would be dropped
             $resizer.css('left', (
               newColumnPosition + 1 + //account for potential static row offset
-              (newIndex > currentColumnIndex ? newColumnWidth : 0)
+              (newIndex > selectedColumnIndex ? newColumnWidth : 0)
             ) + 'px');
           }, 0);
         }
