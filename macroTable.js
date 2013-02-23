@@ -1567,6 +1567,10 @@
       selectedRowCount = 0;
       expandedRowCount = 0;
 
+      this.element.find('div.macro-table-scroll-container, div.macro-table-data-container, div.macro-table-header')
+      .scrollTop(0)
+      .scrollLeft(0);
+
       this._renderTableHeader();
       this._renderHeaderRowControls();
 
@@ -1690,7 +1694,7 @@
       $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + scrollBarWidth);
 
       $header.scrollLeft(
-        $headerRow.find('th').filter(':nth-child('+(currentColumn + 1)+')').position().left //scroll position of old column
+        $header.scrollLeft() + $headerRow.find('th').filter(':nth-child('+(currentColumn + 1)+')').position().left //scroll position of old column
       );
     },
 
@@ -1833,7 +1837,7 @@
       //return table to the old scoll position
       $dataContainer.add($staticDataContainer)
       .scrollTop(
-        $tableBody.find('tr').filter(':nth-child('+(currentDomRow + 1)+')').position().top //scroll position of old DOM row
+        $dataContainer.scrollTop() + $tableBody.find('tr').filter(':nth-child('+(currentDomRow + 1)+')').position().top //scroll position of old DOM row
       );
     },
 
