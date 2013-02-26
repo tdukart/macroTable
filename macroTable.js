@@ -103,7 +103,7 @@
 
     selectedRowCount = 0, //counter to keep track of selected rows, used to optimize selecting behavior comparing currently selected to length of total rows
     expandedRowCount = 0, //counter to keep track of expanded rows, used to optimize selecting behavior comparing currently selected to length of total rows
-    rowsWithChildrenCount = 0, //counter for the total number of rows that can be expanded 
+    rowsWithChildrenCount = 0, //counter for the total number of rows that can be expanded
     expandedTableData, //data structure directly translating to the rows that are displayed in the table (flat, rather than hierarchical)
     expandedRowIndexes = []; //keep track of the rows that are expanded for the onRowExpand callback
 
@@ -117,8 +117,7 @@
    * @returns {Number} the actual number of rows rendered
    */
   function rebuildRows(startRowIndex, endRowIndex, direction) {
-    var tableData = this.options.tableData,
-      $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
+    var $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
       $tableContainer = $tableContentWrapper.find('div.macro-table-data-container'),
       $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
 
@@ -219,7 +218,7 @@
     });
 
     //add calculated margins to allow scrolling to bring last row into view
-    $tableScrollSpacer.css('padding-bottom', (newLastDomRow - this.options.rowBuffer - displayRowWindow) * this.options.rowHeight);
+    $tableScrollSpacer.css('padding-bottom', Math.max(1, newLastDomRow - this.options.rowBuffer - displayRowWindow) * this.options.rowHeight);
     $tableScrollWrappers.css('padding-bottom', tableContainerHeight - distanceFromBottomToNewLastDomRow);
     $reorderGuide.css('bottom', tableContainerHeight - distanceFromBottomToNewLastDomRow);
   }
@@ -235,7 +234,7 @@
       rowNumber = currentRow,
       visibleRowCount = expandedTableData.length,
 
-      finalDomRowWindow = visibleRowCount - rowBuffer - rowBuffer - displayRowWindow, //the final row window render starts at this row
+      finalDomRowWindow = Math.max(0, visibleRowCount - rowBuffer - rowBuffer - displayRowWindow), //the final row window render starts at this row
       isInFinalDomWindow = currentRow > finalDomRowWindow,
       
       $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
@@ -274,7 +273,7 @@
       //scrolling down
       if(direction > 0) {
 
-        currentDomRow = Math.min(currentDomRow + direction, visibleRowCount - maxTotalDomRows); //the DOM row that the table would be at, if a detach weren't about to happen
+        currentDomRow = Math.min(currentDomRow + direction, Math.max(rowBuffer + rowBuffer + displayRowWindow, visibleRowCount - maxTotalDomRows)); //the DOM row that the table would be at, if a detach weren't about to happen
 
         //convenience variables to make debugging the logic easier
         var remainingDomRows = $tableRows.filter(':gt('+(currentDomRow - 1)+')').length,
@@ -510,7 +509,7 @@
    * @return the count of rows with sub rows
    */
   function countRowsWithChildren() {
-    var tableData = this.options.tableData,
+    var tableData = this.renderRowDataSet,
       count = 0;
 
     for(var i = tableData.length - 1; i >= 0; i--) {
@@ -543,7 +542,7 @@
     
     sortWorker.onerror = function(e) {
       sortWorker.terminate();
-      self._renderTableRows(options.tableData);
+      self._renderTableRows(this.renderRowDataSet);
     };
 
     sortWorker.onmessage = function(e) {
@@ -588,6 +587,69 @@
     }
   }
 
+  /**
+   * Build the searchIndex data structure, an array of objects (one for each possible row)
+   * in which the row's index and an ordered array of its column values are housed
+   *
+   * This function will run recursively for sub row cases
+   * @param  {Array} tableData Array of rows
+   */
+  function buildSearchIndex(tableData) {
+    var columns = this.options.columns,
+      rowData, i, j, rowsLength, columnsLength;
+
+    for(i = 0, rowsLength = tableData.length; i < rowsLength; i++) {
+      rowData = [];
+
+      for(j = 0, columnsLength = columns.length; j < columnsLength; j++) {
+        rowData.push(tableData[i].data[columns[j].field]);
+      }
+
+      this.searchIndex.push({
+        index: tableData[i].index,
+        data: tableData[i],
+        values: rowData
+      });
+
+      if(typeof tableData[i].subRows !== 'undefined') {
+        (buildSearchIndex.bind(this))(tableData[i].subRows);
+      }
+    }
+  }
+
+  /**
+   * Loop through the rows in searchIndex and rearrange the data value order
+   * to reflect the current order of columns (to make removing columns easier down the road)
+   * @param  {Number} fromIndex Index from which to move the column value
+   * @param  {Number} toIndex   Index into which to move the column value
+   */
+  function reorderSearchIndexColumns(fromIndex, toIndex) {
+    var rowData, i;
+    for(i = this.searchIndex.length - 1; i >= 0; i--) {
+      rowData = this.searchIndex[i].values;
+      //move the fromIndex value to the toIndex index
+      Array.prototype.splice.apply(rowData, [toIndex, 0].concat(rowData.splice(fromIndex, 1)));
+    }
+  }
+
+
+  function workerFilterTableData() {
+    var filter = this.options.filterTerm,
+      filteredRows = [],
+
+      arraySomeFilter = function(value) {
+        return value.indexOf(filter) !== -1;
+      }, i;
+
+    for(i = this.searchIndex.length - 1; i >= 0; i--) {
+      if(this.searchIndex[i].values.some(arraySomeFilter)) {
+        filteredRows.unshift(this.searchIndex[i].data);
+      }
+    }
+
+    return filteredRows;
+  }
+
   $.widget('n.macroTable', {
 
     /**
@@ -596,6 +658,18 @@
      * @type String
      */
     widgetEventPrefix: 'macroTable',
+
+    /**
+     * Array matching the lenght of options.tableData. Each index contains an array of values,
+     * each index directly corresponding to the visibile columns in their current order.
+     *
+     * This array is used to quickly perform text searches in rows
+     * @type {Array}
+     */
+    searchIndex: [],
+
+
+    renderRowDataSet: {},
 
     options: {
       height: undefined, //default height of table, if not defined will fit to parent
@@ -652,6 +726,11 @@
        * If not set (''), the original order of the data as it was initialized is shown
        */
       sortByColumn: '',
+      /**
+       * String to filter rows by. If '', will show all rows
+       * @type {String}
+       */
+      filterTerm: '',
       rowsSelectable: false
     },
 
@@ -701,6 +780,7 @@
             options.sortByColumn = '';
           }
           this._sortTable(columnIndex);
+          break;
 
         case 'reorderable':
           break;
@@ -713,8 +793,10 @@
 
         case 'tableData':
           rowsWithChildrenCount = countRowsWithChildren.call(this);
-          sortedRows = {};
+          this.searchIndex = []; //reset search index
+        case 'filterTerm':
         case 'summaryRow':
+          //TODO: make summaryRow not need to call init()
           this._init(); //causes currentColumn and currentRow to reset to 0
           break;
 
@@ -823,7 +905,7 @@
         if(isExpanded) {
           expandedRowCount++;
           //apply + concat the subRows to remove to the argument array provides one-line solution to an otherwise loop-related solution
-          expandedTableData.splice.apply(expandedTableData, [index + 1, 0].concat(expandedTableData[index].subRows));
+          Array.prototype.splice.apply(expandedTableData, [index + 1, 0].concat(expandedTableData[index].subRows));
 
           //newly expanded rows are never selected, so if the select all header checkbox is checked, put it into indeterminate state
           if($selectAllHeaderCheckbox.attr('checked')) {
@@ -1167,7 +1249,7 @@
           Math.min(
             $macroTable.outerWidth() - scrollBarWidth - $resizer.outerWidth(), //max left position
             cursorOffset //current cursor position
-          ), 
+          ),
           $columnToResize.offset().left + resizeColumnMinWidth //min resize position
         );
       }
@@ -1238,7 +1320,7 @@
               }
             }
 
-            //now resize the wrapper and scroller to allow for any changes to the column offset 
+            //now resize the wrapper and scroller to allow for any changes to the column offset
             //for the last columns when scrolling all the way right
             var newTotalColumnWidth = $macroTable.find('div.macro-table-header table').outerWidth();
 
@@ -1340,7 +1422,7 @@
 
           //reposition the resizer, do it out of the thread for performance improvements
           setTimeout(function() {
-            $resizer.css('left', calculateReiszeColumnWidth(e.pageX, $columnToResize) + 'px'); 
+            $resizer.css('left', calculateReiszeColumnWidth(e.pageX, $columnToResize) + 'px');
           }, 0);
 
 
@@ -1561,6 +1643,14 @@
       selectedRowCount = 0;
       expandedRowCount = 0;
 
+      sortedRows = {
+        '': options.tableData
+      };
+
+      if(options.tableData.length !== 0 && this.renderRowDataSet.length === 0) {
+        this.renderRowDataSet = options.tableData;
+      }
+
       this.element.find('div.macro-table-scroll-container, div.macro-table-data-container, div.macro-table-header')
       .scrollTop(0)
       .scrollLeft(0);
@@ -1570,6 +1660,12 @@
 
       //resize the table, re-calculate the global variables and populate the data rows
       this.resizeTable(options.height, options.width);
+
+      if(options.tableData.length !== 0 && this.searchIndex.length === 0) {
+        (buildSearchIndex.bind(this))(sortedRows[options.sortByColumn]);
+      } else {
+        //TODO: show no rows message?
+      }
 
       console.log('replaceRowWindow',replaceRowWindow,'maxTotalDomRows',maxTotalDomRows,'maxTotalDomColumns',maxTotalDomColumns,'middleDomRow',~~(maxTotalDomRows / 2),'triggerUpDomRow',triggerUpDomRow,'triggerDownDomRow',triggerDownDomRow);
     },
@@ -1851,6 +1947,7 @@
       if(typeof this.options.onColumnReorder === 'function') {
         this.options.onColumnReorder(columns);
       }
+      reorderSearchIndexColumns.bind(this)(columnToReorder, newIndex);
     },
 
     /**
@@ -1860,13 +1957,12 @@
      * @private
      */
     _sortTable: function(columnToSort) {
-      var self = this,
-        options = this.options,
+      var options = this.options,
         $columnHeader = $('div.macro-table-header tr.macro-table-header-row th', this.element),
         columnData, sortedTableData, sortWorker, columnSorter;
 
       //columnToSort is an array index
-      if(parseInt(columnToSort).length == columnToSort.length) {
+      if(parseInt(columnToSort, 10).length === columnToSort.length) {
 
         if(columnToSort >= 0) {
         
@@ -1877,7 +1973,8 @@
           //rather than a re-rendering. therefore we know we should change sort order direction
           columnData.direction = typeof columnData.direction === 'undefined' ? 1 : columnData.direction * -1;
 
-          sortedTableData = sortedRows[options.sortByColumn];
+          this.renderRowDataSet = sortedRows[options.sortByColumn];
+          sortedTableData = this.renderRowDataSet;
 
           $columnHeader = $columnHeader.filter(':nth-child('+(columnToSort + 1)+')')
           .removeClass('macro-table-sort-ascending macro-table-sort-descending')
@@ -1889,36 +1986,35 @@
         } else {
 
           options.sortByColumn = '';
-          sortedTableData = options.tableData;
+          this.renderRowDataSet = sortedRows[''];
         }
-      
+
       //columnToSort is a column field name
       } else {
 
         options.sortByColumn = columnToSort;
-        
-        if(columnToSort != '') {
 
-          for(var columnIndex = options.columns.length - 1; columnIndex >= 0; columnIndex--) { //TODO: make this a helper function?
-            if(options.columns[columnIndex].field == columnToSort) {
-              
-              columnData = options.columns[columnIndex];
+        //TODO: what's the point of this for loop?
+        /*for(var columnIndex = options.columns.length - 1; columnIndex >= 0; columnIndex--) { //TODO: make this a helper function?
+          if(options.columns[columnIndex].field == columnToSort) {
+            
+            columnData = options.columns[columnIndex];
 
-              //when this function is called with columnToSort as a String value, we know this is an internal
-              //re-rendering without intention of changing the sort order direction
-              
-              break;
-            }
+            //when this function is called with columnToSort as a String value, we know this is an internal
+            //re-rendering without intention of changing the sort order direction
+            
+            break;
           }
+        }*/
 
-          sortedTableData = sortedRows[columnToSort];
-
-        } else {
-
-          sortedTableData = options.tableData;
-        }
+        this.renderRowDataSet = sortedRows[columnToSort];
       }
 
+      if(options.filterTerm !== '') {
+        this.renderRowDataSet = workerFilterTableData.bind(this)();
+      }
+
+      sortedTableData = this.renderRowDataSet;
       this._renderTableRows(sortedTableData);
     },
 
@@ -1959,7 +2055,7 @@
     getSelectedRows: function() {
       var selectedRows = [];
 
-      if(this.options.rowsSelectable === true && selectedRowCount != 0) {
+      if(this.options.rowsSelectable === true && selectedRowCount !== 0) {
 
         for(var i = 0, len = expandedTableData.length; i < len; i++) {
 
@@ -1985,7 +2081,7 @@
       var tableRows = [],
         options = this.options,
         columns = options.columns,
-        tableData = options.tableData,
+        tableData = this.renderRowDataSet,
         rowTraverseCount = 0;
 
       for(var i = 0, len = tableData.length; i < len; i++) {
@@ -2000,7 +2096,7 @@
           //loop through the ordered columns datastructure so that order can be maintained in this output
           for(var k = 0, columnLen = columns.length; k < columnLen; k++) {
             tableRows[rowTraverseCount][k] = {};
-            tableRows[rowTraverseCount][k][columns[k].field] = rowData.data[columns[k].field]; 
+            tableRows[rowTraverseCount][k][columns[k].field] = rowData.data[columns[k].field];
           }
 
           rowTraverseCount++;
@@ -2041,7 +2137,7 @@
 
       //size the data container
       $macroTable.find('div.macro-table-data-container, div.macro-table-static-data-container')
-      .height(height - headerHeight - scrollBarWidth)
+      .height(height - headerHeight - scrollBarWidth);
 
       //size the scroll container
       $macroTable.find('div.macro-table-scroll-container')
@@ -2065,12 +2161,12 @@
     /**
      * Scroll the table to the desired row
      * @param scrollToRow {Number} the row or row index to scroll the table to
-     * @param byIndex {Boolean} true if scrolling to the row index number rather 
+     * @param byIndex {Boolean} true if scrolling to the row index number rather
      *  than the true row number (which may differ if any sub rows are expanded)
      */
     scrollToRow: function(scrollToRow, byIndex) {
       var options = this.options,
-        tableData = options.tableData;
+        tableData = this.renderRowDataSet;
 
       if(byIndex && typeof tableData[scrollToRow] !== 'undefined') {
         scrollToRow = expandedTableData.indexOf(tableData[scrollToRow]);
@@ -2089,6 +2185,10 @@
       }
     },
 
+    /**
+     * Scroll the table to the desired column
+     * @param  {Number} scrollToColumn The column index
+     */
     scrollToColumn: function(scrollToColumn) {
       console.log('scroll to column',scrollToColumn);
 
@@ -2114,6 +2214,19 @@
           };
         }
       }
+    },
+
+    /**
+     * @method filterTable
+     * @description filter the displayed table rows to those that match the search term
+     * @param filterTerm {String} the term for which to search table rows for a match. if undefined, all rows are matched
+     * @return {Array} an array of matching rows
+     */
+    filterTable: function(filterTerm) {
+      filterTerm = typeof filterTerm !== 'string' ? '' : filterTerm;
+      this._setOption('filterTerm', filterTerm);
+
+      return this.renderRowDataSet;
     },
 
     /**
