@@ -4,17 +4,17 @@ this.onmessage = function(e) {
   if(typeof e.data !== 'undefined' && e.data.hasOwnProperty('tableData') && e.data.tableData instanceof Array) {
 
     tableData = e.data.tableData; //table's row data
-  
+
     switch(e.data.action) {
       case 'sort':
         if(e.data.hasOwnProperty('sortByField')) {
-          
+
           sortByField = e.data.sortByField; //column field name to sort the data by
-      
+
           direction = e.data.direction == -1 ? -1 : 1; //direction can only be 1 (ascending) and -1 (descending)
 
           eval('columnSorter = ' + e.data.columnSorter); //de-serialize the user-defined column sorting function
-        
+
           //user has defined custom column sorting function
           if(typeof columnSorter === 'function') {
 

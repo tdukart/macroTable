@@ -522,8 +522,11 @@
     return count;
   }
 
+
   /**
    * Spawn a web worker to perform the table sorting and renders the result when complete
+   * unless filtering needs to be done and it hasn't already been cached. In that case,
+   * spawn the filter web worker.
    * @param columnData {Object} the definition of the column by which the table data is to be sorted
    * @param $columnHeader {jQuery} column header for the sorted column
    */
@@ -537,28 +540,31 @@
 
     sortWorker = new Worker('macroTableSort.js');
 
-    sortWorker.onerror = function(e) {
+    sortWorker.onerror = (function(e) {
       sortWorker.terminate();
       this.renderRowDataSet = options.tableData;
-      self._renderTableRows(this.renderRowDataSet);
+      this._renderTableRows(this.renderRowDataSet);
+      $veil.hide();
       console.error('Error sorting column.');
-    };
+    }).bind(this);
 
-    sortWorker.onmessage = function(e) {
+    sortWorker.onmessage = (function(e) {
       sortedRows[options.sortByColumn][''] = e.data;
 
-      self.renderRowDataSet = postSortFilter.bind(self)(e.data, action); //potentially changes self.renderRowDataSet if there is a filter active!
+      this.renderRowDataSet = postSortFilter.bind(this)(e.data, action); //potentially changes self.renderRowDataSet if there is a filter active!
 
-      self._renderTableRows(self.renderRowDataSet);
+      if(typeof self.renderRowDataSet !== 'undefined') {
+        this._renderTableRows(this.renderRowDataSet);
+
+        $veil.hide();
+      }
 
       $columnHeader.removeClass('macro-table-sort-loading')
       .addClass(columnData.direction > 0 ? 'macro-table-sort-ascending' : 'macro-table-sort-descending');
 
-      $veil.hide();
-
       sortWorker.terminate();
       //console.log('sorted data',e.data);
-    };
+    }).bind(this);
 
     if(typeof sortedRows[options.sortByColumn] === 'undefined') {
       sortedRows[options.sortByColumn] = {};
@@ -616,7 +622,8 @@
     if(options.filterTerm !== '') {
       renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm];
       if(typeof renderRowDataSet === 'undefined') {
-        renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm] = workerFilterTableData.bind(this)();
+        workerFilterTableData.bind(this)();
+        return;
       } else if(sortAction === 'order') {
         renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm] = sortedRows[options.sortByColumn][options.filterTerm].reverse();
       }
@@ -671,68 +678,43 @@
   }
 
 
+  /**
+   * Spawn a web worker to perform the table filtering and renders the result when complete
+   */
   function workerFilterTableData() {
-    var filter = this.options.filterTerm.toLowerCase(),
-      filteredRows = [],
-      lastSearchMatchHierarchy = [],
+    var options = this.options,
+      tableData = options.tableData,
+      $veil = $('div.macro-table-data-veil', this.element),
+      filterWorker;
 
-      arraySomeFilter = function(value) {
-        return value.toLowerCase().indexOf(filter) !== -1;
-      }, i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow;
+    $veil.show(); //probably already shown from workerSortRow
 
-    for(i = this.searchIndex.length - 1; i >= 0; i--) {
-      searchRow = this.searchIndex[i];
+    filterWorker = new Worker('macroTableFilter.js'),
 
-      //main row
-      if(searchRow.index.toString().indexOf(',') === -1) {
-        //do not insert the main row if it has already been backfilled by a matching sub row descendant
-        if(searchRow.values.some(arraySomeFilter) && (filteredRows.length === 0 || filteredRows[0].index.toString() !== searchRow.index.toString())) { //row matches filter
+    filterWorker.onerror = (function(e) {
+      filterWorker.terminate();
+      options.filterTerm = '';
+      this.renderRowDataSet = tableData;
+      this._renderTableRows(this.renderRowDataSet);
+      $veil.hide();
+      console.error('Error filtering rows.');
+    }).bind(this);
 
-          filteredRows.unshift(JSON.parse(JSON.stringify(searchRow.data)));
-          filteredRows[0].subRows = [];
-          lastSearchMatchHierarchy = [filteredRows[0]];
-        }
+    filterWorker.onmessage = (function(e) {
+      this.renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm] = e.data;
 
-      //subrow
-      } else {
-        if(this.searchIndex[i].values.some(arraySomeFilter)) { //row matches filter
+      this._renderTableRows(this.renderRowDataSet);
 
-          //needs to be added to its parent's subRow array.
-          //Its parent may not have matched, so it needs to be backfilled in that case
-          indexHierachy = searchRow.index.toString().split(',');
-          indexCheck = '';
-          for(j = 0, len = indexHierachy.length; j < len; j++) {
-            indexCheck += (j !== 0 ? ',' : '') + indexHierachy[j];
-            if(typeof lastSearchMatchHierarchy[j] === 'undefined' || lastSearchMatchHierarchy[j].index != indexCheck) {
+      $veil.hide();
 
-              //get the real table row object
-              //TODO: maybe make this a convenience function -- give comma-delimited index, return the row object
-              realTableRow = this.options.tableData[indexHierachy[0]];
-              for(k = 1; k <= j; k++) {
-                if(typeof realTableRow.subRows !== 'undeinfed') {
-                  realTableRow = realTableRow.subRows[indexHierachy[k]];
-                } else {
-                  console.error('The index used does not align with the tableData structure', indexCheck);
-                }
-              }
+      filterWorker.terminate();
+    }).bind(this);
 
-              //backfill table row objects and/or add the subrow to its parent
-              if(j === 0) {
-                filteredRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
-                filteredRows[0].subRows = [];
-                lastSearchMatchHierarchy[j] = filteredRows[0];
-              } else {
-                filteredRows[0].subRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
-                filteredRows[0].subRows[0].subRows = [];
-                lastSearchMatchHierarchy[j] = filteredRows[0].subRows[0];
-              }
-            }
-          }
-        }
-      }
-    }
-
-    return filteredRows;
+    filterWorker.postMessage({
+      filter: options.filterTerm,
+      searchIndex: this.searchIndex,
+      tableData: tableData
+    });
   }
 
   $.widget('n.macroTable', {
@@ -2112,9 +2094,13 @@
         renderRowDataSet = sortedRows[columnToSort][''];
       }
 
-      this.renderRowDataSet = renderRowDataSet = postSortFilter.bind(this)(renderRowDataSet);
+      renderRowDataSet = postSortFilter.bind(this)(renderRowDataSet); //possibly trigger webworker
 
-      this._renderTableRows(renderRowDataSet);
+      //the filter web worker wasn't needed, continue with cached version of renderRowDataSet
+      if(typeof renderRowDataSet !== 'undefined') {
+        this.renderRowDataSet = renderRowDataSet;
+        this._renderTableRows(renderRowDataSet);
+      }
     },
 
     /**
