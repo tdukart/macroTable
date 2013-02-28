@@ -90,7 +90,7 @@
     //processedColumns = [], //once columns processed from options.columns, the elements and real widths go in here
 
     //rows
-    sortedRows = {}, //object of sorted combinations of the table data, key 'default' contains the data ordered as it was initialized
+    sortedRows = undefined, //object of sorted combinations of the table data, key 'default' contains the data ordered as it was initialized
     maxTotalDomRows, //real DOM row count would only be less than this if the amount of data is less than this number (don't need the extra DOM rows to display total data)
     scrollTop = 0, //default to top of table
     scrollLeft = 0,//default to left of table
@@ -524,31 +524,32 @@
 
   /**
    * Spawn a web worker to perform the table sorting and renders the result when complete
-   * @param sortedTableData {Array} the current data structure for the table data sorted by this column.
-   *  if it is undefined, it means the table has not yet been sorted by this column. if defined, it should
-   *  simply be reversed (no need to full sort again, we're just changing direction of the sort)
    * @param columnData {Object} the definition of the column by which the table data is to be sorted
    * @param $columnHeader {jQuery} column header for the sorted column
    */
-  function workerSortRow(sortedTableData, columnData, $columnHeader) {
+  function workerSortRow(columnData, $columnHeader) {
     var self = this,
       options = this.options,
       $veil = $('div.macro-table-data-veil', this.element),
-      columnSorter;
+      columnSorter, sortWorker;
 
     $veil.show();
 
     sortWorker = new Worker('macroTableSort.js');
-    
+
     sortWorker.onerror = function(e) {
       sortWorker.terminate();
+      this.renderRowDataSet = options.tableData;
       self._renderTableRows(this.renderRowDataSet);
+      console.error('Error sorting column.');
     };
 
     sortWorker.onmessage = function(e) {
-      var sortedTableData = e.data;
-      sortedRows[options.sortByColumn] = sortedTableData;
-      self._renderTableRows(sortedTableData);
+      self.renderRowDataSet = sortedRows[options.sortByColumn][''] = e.data;
+
+      postSortFilter.bind(self)(); //potentially changes self.renderRowDataSet if there is a filter active!
+
+      self._renderTableRows(self.renderRowDataSet);
 
       $columnHeader.removeClass('macro-table-sort-loading')
       .addClass(columnData.direction > 0 ? 'macro-table-sort-ascending' : 'macro-table-sort-descending');
@@ -556,11 +557,20 @@
       $veil.hide();
 
       sortWorker.terminate();
-      //console.log('sorted data',sortedTableData);
+      //console.log('sorted data',e.data);
     };
 
+    if(typeof sortedRows[options.sortByColumn] === 'undefined') {
+      sortedRows[options.sortByColumn] = {};
+    }
+
+    //the current data structure for the table data sorted by this column.
+    //if it is undefined, it means the table has not yet been sorted by this column. if defined, it should
+    //simply be reversed (no need to full sort again, we're just changing direction of the sort)
+    this.renderRowDataSet = sortedRows[options.sortByColumn][''];
+
     //initialize the ordered tableData to use
-    if(typeof sortedTableData === 'undefined') {
+    if(typeof this.renderRowDataSet === 'undefined') {
 
       //console.log('pre-sorted data',options.tableData);
 
@@ -577,13 +587,30 @@
 
     } else {
 
-      //console.log('pre-sorted data',sortedTableData);
-      
+      //console.log('pre-sorted data',this.renderRowDataSet);
+
       sortWorker.postMessage({
         action: 'order',
-        tableData: sortedTableData
+        tableData: this.renderRowDataSet
       });
-      
+    }
+  }
+
+  function postSortFilter() {
+    var options = this.options;
+
+    if(this.renderRowDataSet.length !== 0 && this.searchIndex.length === 0) {
+      (buildSearchIndex.bind(this))(this.renderRowDataSet);
+    } else {
+      //TODO: show no rows message?
+    }
+
+    if(options.filterTerm !== '') {
+      this.renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm];
+      if(typeof this.renderRowDataSet === 'undefined') {
+        sortedRows[options.sortByColumn][options.filterTerm] = workerFilterTableData.bind(this)();
+        this.renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm];
+      }
     }
   }
 
@@ -634,16 +661,63 @@
 
 
   function workerFilterTableData() {
-    var filter = this.options.filterTerm,
+    var filter = this.options.filterTerm.toLowerCase(),
       filteredRows = [],
+      lastSearchMatchHierarchy = [],
 
       arraySomeFilter = function(value) {
-        return value.indexOf(filter) !== -1;
-      }, i;
+        return value.toLowerCase().indexOf(filter) !== -1;
+      }, i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow;
 
     for(i = this.searchIndex.length - 1; i >= 0; i--) {
-      if(this.searchIndex[i].values.some(arraySomeFilter)) {
-        filteredRows.unshift(this.searchIndex[i].data);
+      searchRow = this.searchIndex[i];
+
+      //main row
+      if(searchRow.index.toString().indexOf(',') === -1) {
+        //do not insert the main row if it has already been backfilled by a matching sub row descendant
+        if(searchRow.values.some(arraySomeFilter) && (filteredRows.length === 0 || filteredRows[0].index.toString() !== searchRow.index.toString())) { //row matches filter
+
+          filteredRows.unshift(JSON.parse(JSON.stringify(searchRow.data)));
+          filteredRows[0].subRows = [];
+          lastSearchMatchHierarchy = [filteredRows[0]];
+        }
+
+      //subrow
+      } else {
+        if(this.searchIndex[i].values.some(arraySomeFilter)) { //row matches filter
+
+          //needs to be added to its parent's subRow array.
+          //Its parent may not have matched, so it needs to be backfilled in that case
+          indexHierachy = searchRow.index.toString().split(',');
+          indexCheck = '';
+          for(j = 0, len = indexHierachy.length; j < len; j++) {
+            indexCheck += (j !== 0 ? ',' : '') + indexHierachy[j];
+            if(typeof lastSearchMatchHierarchy[j] === 'undefined' || lastSearchMatchHierarchy[j].index != indexCheck) {
+
+              //get the real table row object
+              //TODO: maybe make this a convenience function -- give comma-delimited index, return the row object
+              realTableRow = this.options.tableData[indexHierachy[0]];
+              for(k = 1; k <= j; k++) {
+                if(typeof realTableRow.subRows !== 'undeinfed') {
+                  realTableRow = realTableRow.subRows[indexHierachy[k]];
+                } else {
+                  console.error('The index used does not align with the tableData structure', indexCheck);
+                }
+              }
+
+              //backfill table row objects and/or add the subrow to its parent
+              if(j === 0) {
+                filteredRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
+                filteredRows[0].subRows = [];
+                lastSearchMatchHierarchy[j] = filteredRows[0];
+              } else {
+                filteredRows[0].subRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
+                filteredRows[0].subRows[0].subRows = [];
+                lastSearchMatchHierarchy[j] = filteredRows[0].subRows[0];
+              }
+            }
+          }
+        }
       }
     }
 
@@ -792,8 +866,9 @@
           break;
 
         case 'tableData':
-          rowsWithChildrenCount = countRowsWithChildren.call(this);
+          this.renderRowDataSet = [];
           this.searchIndex = []; //reset search index
+          sortedRows = undefined; //let _init reinitialize this
         case 'filterTerm':
         case 'summaryRow':
           //TODO: make summaryRow not need to call init()
@@ -1094,7 +1169,7 @@
           //set the row data structure to the appropriate selected state
           expandedRowIndexes = [];
           for(var i = 0, subRowsModified = 0, len = expandedTableData.length; i < len + subRowsModified; i++) {
-            
+
             if(typeof expandedTableData[i].subRows !== 'undefined' && expandedTableData[i].subRows.length) {
 
               if(isToggled) {
@@ -1181,7 +1256,7 @@
 
             $selectAllHeaderCheckbox[0].indeterminate = true;
           }
-        
+
         //expand/collapse a row
         } else if($checkbox.hasClass('macro-table-row-expander')) {
 
@@ -1261,7 +1336,7 @@
           resizePositionStart = e.pageX - $macroTable.offset().left;
 
           //the resizer has been grabbed, attach listeners to the container to allow it to move around
-          
+
           $resizer.addClass('macro-table-active');
           self.element.addClass('macro-table-resizing')
           .bind('mouseup', function resizeMouseup(e) {
@@ -1362,7 +1437,7 @@
 
           //trigger reordering mode
           $macroTable.addClass('macro-table-column-moving');
-          
+
           columnGrabOffset = e.pageX - $selectedColumn.offset().left;
 
           $reorderGuide.width($selectedColumn.outerWidth())
@@ -1591,7 +1666,7 @@
         var rowsToScroll = Math.abs(~~(scrollTop / rowHeight) - ~~(lastScrollTop / rowHeight));
         if(rowsToScroll > 0) {
           if(lastScrollTop < scrollTop) {
-            
+
             currentRow += rowsToScroll;
             if(!breakTableScroll) {
               scrollTableVertical.call(self, rowsToScroll, forceTableScrollRender);
@@ -1632,9 +1707,6 @@
         options.sortByColumn = '';
       }
 
-      //initialize the global count for rows with children
-      rowsWithChildrenCount = countRowsWithChildren.call(this);
-
       scrollTop = 0;
       currentRow = 0;
       currentDomRow = 0;
@@ -1643,13 +1715,21 @@
       selectedRowCount = 0;
       expandedRowCount = 0;
 
-      sortedRows = {
-        '': options.tableData
-      };
+      //sortedRows' keys go by column, then filterTerm
+      if(typeof sortedRows === 'undefined') {
+        sortedRows = {
+          '': {
+            '': options.tableData
+          }
+        };
+      }
 
       if(options.tableData.length !== 0 && this.renderRowDataSet.length === 0) {
         this.renderRowDataSet = options.tableData;
       }
+
+      //initialize the global count for rows with children
+      rowsWithChildrenCount = countRowsWithChildren.call(this);
 
       this.element.find('div.macro-table-scroll-container, div.macro-table-data-container, div.macro-table-header')
       .scrollTop(0)
@@ -1660,12 +1740,6 @@
 
       //resize the table, re-calculate the global variables and populate the data rows
       this.resizeTable(options.height, options.width);
-
-      if(options.tableData.length !== 0 && this.searchIndex.length === 0) {
-        (buildSearchIndex.bind(this))(sortedRows[options.sortByColumn]);
-      } else {
-        //TODO: show no rows message?
-      }
 
       console.log('replaceRowWindow',replaceRowWindow,'maxTotalDomRows',maxTotalDomRows,'maxTotalDomColumns',maxTotalDomColumns,'middleDomRow',~~(maxTotalDomRows / 2),'triggerUpDomRow',triggerUpDomRow,'triggerDownDomRow',triggerDownDomRow);
     },
@@ -1739,7 +1813,7 @@
               $summaryColumn.html(summaryRow[columns[i].field]);
             }
           }
-          
+
           if(columns[i].resizable !== false) {
             $headerColumn.addClass('macro-table-column-resizable');
             if(typeof summaryRow === 'object') {
@@ -1872,7 +1946,8 @@
         $dataContainer = $dataContainerWrapper.find('div.macro-table-data-container'),
         $staticDataContainer = $dataContainerWrapper.find('div.macro-table-static-data-container'),
         $tableBody = $dataContainerWrapper.find('tbody.macro-table-column-content'),
-        $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content');
+        $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content'),
+        $currentRowElement, scrollPosition;
 
       expandedTableData = [];
 
@@ -1924,10 +1999,11 @@
       .height(rowHeight * expandedTableData.length);
 
       //return table to the old scoll position
+      $currentRowElement = $tableBody.find('tr').filter(':nth-child('+(currentDomRow + 1)+')');
+      scrollPosition = $dataContainer.scrollTop() + ($currentRowElement.length === 0 ? 0 : $currentRowElement.position().top);
+
       $dataContainer.add($staticDataContainer)
-      .scrollTop(
-        $dataContainer.scrollTop() + $tableBody.find('tr').filter(':nth-child('+(currentDomRow + 1)+')').position().top //scroll position of old DOM row
-      );
+      .scrollTop(scrollPosition); //scroll position of old DOM row
     },
 
     /**
@@ -1959,13 +2035,13 @@
     _sortTable: function(columnToSort) {
       var options = this.options,
         $columnHeader = $('div.macro-table-header tr.macro-table-header-row th', this.element),
-        columnData, sortedTableData, sortWorker, columnSorter;
+        columnData, sortWorker, columnSorter;
 
       //columnToSort is an array index
       if(parseInt(columnToSort, 10).length === columnToSort.length) {
 
         if(columnToSort >= 0) {
-        
+
           columnData = options.columns[columnToSort];
           options.sortByColumn = columnData.field;
 
@@ -1973,20 +2049,17 @@
           //rather than a re-rendering. therefore we know we should change sort order direction
           columnData.direction = typeof columnData.direction === 'undefined' ? 1 : columnData.direction * -1;
 
-          this.renderRowDataSet = sortedRows[options.sortByColumn];
-          sortedTableData = this.renderRowDataSet;
-
           $columnHeader = $columnHeader.filter(':nth-child('+(columnToSort + 1)+')')
           .removeClass('macro-table-sort-ascending macro-table-sort-descending')
           .addClass('macro-table-sort-loading');
 
-          workerSortRow.call(this, sortedTableData, columnData, $columnHeader);
+          workerSortRow.call(this, columnData, $columnHeader);
           return;
 
         } else {
 
           options.sortByColumn = '';
-          this.renderRowDataSet = sortedRows[''];
+          this.renderRowDataSet = sortedRows[''][''];
         }
 
       //columnToSort is a column field name
@@ -2007,15 +2080,12 @@
           }
         }*/
 
-        this.renderRowDataSet = sortedRows[columnToSort];
+        this.renderRowDataSet = sortedRows[columnToSort][''];
       }
 
-      if(options.filterTerm !== '') {
-        this.renderRowDataSet = workerFilterTableData.bind(this)();
-      }
+      postSortFilter.bind(this)();
 
-      sortedTableData = this.renderRowDataSet;
-      this._renderTableRows(sortedTableData);
+      this._renderTableRows(this.renderRowDataSet);
     },
 
     /**
