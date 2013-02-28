@@ -1478,6 +1478,7 @@
             }
 
             $macroTable.removeClass('macro-table-column-moving');
+            $headerWrapper.removeClass('macro-table-header-active');
           }
         }
       });
@@ -1702,7 +1703,7 @@
       $leftScrollWrapperBody.width(totalColumnWidth + marginAdded);
       $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + scrollBarWidth);
 
-      $header.scrollLeft(
+      $header.add($macroTable.find('div.macro-table-data-container')).scrollLeft(
         $header.scrollLeft() + $headerRow.find('th').filter(':nth-child('+(currentColumn + 1)+')').position().left //scroll position of old column
       );
     },
