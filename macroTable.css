@@ -144,10 +144,7 @@
   padding: 0;
 }
 
-.macro-table .macro-table-dynamic td {
-  border-left: 1px #ccc solid;
-}
-
+.macro-table .macro-table-dynamic td,
 .macro-table .macro-table-dynamic th {
   border-left: 1px #ccc solid;
 }
