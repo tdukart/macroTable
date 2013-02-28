@@ -1320,6 +1320,8 @@
       function calculateReiszeColumnWidth(cursorPosition, $columnToResize) {
         var cursorOffset = cursorPosition - $macroTable.offset().left;
 
+        //console.log('calculateReiszeColumnWidth:', $macroTable.outerWidth() - scrollBarWidth - $resizer.outerWidth(), cursorOffset, $columnToResize.offset().left + resizeColumnMinWidth);
+
         return Math.max(
           Math.min(
             $macroTable.outerWidth() - scrollBarWidth - $resizer.outerWidth(), //max left position
@@ -1333,7 +1335,7 @@
       var resizePositionStart;
       $resizer.bind('mousedown', function(e) {
         if(typeof resizePositionStart === 'undefined') { //prevent multiple mousedowns (if you mousedown, move cursor off of table, then move back and click)
-          resizePositionStart = e.pageX - $macroTable.offset().left;
+          resizePositionStart = $resizer.position().left;
 
           //the resizer has been grabbed, attach listeners to the container to allow it to move around
 
@@ -1348,7 +1350,7 @@
               $columns = $columnContainers.filter(':first').find('col'),
               columnNumber = $columnToResize.index(),
               $columnSizers = $columnContainers.find('col:nth-child('+(columnNumber + 1)+')'),
-              widthDelta = calculateReiszeColumnWidth(e.pageX, $columnToResize) - resizePositionStart,
+              widthDelta = $resizer.position().left - resizePositionStart,
               marginAdded = 0,
               totalColumnWidth = 0,
               tableViewportWidth = $macroTable.parent().width() - scrollBarWidth,
@@ -1457,33 +1459,46 @@
       var lastPageX, //allow reorder guide to follow cursor without changing it's relative position from where it started
         scrollColumnTimer;
       $macroTable.bind('mousemove', function(e) {
-        var $element = $(e.target),
+        var $element = $(e.target).closest('th, td'),
           resizerWidth = $resizer.outerWidth(),
-          cursorOffset = e.pageX - $macroTable.offset().left;
+          cursorOffset = e.pageX - $macroTable.offset().left,
+          cursorCellOffset;
+
+        if($element.length === 0) {
+          return;
+        }
 
         /* process enabling/disabling the resize handle when hovering */
 
         if(!$macroTable.hasClass('macro-table-resizing') && !$macroTable.hasClass('macro-table-column-moving')) {
 
+          //if near the left edge of a cell, we want to resize the previous cell
+          cursorCellOffset = e.pageX - $element.offset().left;
+          if(cursorCellOffset <= 1) {
+            $element = $element.prev();
+          }
+
           if($element.hasClass('macro-table-column-resizable')) {
 
-            var thumbPosition = ($element.offset().left - $macroTable.offset().left) + //relative start position to macroTable container
-                                $element.outerWidth() - Math.ceil(resizerWidth / 2); //end position of the cell with resize guide compensation
+            if($element.length !== 0) {
+              var thumbPosition = ($element.offset().left - $macroTable.offset().left) + //relative start position to macroTable container
+                                  $element.outerWidth() - Math.ceil(resizerWidth / 2) + 1; //end position of the cell with resize guide compensation
 
-            if(cursorOffset >= thumbPosition) {
+              if(cursorOffset >= thumbPosition) {
 
-              if(typeof $columnToResize !== 'undefined') {
-                $columnToResize.removeClass('macro-table-column-resize');
+                if(typeof $columnToResize !== 'undefined') {
+                  $columnToResize.removeClass('macro-table-column-resize');
+                }
+                $columnToResize = $element;
+                $columnToResize.addClass('macro-table-column-resize');
+                $resizer.addClass('macro-table-highlight')
+                .css('left', thumbPosition);
+
+              } else {
+
+                deselectResizeHandle();
+
               }
-              $columnToResize = $element;
-              $columnToResize.addClass('macro-table-column-resize');
-              $resizer.addClass('macro-table-highlight')
-              .css('left', thumbPosition);
-
-            } else {
-
-              deselectResizeHandle();
-
             }
 
           } else if(!$element.hasClass('macro-table-resize-guide')) {
@@ -1620,6 +1635,7 @@
             }
 
             $macroTable.removeClass('macro-table-column-moving');
+            $headerWrapper.removeClass('macro-table-header-active');
           }
         }
       });
@@ -1857,7 +1873,7 @@
       $leftScrollWrapperBody.width(totalColumnWidth + marginAdded);
       $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + scrollBarWidth);
 
-      $header.scrollLeft(
+      $header.add($macroTable.find('div.macro-table-data-container')).scrollLeft(
         $header.scrollLeft() + $headerRow.find('th').filter(':nth-child('+(currentColumn + 1)+')').position().left //scroll position of old column
       );
     },
