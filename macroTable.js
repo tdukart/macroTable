@@ -251,8 +251,8 @@
       //final dom window should always render the maxTotalDomRows number of rows
       if(isInFinalDomWindow) {
 
-        rebuildRows.call(this, visibleRowCount - maxTotalDomRows, visibleRowCount);
-        currentDomRow = maxTotalDomRows - (visibleRowCount - rowNumber);
+        rebuildRows.call(this, visibleRowCount < maxTotalDomRows ? 0 : visibleRowCount - maxTotalDomRows, visibleRowCount);
+        currentDomRow = visibleRowCount < maxTotalDomRows ? rowNumber : maxTotalDomRows - (visibleRowCount - rowNumber);
         calculateAndApplyBottomMargin.call(this); //at the bottom, make sure the scroll margins are in place
 
       //not in final dom window, proceed as normal
@@ -531,7 +531,7 @@
     var self = this,
       options = this.options,
       $veil = $('div.macro-table-data-veil', this.element),
-      columnSorter, sortWorker;
+      columnSorter, sortWorker, action;
 
     $veil.show();
 
@@ -545,9 +545,9 @@
     };
 
     sortWorker.onmessage = function(e) {
-      self.renderRowDataSet = sortedRows[options.sortByColumn][''] = e.data;
+      sortedRows[options.sortByColumn][''] = e.data;
 
-      postSortFilter.bind(self)(); //potentially changes self.renderRowDataSet if there is a filter active!
+      self.renderRowDataSet = postSortFilter.bind(self)(e.data, action); //potentially changes self.renderRowDataSet if there is a filter active!
 
       self._renderTableRows(self.renderRowDataSet);
 
@@ -578,8 +578,10 @@
         columnSorter = columnData.sortable.toString();
       }
 
+      action = 'sort';
+
       sortWorker.postMessage({
-        action: 'sort',
+        action: action,
         tableData: options.tableData,
         sortByField: options.sortByColumn,
         columnSorter: columnSorter
@@ -588,30 +590,39 @@
     } else {
 
       //console.log('pre-sorted data',this.renderRowDataSet);
-
+      action = 'order';
       sortWorker.postMessage({
-        action: 'order',
+        action: action,
         tableData: this.renderRowDataSet
       });
     }
   }
 
-  function postSortFilter() {
+  /**
+   * Filter the renderRowDataSet data after it has been sorted
+   * This function will also trigger the building of the searchIndex
+   * @param {Array} renderRowDataSet Original data set to be filtered and indexed
+   * @return {Array} The filtered renderRowDataSet array, should be set to this.renderRowDataSet
+   */
+  function postSortFilter(renderRowDataSet, sortAction) {
     var options = this.options;
 
-    if(this.renderRowDataSet.length !== 0 && this.searchIndex.length === 0) {
-      (buildSearchIndex.bind(this))(this.renderRowDataSet);
+    if(renderRowDataSet.length !== 0 && this.searchIndex.length === 0) {
+      (buildSearchIndex.bind(this))(renderRowDataSet);
     } else {
       //TODO: show no rows message?
     }
 
     if(options.filterTerm !== '') {
-      this.renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm];
-      if(typeof this.renderRowDataSet === 'undefined') {
-        sortedRows[options.sortByColumn][options.filterTerm] = workerFilterTableData.bind(this)();
-        this.renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm];
+      renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm];
+      if(typeof renderRowDataSet === 'undefined') {
+        renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm] = workerFilterTableData.bind(this)();
+      } else if(sortAction === 'order') {
+        renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm] = sortedRows[options.sortByColumn][options.filterTerm].reverse();
       }
     }
+
+    return renderRowDataSet;
   }
 
   /**
@@ -869,6 +880,8 @@
           this.renderRowDataSet = [];
           this.searchIndex = []; //reset search index
           sortedRows = undefined; //let _init reinitialize this
+          options.sortByColumn = '';
+          //TOD call function here that will reset the column arrows indicating the sort order
         case 'filterTerm':
         case 'summaryRow':
           //TODO: make summaryRow not need to call init()
@@ -1744,18 +1757,18 @@
         this.renderRowDataSet = options.tableData;
       }
 
-      //initialize the global count for rows with children
-      rowsWithChildrenCount = countRowsWithChildren.call(this);
-
       this.element.find('div.macro-table-scroll-container, div.macro-table-data-container, div.macro-table-header')
       .scrollTop(0)
       .scrollLeft(0);
 
       this._renderTableHeader();
-      this._renderHeaderRowControls();
 
       //resize the table, re-calculate the global variables and populate the data rows
       this.resizeTable(options.height, options.width);
+
+      //initialize the global count for rows with children
+      rowsWithChildrenCount = countRowsWithChildren.call(this);
+      this._renderHeaderRowControls();
 
       console.log('replaceRowWindow',replaceRowWindow,'maxTotalDomRows',maxTotalDomRows,'maxTotalDomColumns',maxTotalDomColumns,'middleDomRow',~~(maxTotalDomRows / 2),'triggerUpDomRow',triggerUpDomRow,'triggerDownDomRow',triggerDownDomRow);
     },
@@ -1896,7 +1909,7 @@
       $staticSummaryRow.empty();
 
       //set up table for rows to have checkbox columns, sizing handled in .resizeTable()
-      if(options.rowsSelectable === true) {
+      if(options.rowsSelectable === true && this.renderRowDataSet.length > 0) {
         var $checboxColumnSizer = $(document.createElement('col')).addClass('macro-table-row-selector-column')
           .width(rowSelectColumnWidth),
           $checkboxColumn = $(document.createElement('th')).html('<input type="checkbox" class="macro-table-checkbox macro-table-select-toggle" />');
@@ -2051,7 +2064,7 @@
     _sortTable: function(columnToSort) {
       var options = this.options,
         $columnHeader = $('div.macro-table-header tr.macro-table-header-row th', this.element),
-        columnData, sortWorker, columnSorter;
+        columnData, sortWorker, columnSorter, renderRowDataSet;
 
       //columnToSort is an array index
       if(parseInt(columnToSort, 10).length === columnToSort.length) {
@@ -2075,7 +2088,7 @@
         } else {
 
           options.sortByColumn = '';
-          this.renderRowDataSet = sortedRows[''][''];
+          renderRowDataSet = sortedRows[''][''];
         }
 
       //columnToSort is a column field name
@@ -2096,12 +2109,12 @@
           }
         }*/
 
-        this.renderRowDataSet = sortedRows[columnToSort][''];
+        renderRowDataSet = sortedRows[columnToSort][''];
       }
 
-      postSortFilter.bind(this)();
+      this.renderRowDataSet = renderRowDataSet = postSortFilter.bind(this)(renderRowDataSet);
 
-      this._renderTableRows(this.renderRowDataSet);
+      this._renderTableRows(renderRowDataSet);
     },
 
     /**
