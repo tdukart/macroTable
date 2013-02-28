@@ -614,9 +614,8 @@
     var options = this.options;
 
     if(renderRowDataSet.length !== 0 && this.searchIndex.length === 0) {
+      //called whenever the first rendering of a new dataset occurs
       (buildSearchIndex.bind(this))(renderRowDataSet);
-    } else {
-      //TODO: show no rows message?
     }
 
     if(options.filterTerm !== '') {
@@ -716,6 +715,7 @@
       tableData: tableData
     });
   }
+
 
   $.widget('n.macroTable', {
 
