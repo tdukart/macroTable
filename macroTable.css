@@ -334,6 +334,31 @@
   border-top-width: 0;
 }
 
+/* table message rules */
+
+.macro-table-message-wrapper {
+  display: none;
+  position: absolute;
+  right: 50%;
+  top: 25%;
+}
+
+.macro-table-display-message .macro-table-message-wrapper {
+  display: block;
+}
+
+.macro-table-message {
+  position: relative;
+  left: 50%;
+  background-color: #fff;
+  padding: 1em;
+  border: 1px solid #ccc;
+  -moz-box-shadow: 2px 2px 2px 0px #ccc;
+  -webkit-box-shadow: 2px 2px 2px 0px #ccc;
+  box-shadow: 2px 2px 2px 0px #ccc;
+}
+
+
 .macro-table-scroll-container {
   position: absolute;
   overflow: scroll;

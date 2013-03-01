@@ -307,7 +307,7 @@
       } else if(direction < 0) {
 
         currentDomRow = Math.max(currentDomRow + direction, 0); //the DOM row that the table would be at, if a detach weren't about to happen
-        
+
         if(currentDomRow <= triggerUpDomRow && rowNumber > replaceRowWindow) {
 
           newRenderCount = maxTotalDomRows - currentDomRow - displayRowWindow - rowBuffer;
@@ -325,8 +325,8 @@
       } //scroll up
     } //else
 
-    var scrollTop = $tableRows.eq(currentDomRow).offset().top - $tableBody.offset().top;
-    console.log('current dom row (top visible row)',currentDomRow,'currentRow',currentRow,'row index',expandedTableData[currentRow].index,'from top',scrollTop);
+    var scrollTop = $tableRows.length > 0 ? $tableRows.eq(currentDomRow).offset().top - $tableBody.offset().top : 0;
+    //console.log('current dom row (top visible row)',currentDomRow,'currentRow',currentRow,'row index',expandedTableData[currentRow],'from top',scrollTop);
     $tableContainer.scrollTop(scrollTop);
     $staticTableContainer.scrollTop(scrollTop);
   }
@@ -530,7 +530,7 @@
    * @param columnData {Object} the definition of the column by which the table data is to be sorted
    * @param $columnHeader {jQuery} column header for the sorted column
    */
-  function workerSortRow(columnData, $columnHeader) {
+  function workerSortRow(columnData, $columnHeader, callback) {
     var self = this,
       options = this.options,
       $veil = $('div.macro-table-data-veil', this.element),
@@ -543,7 +543,13 @@
     sortWorker.onerror = (function(e) {
       sortWorker.terminate();
       this.renderRowDataSet = options.tableData;
+
+      if(typeof callback === 'function') {
+        callback.bind(this)();
+      }
+
       this._renderTableRows(this.renderRowDataSet);
+
       $veil.hide();
       console.error('Error sorting column.');
     }).bind(this);
@@ -551,7 +557,7 @@
     sortWorker.onmessage = (function(e) {
       sortedRows[options.sortByColumn][''] = e.data;
 
-      this.renderRowDataSet = postSortFilter.bind(this)(e.data, action); //potentially changes self.renderRowDataSet if there is a filter active!
+      this.renderRowDataSet = postSortFilter.bind(this)(e.data, action, callback); //potentially changes self.renderRowDataSet if there is a filter active!
 
       if(typeof self.renderRowDataSet !== 'undefined') {
         this._renderTableRows(this.renderRowDataSet);
@@ -610,7 +616,7 @@
    * @param {Array} renderRowDataSet Original data set to be filtered and indexed
    * @return {Array} The filtered renderRowDataSet array, should be set to this.renderRowDataSet
    */
-  function postSortFilter(renderRowDataSet, sortAction) {
+  function postSortFilter(renderRowDataSet, sortAction, callback) {
     var options = this.options;
 
     if(renderRowDataSet.length !== 0 && this.searchIndex.length === 0) {
@@ -621,13 +627,16 @@
     if(options.filterTerm !== '') {
       renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm];
       if(typeof renderRowDataSet === 'undefined') {
-        workerFilterTableData.bind(this)();
+        workerFilterTableData.bind(this)(callback);
         return;
       } else if(sortAction === 'order') {
         renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm] = sortedRows[options.sortByColumn][options.filterTerm].reverse();
       }
     }
 
+    if(typeof callback === 'function') {
+      callback.bind(this)();
+    }
     return renderRowDataSet;
   }
 
@@ -680,7 +689,7 @@
   /**
    * Spawn a web worker to perform the table filtering and renders the result when complete
    */
-  function workerFilterTableData() {
+  function workerFilterTableData(callback) {
     var options = this.options,
       tableData = options.tableData,
       $veil = $('div.macro-table-data-veil', this.element),
@@ -694,6 +703,11 @@
       filterWorker.terminate();
       options.filterTerm = '';
       this.renderRowDataSet = tableData;
+
+      if(typeof callback === 'function') {
+        callback.bind(this)();
+      }
+
       this._renderTableRows(this.renderRowDataSet);
       $veil.hide();
       console.error('Error filtering rows.');
@@ -701,6 +715,10 @@
 
     filterWorker.onmessage = (function(e) {
       this.renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm] = e.data;
+
+      if(typeof callback === 'function') {
+        callback.bind(this)();
+      }
 
       this._renderTableRows(this.renderRowDataSet);
 
@@ -798,7 +816,15 @@
        * @type {String}
        */
       filterTerm: '',
-      rowsSelectable: false
+      rowsSelectable: false,
+
+      /**
+       * Messages to show for an empty, initialized table and the case where a filtered table
+       * has no matching rows
+       * @type {String}
+       */
+      emptyInitializedMessage: 'No data to display',
+      emptyFilteredMessage: 'No matching rows found'
     },
 
     /** "Private" methods */
@@ -919,6 +945,9 @@
         '<div class="macro-table-scroll-shim"></div>'+
       '</div>'+
       '<div class="macro-table-data-container-wrapper">'+
+        '<div class="macro-table-message-wrapper">'+
+          '<div class="macro-table-message"></div>'+
+        '</div>'+
         '<div class="macro-table-static-data-container">'+
           '<div class="macro-table-scroll-wrapper">'+
             '<table class="macro-table-static">'+
@@ -1746,11 +1775,23 @@
       this._renderTableHeader();
 
       //resize the table, re-calculate the global variables and populate the data rows
-      this.resizeTable(options.height, options.width);
+      this._resizeTable(options.height, options.width);
+      this._sortTable(options.sortByColumn, function() {
+        //initialize the global count for rows with children
+        rowsWithChildrenCount = countRowsWithChildren.call(this);
+        this._renderHeaderRowControls();
 
-      //initialize the global count for rows with children
-      rowsWithChildrenCount = countRowsWithChildren.call(this);
-      this._renderHeaderRowControls();
+        if(this.renderRowDataSet.length > 0) {
+          this.element.removeClass('macro-table-display-message');
+        } else {
+          this.element.addClass('macro-table-display-message');
+          if(options.filterTerm === '') {
+            this.element.find('div.macro-table-message').text(options.emptyInitializedMessage);
+          } else {
+            this.element.find('div.macro-table-message').text(options.emptyFilteredMessage);
+          }
+        }
+      });
 
       console.log('replaceRowWindow',replaceRowWindow,'maxTotalDomRows',maxTotalDomRows,'maxTotalDomColumns',maxTotalDomColumns,'middleDomRow',~~(maxTotalDomRows / 2),'triggerUpDomRow',triggerUpDomRow,'triggerDownDomRow',triggerDownDomRow);
     },
@@ -1934,7 +1975,7 @@
       }
 
       //enable/disable static columns depending on settings
-      if(options.rowsSelectable === true || rowsWithChildrenCount > 0 /*|| other.settings.that.enable.static.column */) {
+      if(this.renderRowDataSet.length > 0 && (options.rowsSelectable === true || rowsWithChildrenCount > 0 /*|| other.settings.that.enable.static.column */)) {
         $macroTable.addClass('macro-table-static-column-enabled');
       } else {
         $macroTable.removeClass('macro-table-static-column-enabled');
@@ -2041,9 +2082,10 @@
      * @method _sortTable
      * @description sort the table by a particular column
      * @param columnToSort {Number|String} the column to sort by's index or field name
+     * @param {Function} callback Callback function that executes upon completion of the sort/filter
      * @private
      */
-    _sortTable: function(columnToSort) {
+    _sortTable: function(columnToSort, callback) {
       var options = this.options,
         $columnHeader = $('div.macro-table-header tr.macro-table-header-row th', this.element),
         columnData, sortWorker, columnSorter, renderRowDataSet;
@@ -2064,7 +2106,7 @@
           .removeClass('macro-table-sort-ascending macro-table-sort-descending')
           .addClass('macro-table-sort-loading');
 
-          workerSortRow.call(this, columnData, $columnHeader);
+          workerSortRow.bind(this)(columnData, $columnHeader, callback);
           return;
 
         } else {
@@ -2094,12 +2136,15 @@
         renderRowDataSet = sortedRows[columnToSort][''];
       }
 
-      renderRowDataSet = postSortFilter.bind(this)(renderRowDataSet); //possibly trigger webworker
+      renderRowDataSet = postSortFilter.bind(this)(renderRowDataSet, null, callback); //possibly trigger webworker
 
       //the filter web worker wasn't needed, continue with cached version of renderRowDataSet
       if(typeof renderRowDataSet !== 'undefined') {
         this.renderRowDataSet = renderRowDataSet;
         this._renderTableRows(renderRowDataSet);
+        if(typeof callback === 'function') {
+          callback.bind(this)();
+        }
       }
     },
 
@@ -2128,6 +2173,59 @@
      */
     _refreshRows: function() {
       scrollTableVertical.call(this, 0, true);
+    },
+
+    /**
+     * Resize the table components to fit the supplied dimensions
+     * if no dimension is given, fit to the parent container
+     * Should be followed by a call to _sortTable
+     * @param   {Number} height Height in pixels to resize table to
+     * @param   {Number} width  Width in pixels to resize table to
+     * @private
+     */
+    _resizeTable: function(height, width) {
+      var $macroTable = this.element,
+        options = this.options,
+        rowHeight = options.rowHeight,
+        headerHeight = $macroTable.find('div.macro-table-scroll-shim').outerHeight() - 1,
+        rowSelectorOffset = options.rowsSelectable === true ? rowSelectColumnWidth : 0,
+        middleDomRow;
+
+      //initialized undefined dimensions with parent dimensions
+      height = height || $macroTable.parent().height();
+      width = width || $macroTable.parent().width();
+
+      //determine how many rows will fit in the provided height
+      displayRowWindow = height < rowHeight ? ~~(defaultTableHeight / rowHeight) : ~~((height - rowHeight - scrollBarWidth) / rowHeight);
+
+      if(options.rowBuffer < displayRowWindow) {
+        console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',displayRowWindow,'. rowBuffer value being changed to',displayRowWindow);
+        options.rowBuffer = displayRowWindow;
+      }
+
+      //size the data container wrapper
+      $macroTable.find('div.macro-table-data-container-wrapper')
+      .height(height - headerHeight - scrollBarWidth - 1) //-1 to account for bottom border of header
+      .width(width - scrollBarWidth - 1); //-1 to account for left border
+
+      //size the data container
+      $macroTable.find('div.macro-table-data-container, div.macro-table-static-data-container')
+      .height(height - headerHeight - scrollBarWidth);
+
+      //size the scroll container
+      $macroTable.find('div.macro-table-scroll-container')
+      .outerHeight(height - headerHeight - 1); //may have box-sizing: border-box; set (if not webkit)
+
+      //size the vertical drop guide for the resizing functionality
+      $macroTable.find('div.macro-table-resize-guide')
+      .height(height - scrollBarWidth);
+
+      //set globals based on new table dimensions
+      replaceRowWindow = options.rowBuffer / 2;
+      maxTotalDomRows = displayRowWindow + (options.rowBuffer * 2);
+      middleDomRow = ~~(maxTotalDomRows / 2);
+      triggerUpDomRow = middleDomRow - ~~(displayRowWindow / 2) - replaceRowWindow;
+      triggerDownDomRow = middleDomRow - ~~(displayRowWindow / 2) + replaceRowWindow;
     },
 
     /** Public methods */
@@ -2193,54 +2291,13 @@
 
     /**
      * Resize the table components to fit the supplied dimensions
-     * if no dimension is given, fit to the parent container
+     * Public interface for calls to _resizeTable and _sortTable
      */
     resizeTable: function(height, width) {
-      var $macroTable = this.element,
-        options = this.options,
-        rowHeight = options.rowHeight,
-        headerHeight = $macroTable.find('div.macro-table-scroll-shim').outerHeight() - 1,
-        rowSelectorOffset = options.rowsSelectable === true ? rowSelectColumnWidth : 0,
-        middleDomRow;
-
-      //initialized undefined dimensions with parent dimensions
-      height = height || $macroTable.parent().height();
-      width = width || $macroTable.parent().width();
-
-      //determine how many rows will fit in the provided height
-      displayRowWindow = height < rowHeight ? ~~(defaultTableHeight / rowHeight) : ~~((height - rowHeight - scrollBarWidth) / rowHeight);
-
-      if(options.rowBuffer < displayRowWindow) {
-        console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',displayRowWindow,'. rowBuffer value being changed to',displayRowWindow);
-        options.rowBuffer = displayRowWindow;
-      }
-
-      //size the data container wrapper
-      $macroTable.find('div.macro-table-data-container-wrapper')
-      .height(height - headerHeight - scrollBarWidth - 1) //-1 to account for bottom border of header
-      .width(width - scrollBarWidth - 1); //-1 to account for left border
-
-      //size the data container
-      $macroTable.find('div.macro-table-data-container, div.macro-table-static-data-container')
-      .height(height - headerHeight - scrollBarWidth);
-
-      //size the scroll container
-      $macroTable.find('div.macro-table-scroll-container')
-      .outerHeight(height - headerHeight - 1); //may have box-sizing: border-box; set (if not webkit)
-
-      //size the vertical drop guide for the resizing functionality
-      $macroTable.find('div.macro-table-resize-guide')
-      .height(height - scrollBarWidth);
-
-      //set globals based on new table dimensions
-      replaceRowWindow = options.rowBuffer / 2;
-      maxTotalDomRows = displayRowWindow + (options.rowBuffer * 2);
-      middleDomRow = ~~(maxTotalDomRows / 2);
-      triggerUpDomRow = middleDomRow - ~~(displayRowWindow / 2) - replaceRowWindow;
-      triggerDownDomRow = middleDomRow - ~~(displayRowWindow / 2) + replaceRowWindow;
+      this._resizeTable(height, width);
 
       //maxTotalDomRows and the trigger rows have changed, so the table rows need to be re-rendered so that scrolling doesn't break
-      this._sortTable(options.sortByColumn);
+      this._sortTable(this.options.sortByColumn);
     },
 
     /**
@@ -2264,7 +2321,7 @@
       var rowsToScroll = scrollToRow - currentRow;
       if(rowsToScroll !== 0) {
         this.element.find('div.macro-table-scroll-container').scrollTop(scrollTop + (rowsToScroll * options.rowHeight));
-      
+
       } else {
         this._refreshRows();
       }
