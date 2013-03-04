@@ -671,18 +671,41 @@
   }
 
   /**
-   * Loop through the rows in searchIndex and rearrange the data value order
+   * Rebuild portions/the entirety of the searchIndex based on the action being performed
+   * For 'add', rebuild the search index from the ground up
+   * For 'move' and 'delete', loop through the rows in searchIndex and rearrange the data value order
    * to reflect the current order of columns (to make removing columns easier down the road)
+   * @param  {String} action    The rebuild action to take, e.g. 'add', 'move', and 'delete'
    * @param  {Number} fromIndex Index from which to move the column value
    * @param  {Number} toIndex   Index into which to move the column value
    */
-  function reorderSearchIndexColumns(fromIndex, toIndex) {
-    var rowData, i;
-    for(i = this.searchIndex.length - 1; i >= 0; i--) {
-      rowData = this.searchIndex[i].values;
-      //move the fromIndex value to the toIndex index
-      Array.prototype.splice.apply(rowData, [toIndex, 0].concat(rowData.splice(fromIndex, 1)));
-    }
+  function rebuildSearchIndexColumns(action, fromIndex, toIndex) {
+    var options, rowData, i;
+
+    if(action === 'add') {
+      options = this.options;
+      this.searchIndex = [];
+      (buildSearchIndex.bind(this))(sortedRows[options.sortByColumn][options.filterTerm]);
+
+    } else {
+
+      for(i = this.searchIndex.length - 1; i >= 0; i--) {
+        rowData = this.searchIndex[i].values;
+        switch(action) {
+          case 'move':
+            //move the fromIndex value to the toIndex index
+            Array.prototype.splice.apply(rowData, [toIndex, 0].concat(rowData.splice(fromIndex, 1)));
+            break;
+
+          case 'delete':
+            rowData.splice(fromIndex, 1);
+            break;
+
+          default:
+            break;
+        }
+      } //for
+    } //else
   }
 
 
@@ -785,6 +808,18 @@
        */
       onColumnReorder: undefined,
       /**
+       * Callback run on removing columns
+       * called with the newly ordered columns array as a parameter
+       * could be used for storing users preferences, etc.
+       */
+      onColumnRemove: undefined,
+      /**
+       * Callback run on adding columns
+       * called with the newly ordered columns array as a parameter
+       * could be used for storing users preferences, etc.
+       */
+      onColumnAdd: undefined,
+      /**
        * Callback run when a column is resized
        * called with the index of the column that was resized and its new width
        * could be used for storing users preferences, etc.
@@ -881,6 +916,13 @@
         case 'onColumnReorder':
           break;
 
+        case 'onColumnRemove':
+          break;
+
+        case 'onColumnAdd':
+          this.searchIndex = []; //reset search index
+          break;
+
         case 'onColumnResize':
           break;
 
@@ -940,7 +982,14 @@
               '<tr class="macro-table-summary-row"></tr>'+
             '</table>'+
           '</div>'+
-          '<div class="macro-table-reorder-handle"></div>'+
+          '<div class="macro-table-column-controls">'+
+            '<div class="macro-table-reorder-handle">'+
+              '<i class="icon icon--vertical-handle"></i>'+
+            '</div>'+
+            '<button class="macro-table-remove-column">'+
+              '<i class="icon icon--delete"></i>'+
+            '</button>'+
+          '</div>'+
         '</div>'+
         '<div class="macro-table-scroll-shim"></div>'+
       '</div>'+
@@ -978,6 +1027,7 @@
         $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
         $resizer = $macroTable.find('div.macro-table-resize-guide'),
         $reorderHandle = $macroTable.find('div.macro-table-reorder-handle'),
+        $removeColumn = $macroTable.find('button.macro-table-remove-column'),
         $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
         $headerWrapper = $macroTable.find('div.macro-table-header'),
         $header = $headerWrapper.find('table'),
@@ -1055,6 +1105,10 @@
               top: (($columnHeader.height() - $reorderHandle.height()) / 2) + 'px',
               left: $headerWrapper.scrollLeft() + $columnHeader.position().left + 2 + 'px'
             });
+            $removeColumn.css({
+              top: (($columnHeader.height() - $removeColumn.height()) / 2) + 'px',
+              left: $headerWrapper.scrollLeft() + $columnHeader.position().left + $columnHeader.outerWidth() - $removeColumn.width() + (-2) + 'px'
+            });
           } else {
             $headerWrapper.removeClass('macro-table-header-active');
           }
@@ -1064,7 +1118,8 @@
 
       //provide delay to hiding of reorder handle when mouseout'ing of header cell
       .delegate('tr.macro-table-header-row th', 'mouseout', function(e) {
-        if(!$(e.relatedTarget).hasClass('macro-table-reorder-handle')) { //don't deselect column if hovering over the reorder handle
+        if($(e.relatedTarget).closest('div.macro-table-column-controls').length === 0) {
+        //if(!$(e.relatedTarget).hasClass('macro-table-reorder-handle')) { //don't deselect column if hovering over the reorder handle
           columnMouseoverPid = setTimeout(function() {
             $headerWrapper.removeClass('macro-table-header-active');
             $(e.target).removeClass('macro-table-header-active-cell');
@@ -1447,6 +1502,16 @@
         } //if(typeof resizePositionStart === 'undefined')
       });
 
+      /* Remove column event */
+
+      $removeColumn.bind('click', function(e) {
+        e.preventDefault();
+
+        var columnToRemoveIndex = $header.find('th.macro-table-header-active-cell').filter(':first').index();
+
+        self._removeColumn(columnToRemoveIndex);
+      });
+
 
       /* Wire column reorder events */
 
@@ -1659,9 +1724,10 @@
             }
 
             $macroTable.removeClass('macro-table-column-moving');
-            $headerWrapper.removeClass('macro-table-header-active');
           }
         }
+
+        $headerWrapper.removeClass('macro-table-header-active');
       });
 
 
@@ -2059,23 +2125,68 @@
     },
 
     /**
-     * @method _moveColumn
-     * @description move a column to a new position
+     * Move a column to a new position in the table
+     * @param   {Number} columnToReorder Index of column to reposition (0 offset)
+     * @param   {Number} newIndex        Index to which the new column should be moved (0 offset)
      * @private
      */
-    _moveColumn: function(columnToReorder, newIndex) {
+    _moveColumn: function(columnToReorderIndex, newIndex) {
       console.log('_moveColumn',columnToReorder,'to',newIndex);
 
       var columns = this.options.columns;
       newIndex = newIndex > columns.length - 1 ? columns.length - 1 : newIndex;
-      columns.splice(newIndex, 0, columns.splice(columnToReorder, 1)[0]);
+      columns.splice(newIndex, 0, columns.splice(columnToReorderIndex, 1)[0]);
       this._setOption('columns', columns);
 
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
       if(typeof this.options.onColumnReorder === 'function') {
         this.options.onColumnReorder(columns);
       }
-      reorderSearchIndexColumns.bind(this)(columnToReorder, newIndex);
+      rebuildSearchIndexColumns.bind(this)('move', columnToReorder, newIndex);
+    },
+
+    /**
+     * Remove a column from display in the table
+     * @param   {Number} columnToRemoveIndex The column index number (0 offset) to remove
+     * @private
+     */
+    _removeColumn: function(columnToRemoveIndex) {
+      var columns = this.options.columns;
+
+      if(columnToRemoveIndex <= columns.length) {
+        columns.splice(columnToRemoveIndex, 1);
+      }
+      this._setOption('columns', columns);
+
+      //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
+      if(typeof this.options.onColumnRemove === 'function') {
+        this.options.onColumnRemove(columns);
+      }
+      rebuildSearchIndexColumns.bind(this)('delete', columnToRemoveIndex);
+    },
+
+    /**
+     * Add a column to display in the table
+     * @param   {Object} columnToAdd Column object used to render row data
+     * @param   {Number} newIndex    Index at which to insert the new column (0 offset)
+     * @private
+     */
+    _addColumn: function(columnToAdd, newIndex) {
+      var columns = this.options.columns;
+
+      if(newIndex > columns.length) {
+        newIndex = columns.length;
+      } else if(newIndex < 0) {
+        newIndex = 0;
+      }
+
+      columns.splice(newIndex, 0, columnToAdd);
+
+      //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
+      if(typeof this.options.onColumnAdd === 'function') {
+        this.options.onColumnAdd(columns);
+      }
+      rebuildSearchIndexColumns.bind(this)('add');
     },
 
     /**
