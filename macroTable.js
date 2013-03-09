@@ -2126,12 +2126,12 @@
 
     /**
      * Move a column to a new position in the table
-     * @param   {Number} columnToReorder Index of column to reposition (0 offset)
-     * @param   {Number} newIndex        Index to which the new column should be moved (0 offset)
+     * @param   {Number} columnToReorderIndex Index of column to reposition (0 offset)
+     * @param   {Number} newIndex             Index to which the new column should be moved (0 offset)
      * @private
      */
     _moveColumn: function(columnToReorderIndex, newIndex) {
-      console.log('_moveColumn',columnToReorder,'to',newIndex);
+      console.log('_moveColumn',columnToReorderIndex,'to',newIndex);
 
       var columns = this.options.columns;
       newIndex = newIndex > columns.length - 1 ? columns.length - 1 : newIndex;
@@ -2142,7 +2142,7 @@
       if(typeof this.options.onColumnReorder === 'function') {
         this.options.onColumnReorder(columns);
       }
-      rebuildSearchIndexColumns.bind(this)('move', columnToReorder, newIndex);
+      rebuildSearchIndexColumns.bind(this)('move', columnToReorderIndex, newIndex);
     },
 
     /**
