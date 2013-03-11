@@ -18,7 +18,6 @@
         this.onmousewheel = handler;
       }
     },
-    
     teardown: function() {
       if ( this.removeEventListener ) {
         for ( var i=types.length; i; ) {
@@ -34,7 +33,7 @@
     mousewheel: function(fn) {
       return fn ? this.bind("mousewheel", fn) : this.trigger("mousewheel");
     },
-    
+
     unmousewheel: function(fn) {
       return this.unbind("mousewheel", fn);
     }
@@ -45,27 +44,27 @@
     var orgEvent = event || window.event, args = [].slice.call( arguments, 1 ), delta = 0, returnValue = true, deltaX = 0, deltaY = 0;
     event = $.event.fix(orgEvent);
     event.type = "mousewheel";
-    
+
     // Old school scrollwheel delta
     if ( orgEvent.wheelDelta ) { delta = orgEvent.wheelDelta/120; }
     if ( orgEvent.detail     ) { delta = -orgEvent.detail/3; }
-    
+
     // New school multidimensional scroll (touchpads) deltas
     deltaY = delta;
-    
+
     // Gecko
     if ( orgEvent.axis !== undefined && orgEvent.axis === orgEvent.HORIZONTAL_AXIS ) {
       deltaY = 0;
       deltaX = -1*delta;
     }
-    
+
     // Webkit
     if ( orgEvent.wheelDeltaY !== undefined ) { deltaY = orgEvent.wheelDeltaY/120; }
     if ( orgEvent.wheelDeltaX !== undefined ) { deltaX = -1*orgEvent.wheelDeltaX/120; }
-    
+
     // Add event and delta to the front of the arguments
     args.unshift(event, delta, deltaX, deltaY);
-    
+
     return ($.event.dispatch || $.event.handle).apply(this, args);
   }
 
@@ -90,7 +89,6 @@
     //processedColumns = [], //once columns processed from options.columns, the elements and real widths go in here
 
     //rows
-    sortedRows = undefined, //object of sorted combinations of the table data, key 'default' contains the data ordered as it was initialized
     maxTotalDomRows, //real DOM row count would only be less than this if the amount of data is less than this number (don't need the extra DOM rows to display total data)
     scrollTop = 0, //default to top of table
     scrollLeft = 0,//default to left of table
@@ -103,9 +101,7 @@
 
     selectedRowCount = 0, //counter to keep track of selected rows, used to optimize selecting behavior comparing currently selected to length of total rows
     expandedRowCount = 0, //counter to keep track of expanded rows, used to optimize selecting behavior comparing currently selected to length of total rows
-    rowsWithChildrenCount = 0, //counter for the total number of rows that can be expanded
-    expandedTableData, //data structure directly translating to the rows that are displayed in the table (flat, rather than hierarchical)
-    expandedRowIndexes = []; //keep track of the rows that are expanded for the onRowExpand callback
+    rowsWithChildrenCount = 0; //counter for the total number of rows that can be expanded
 
   /** Truly Private functions */
 
@@ -140,12 +136,12 @@
 
     //append all new rows to the table, since we've exhausted the ones we can reuse already in the DOM
     while(startRowIndex + renderCount != endRowIndex) {
-      rowData = expandedTableData[startRowIndex + renderCount];
+      rowData = this.expandedTableData[startRowIndex + renderCount];
 
       if(typeof rowData !== 'undefined') {
 
         rowElements = renderRow.call(this, rowData, (startRowIndex + renderCount));
-        
+
         //append new rows to table
         $tableBody.append(rowElements.dynamicRow);
         $staticTableBody.append(rowElements.staticRow);
@@ -164,7 +160,7 @@
         }
 
         renderCount += (endRowIndex > startRowIndex ? 1 : -1);
-      
+
       //reached beginning or end of table
       } else {
 
@@ -193,6 +189,7 @@
    * in order to allow for scrolling into view the last row of the table
    * whether or not this function is appropriate to run is handled by the caller
    * (should only be called when in the last DOM window row of the table)
+   * @return {Boolean} True if the scroll spacer was given margin-bottom compensation for the scrollbar (meriting a re-scroll so the last row isn't potentially cut off)
    */
   function calculateAndApplyBottomMargin() {
     var newLastDomRow,
@@ -204,8 +201,9 @@
       $tableScrollSpacer = $macroTable.find('div.macro-table-scroll-spacer'),
       $tableScrollWrappers = $tableContainerWrapper.find('div.macro-table-scroll-wrapper'),
       $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
-
-      tableContainerHeight = $tableContainer.height();
+      spacerMultiplier = 0,
+      tableContainerHeight = $tableContainer.height(),
+      tableScrollSpacerMarginAdded = false;
 
     //loop through rows backwards to find the new, truly last row that will allow the last row to show
     $($tableRows.get().reverse()).each(function(i, element) {
@@ -213,14 +211,25 @@
       if(distanceFromBottomToNewLastDomRow > tableContainerHeight) {
         distanceFromBottomToNewLastDomRow -= $(element).height();
         newLastDomRow = $tableRows.length - i + 1;
+
+        if(distanceFromBottomToNewLastDomRow / i !== this.options.rowHeight) {
+          spacerMultiplier = Math.max(0, newLastDomRow - this.options.rowBuffer - displayRowWindow);
+        }
         return false;
       }
-    });
+    }.bind(this));
+
+    if($tableScrollSpacer.css('margin-bottom') === '0px' && tableContainerHeight - distanceFromBottomToNewLastDomRow > 0) {
+      tableScrollSpacerMarginAdded = true;
+    }
 
     //add calculated margins to allow scrolling to bring last row into view
-    $tableScrollSpacer.css('padding-bottom', Math.max(1, newLastDomRow - this.options.rowBuffer - displayRowWindow) * this.options.rowHeight);
+    $tableScrollSpacer.css('padding-bottom', spacerMultiplier * this.options.rowHeight)
+    .css('margin-bottom', tableContainerHeight - distanceFromBottomToNewLastDomRow);
     $tableScrollWrappers.css('padding-bottom', tableContainerHeight - distanceFromBottomToNewLastDomRow);
     $reorderGuide.css('bottom', tableContainerHeight - distanceFromBottomToNewLastDomRow);
+
+    return tableScrollSpacerMarginAdded;
   }
 
   /**
@@ -230,13 +239,13 @@
    */
   function scrollTableVertical(direction, rerender) {
     var rowBuffer = this.options.rowBuffer,
-
+      reScrollNeeded = false,
       rowNumber = currentRow,
-      visibleRowCount = expandedTableData.length,
+      visibleRowCount = this.expandedTableData.length,
 
       finalDomRowWindow = Math.max(0, visibleRowCount - rowBuffer - rowBuffer - displayRowWindow), //the final row window render starts at this row
       isInFinalDomWindow = currentRow > finalDomRowWindow,
-      
+
       $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
       $tableContainer = $tableContentWrapper.find('div.macro-table-data-container'),
 
@@ -253,7 +262,7 @@
 
         rebuildRows.call(this, visibleRowCount < maxTotalDomRows ? 0 : visibleRowCount - maxTotalDomRows, visibleRowCount);
         currentDomRow = visibleRowCount < maxTotalDomRows ? rowNumber : maxTotalDomRows - (visibleRowCount - rowNumber);
-        calculateAndApplyBottomMargin.call(this); //at the bottom, make sure the scroll margins are in place
+        reScrollNeeded = calculateAndApplyBottomMargin.call(this); //at the bottom, make sure the scroll margins are in place
 
       //not in final dom window, proceed as normal
       } else {
@@ -299,8 +308,7 @@
         //in the finalDomRowWindow, add margin to bottom of wrapper to allow scrolling the last row completely into the visible window
         } else {
 
-          calculateAndApplyBottomMargin.call(this);
-
+          reScrollNeeded = calculateAndApplyBottomMargin.call(this);
         }
 
       //scrolling up
@@ -329,6 +337,11 @@
     //console.log('current dom row (top visible row)',currentDomRow,'currentRow',currentRow,'row index',expandedTableData[currentRow],'from top',scrollTop);
     $tableContainer.scrollTop(scrollTop);
     $staticTableContainer.scrollTop(scrollTop);
+
+    if(reScrollNeeded && this.scrollToRowIndex !== null) {
+      this.scrollToRow(this.scrollToRowIndex);
+    }
+    this.scrollToRowIndex = null;
   }
 
   /**
@@ -396,7 +409,7 @@
       staticRowColumns = '',
       $dynamicRow = $(document.createElement('tr')).data('row-index', index),
       $staticRow = $(document.createElement('tr')).data('row-index', index),
-      rowData, indexHierachy, tableDataSubRows, i;
+      rowData, indexHierachy, tableDataSubRows, i, len;
 
     //give even rows a stripe color
     if(index % 2 === 0) {
@@ -462,7 +475,7 @@
         expanderCellClass += 'macro-table-subrow-hierarchy-vertical-line-top-half';
       }
     }
-    
+
     var timestamp = +new Date();
     staticRowColumns += '<td class="macro-table-row-expander-cell' + (expanderCellClass !== '' ? ' '+expanderCellClass : '') + '">' +
       '<div class="macro-table-expand-toggle-container">' +
@@ -555,7 +568,7 @@
     }).bind(this);
 
     sortWorker.onmessage = (function(e) {
-      sortedRows[options.sortByColumn][''] = e.data;
+      this.sortedRows[options.sortByColumn][''] = e.data;
 
       this.renderRowDataSet = postSortFilter.bind(this)(e.data, action, callback); //potentially changes self.renderRowDataSet if there is a filter active!
 
@@ -572,14 +585,14 @@
       //console.log('sorted data',e.data);
     }).bind(this);
 
-    if(typeof sortedRows[options.sortByColumn] === 'undefined') {
-      sortedRows[options.sortByColumn] = {};
+    if(typeof this.sortedRows[options.sortByColumn] === 'undefined') {
+      this.sortedRows[options.sortByColumn] = {};
     }
 
     //the current data structure for the table data sorted by this column.
     //if it is undefined, it means the table has not yet been sorted by this column. if defined, it should
     //simply be reversed (no need to full sort again, we're just changing direction of the sort)
-    this.renderRowDataSet = sortedRows[options.sortByColumn][''];
+    this.renderRowDataSet = this.sortedRows[options.sortByColumn][''];
 
     //initialize the ordered tableData to use
     if(typeof this.renderRowDataSet === 'undefined') {
@@ -625,12 +638,12 @@
     }
 
     if(options.filterTerm !== '') {
-      renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm];
+      renderRowDataSet = this.sortedRows[options.sortByColumn][options.filterTerm];
       if(typeof renderRowDataSet === 'undefined') {
         workerFilterTableData.bind(this)(callback);
         return;
       } else if(sortAction === 'order') {
-        renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm] = sortedRows[options.sortByColumn][options.filterTerm].reverse();
+        renderRowDataSet = this.sortedRows[options.sortByColumn][options.filterTerm] = this.sortedRows[options.sortByColumn][options.filterTerm].reverse();
       }
     }
 
@@ -685,7 +698,7 @@
     if(action === 'add') {
       options = this.options;
       this.searchIndex = [];
-      (buildSearchIndex.bind(this))(sortedRows[options.sortByColumn][options.filterTerm]);
+      (buildSearchIndex.bind(this))(this.sortedRows[options.sortByColumn][options.filterTerm]);
 
     } else {
 
@@ -737,7 +750,7 @@
     }).bind(this);
 
     filterWorker.onmessage = (function(e) {
-      this.renderRowDataSet = sortedRows[options.sortByColumn][options.filterTerm] = e.data;
+      this.renderRowDataSet = this.sortedRows[options.sortByColumn][options.filterTerm] = e.data;
 
       if(typeof callback === 'function') {
         callback.bind(this)();
@@ -768,7 +781,7 @@
     widgetEventPrefix: 'macroTable',
 
     /**
-     * Array matching the lenght of options.tableData. Each index contains an array of values,
+     * Array matching the length of renderRowDataSet. Each index contains an array of values,
      * each index directly corresponding to the visibile columns in their current order.
      *
      * This array is used to quickly perform text searches in rows
@@ -776,8 +789,86 @@
      */
     searchIndex: [],
 
+    /**
+     * object of sorted combinations of the table data, key 'default' contains the data ordered as it was initialized
+     * @type {Object}
+     */
+    sortedRows: null,
 
-    renderRowDataSet: {},
+    /**
+     * data structure directly translating to the rows that are displayed in the table (flat, rather than hierarchical)
+     * @type {Array}
+     */
+    expandedTableData: [],
+
+    /**
+     * keep track of the rows that are expanded for the onRowExpand callback
+     * @type {Array}
+     */
+    expandedRowIndexes: [],
+
+    /**
+     * Current dataset the table will use to render its rows
+     * @type {Array}
+     */
+    renderRowDataSet: [],
+
+
+    /**
+     * Field set when scrollToRow() is called
+     * 
+     * Keeps track of the intended scrollTo row in case the padding/margin
+     * hasn't yet been added to the table to handle larger rows in the final
+     * scroll window or to buffer so that the final row can be scrolled into view
+     *
+     * When this margin/padding is added, scrollTableVertical will detect that it
+     * needs to re-scroll to this value in order to take into account the new heights
+     * @type {Number}
+     */
+    scrollToRowIndex: null,
+
+    /** Subscribable events */
+
+    /**
+     * Callback run on reordering columns
+     * called with the newly ordered columns array as a parameter
+     * could be used for storing users preferences, etc.
+     */
+    //columnreorder
+
+    /**
+     * Callback run when a column is resized
+     * called with the index of the column that was resized and its new width
+     * could be used for storing users preferences, etc.
+     */
+    //columnresize
+
+    /**
+     * Callback run when a row is expanded or collapsed
+     * called with an array of the row indexes that are expanded
+     * could be used for storing users preferences, etc.
+     */
+    //rowexpand
+
+    /**
+     * Callback run on removing columns
+     * called with the newly ordered columns array as a parameter
+     * could be used for storing users preferences, etc.
+     */
+    //columnremove
+
+    /**
+     * Callback run on adding columns
+     * called with the newly ordered columns array as a parameter
+     * could be used for storing users preferences, etc.
+     */
+    //columnadd
+
+    /**
+     * callback run when a row is focused (clicked)
+     * @type {Function}
+     */
+    //rowfocus
 
     options: {
       height: undefined, //default height of table, if not defined will fit to parent
@@ -801,41 +892,6 @@
        * Allow the columns to be re-ordered via drag and drop
        */
       reorderable: true,
-      /**
-       * Callback run on reordering columns
-       * called with the newly ordered columns array as a parameter
-       * could be used for storing users preferences, etc.
-       */
-      onColumnReorder: undefined,
-      /**
-       * Callback run on removing columns
-       * called with the newly ordered columns array as a parameter
-       * could be used for storing users preferences, etc.
-       */
-      onColumnRemove: undefined,
-      /**
-       * Callback run on adding columns
-       * called with the newly ordered columns array as a parameter
-       * could be used for storing users preferences, etc.
-       */
-      onColumnAdd: undefined,
-      /**
-       * Callback run when a column is resized
-       * called with the index of the column that was resized and its new width
-       * could be used for storing users preferences, etc.
-       */
-      onColumnResize: undefined,
-      /**
-       * Callback run when a row is expanded or collapsed
-       * called with an array of the row indexes that are expanded
-       * could be used for storing users preferences, etc.
-       */
-      onRowExpand: undefined,
-      /**
-       * callback run when a row is focused (clicked)
-       * @type {Function}
-       */
-      onRowFocus: undefined,
       /**
        * Single row data structure for displaying in the summary row section
        */
@@ -896,6 +952,7 @@
           break;
 
         case 'columns':
+          this.searchIndex = []; //reset search index
           this._reRender();
           break;
 
@@ -913,23 +970,10 @@
         case 'reorderable':
           break;
 
-        case 'onColumnReorder':
-          break;
-
-        case 'onColumnRemove':
-          break;
-
-        case 'onColumnAdd':
-          this.searchIndex = []; //reset search index
-          break;
-
-        case 'onColumnResize':
-          break;
-
         case 'tableData':
           this.renderRowDataSet = [];
           this.searchIndex = []; //reset search index
-          sortedRows = undefined; //let _init reinitialize this
+          sortedRows = null; //let _init reinitialize this
           options.sortByColumn = '';
           //TOD call function here that will reset the column arrows indicating the sort order
         case 'filterTerm':
@@ -1049,12 +1093,12 @@
       function handleRowExpandToggle(index, isExpanded) {
         var $selectAllHeaderCheckbox = $staticHeaderRow.find('input.macro-table-select-toggle');
 
-        expandedTableData[index].expanded = !!isExpanded;
+        self.expandedTableData[index].expanded = !!isExpanded;
 
         if(isExpanded) {
           expandedRowCount++;
           //apply + concat the subRows to remove to the argument array provides one-line solution to an otherwise loop-related solution
-          Array.prototype.splice.apply(expandedTableData, [index + 1, 0].concat(expandedTableData[index].subRows));
+          Array.prototype.splice.apply(self.expandedTableData, [index + 1, 0].concat(self.expandedTableData[index].subRows));
 
           //newly expanded rows are never selected, so if the select all header checkbox is checked, put it into indeterminate state
           if($selectAllHeaderCheckbox.attr('checked')) {
@@ -1064,7 +1108,7 @@
 
         } else {
           expandedRowCount--;
-          var removedRows = expandedTableData.splice(index + 1, expandedTableData[index].subRows.length);
+          var removedRows = self.expandedTableData.splice(index + 1, self.expandedTableData[index].subRows.length);
 
           //clean up selected count from removed rows
           for(var i = 0, len = removedRows.length; i < len; i++) {
@@ -1075,7 +1119,7 @@
           }
 
           //by hiding the sub rows, all remaining rows are selected, so make select toggle checkbox reflect that
-          if(selectedRowCount == expandedTableData.length) {
+          if(selectedRowCount == self.expandedTableData.length) {
             $selectAllHeaderCheckbox.attr('checked', true); //click the box again and it will deselect all rows
             $selectAllHeaderCheckbox[0].indeterminate = false;
           }
@@ -1146,10 +1190,10 @@
         console.log('clicking this row',$rows.data('row-index'));
 
         var dataRowIndex = $rows.data('row-index'),
-          isRowUnFocusing = expandedTableData[dataRowIndex].focused; //row is focused and was clicked again to unfocus
+          isRowUnFocusing = self.expandedTableData[dataRowIndex].focused; //row is focused and was clicked again to unfocus
 
-        for(var i = expandedTableData.length - 1; i >= 0; i--) {
-          expandedTableData[i].focused = false;
+        for(var i = self.expandedTableData.length - 1; i >= 0; i--) {
+          self.expandedTableData[i].focused = false;
         }
 
         $staticDataContainer.find('tr.macro-table-row-focused').removeClass('macro-table-row-focused');
@@ -1157,13 +1201,10 @@
 
         if(!isRowUnFocusing) {
           $rows.addClass('macro-table-row-focused');
-          expandedTableData[dataRowIndex].focused = true;
+          self.expandedTableData[dataRowIndex].focused = true;
         }
 
-        //TODO: callback function
-        if(typeof self.options.onRowFocus === 'function') {
-          self.options.onRowFocus(dataRowIndex, expandedTableData[dataRowIndex]);
-        }
+        self.element.trigger('rowfocus', dataRowIndex, self.expandedTableData[dataRowIndex]);
       }
 
       //rows in the static container
@@ -1210,7 +1251,7 @@
             isToggled = true;
             $checkboxes.attr('checked', true);
             $tableRows.addClass('macro-table-highlight macro-table-selected-row');
-            selectedRowCount = expandedTableData.length;
+            selectedRowCount = self.expandedTableData.length;
 
           //header checkbox deselected
           } else {
@@ -1222,8 +1263,8 @@
           }
 
           //set the row data structure to the appropriate selected state
-          for(var i = 0, len = expandedTableData.length; i < len; i++) {
-            expandedTableData[i].selected = isToggled;
+          for(var i = 0, len = self.expandedTableData.length; i < len; i++) {
+            self.expandedTableData[i].selected = isToggled;
           }
 
         //expand/collapse all rows
@@ -1243,21 +1284,21 @@
             $checkboxes.attr('checked', false);
           }
 
-          thisCurrentRow = expandedTableData[currentRow];
+          thisCurrentRow = self.expandedTableData[currentRow];
 
           //set the row data structure to the appropriate selected state
-          expandedRowIndexes = [];
-          for(var i = 0, subRowsModified = 0, len = expandedTableData.length; i < len + subRowsModified; i++) {
+          self.expandedRowIndexes = [];
+          for(var i = 0, subRowsModified = 0, len = self.expandedTableData.length; i < len + subRowsModified; i++) {
 
-            if(typeof expandedTableData[i].subRows !== 'undefined' && expandedTableData[i].subRows.length) {
+            if(typeof self.expandedTableData[i].subRows !== 'undefined' && self.expandedTableData[i].subRows.length) {
 
               if(isToggled) {
-                expandedRowIndexes.push(expandedTableData[i].index);
+                self.expandedRowIndexes.push(self.expandedTableData[i].index);
               }
 
-              if(expandedTableData[i].expanded != isToggled) {
+              if(self.expandedTableData[i].expanded != isToggled) {
                 handleRowExpandToggle(i, isToggled);
-                subRowsModified += (isToggled ? 1 : -1) * expandedTableData[i].subRows.length; //expandedTableData is changing, so need to modify the loop length
+                subRowsModified += (isToggled ? 1 : -1) * self.expandedTableData[i].subRows.length; //expandedTableData is changing, so need to modify the loop length
               }
 
               //(optimization) all expandable rows accounted for, stop the loop
@@ -1268,13 +1309,13 @@
           }
 
           //handle the resizing of the scroll spacer, and make sure the row position doesn't change
-          thisCurrentRow = expandedTableData.indexOf(thisCurrentRow) != -1 ?
-            expandedTableData.indexOf(thisCurrentRow) : //scroll to the original row
-            expandedTableData.indexOf(tableData[thisCurrentRow.index]); //scroll to the row's parent
+          thisCurrentRow = self.expandedTableData.indexOf(thisCurrentRow) != -1 ?
+            self.expandedTableData.indexOf(thisCurrentRow) : //scroll to the original row
+            self.expandedTableData.indexOf(tableData[thisCurrentRow.index]); //scroll to the row's parent
 
           breakTableScroll = true; //when resizing the scroll spacer, a scroll even may be triggered (and we don't want it to)
           $macroTable.find('div.macro-table-scroll-spacer')
-          .height(rowHeight * expandedTableData.length);
+          .height(rowHeight * self.expandedTableData.length);
 
           //nested setTimeouts to allow for scroll event to trigger for the scroll-spacer resize, then re-render the current position
           setTimeout(function() {
@@ -1285,9 +1326,7 @@
             //reset the force re-render flag
             setTimeout(function() {
               forceTableScrollRender = false;
-              if(typeof self.options.onRowExpand === 'function') {
-                self.options.onRowExpand(expandedRowIndexes);
-              }
+              self.element.trigger('rowexpand', self.expandedRowIndexes);
             },0);
           },0);
         }
@@ -1311,12 +1350,12 @@
           if($checkbox.is(':checked')) {
             $checkboxRow.addClass('macro-table-highlight macro-table-selected-row');
             $dataRow.addClass('macro-table-highlight macro-table-selected-row');
-            expandedTableData[dataRowIndex].selected = true;
+            self.expandedTableData[dataRowIndex].selected = true;
             selectedRowCount++;
           } else {
             $checkboxRow.removeClass('macro-table-highlight macro-table-selected-row');
             $dataRow.removeClass('macro-table-highlight macro-table-selected-row');
-            expandedTableData[dataRowIndex].selected = false;
+            self.expandedTableData[dataRowIndex].selected = false;
             selectedRowCount--;
           }
 
@@ -1326,7 +1365,7 @@
             $selectAllHeaderCheckbox.attr('checked', false);
             $selectAllHeaderCheckbox[0].indeterminate = false;
 
-          } else if(selectedRowCount == expandedTableData.length) { //all rows selected
+          } else if(selectedRowCount == self.expandedTableData.length) { //all rows selected
 
             $selectAllHeaderCheckbox.attr('checked', true);
             $selectAllHeaderCheckbox[0].indeterminate = false;
@@ -1349,8 +1388,8 @@
             handleRowExpandToggle(dataRowIndex, true);
 
             //add the expanded row index to the array for the onRowExpand callback
-            if(expandedRowIndexes.indexOf(dataRowIndex) == -1) {
-              expandedRowIndexes.push(dataRowIndex);
+            if(self.expandedRowIndexes.indexOf(dataRowIndex) == -1) {
+              self.expandedRowIndexes.push(dataRowIndex);
             }
           } else {
             $dataRow.removeClass('macro-table-row-expanded')
@@ -1362,7 +1401,7 @@
             handleRowExpandToggle(dataRowIndex, false);
 
             //remove the collapsed row index from the array for the onRowExpand callback
-            expandedRowIndexes.splice(expandedRowIndexes.indexOf(dataRowIndex), 1);
+            self.expandedRowIndexes.splice(self.expandedRowIndexes.indexOf(dataRowIndex), 1);
           }
 
           self._refreshRows();
@@ -1384,11 +1423,9 @@
           //}
 
           $macroTable.find('div.macro-table-scroll-spacer')
-          .height(rowHeight * expandedTableData.length);
+          .height(rowHeight * self.expandedTableData.length);
 
-          if(typeof self.options.onRowExpand === 'function') {
-            self.options.onRowExpand(expandedRowIndexes.sort());
-          }
+          self.element.trigger('rowexpand', self.expandedRowIndexes.sort());
         }
       });
 
@@ -1495,9 +1532,7 @@
 
             resizePositionStart = undefined;
 
-            if(typeof self.options.onColumnResize === 'function') {
-              self.options.onColumnResize(columnNumber, newWidth);
-            }
+            self.element.trigger('columnresize', columnNumber, newWidth);
           }); //mouseup
         } //if(typeof resizePositionStart === 'undefined')
       });
@@ -1746,7 +1781,7 @@
 
         if(deltaX !== 0) {
           var $domColumns = $header.find('th'),
-            offset = Math.abs($domColumns.eq(0).position().left);
+            offset = $domColumns.length !== 0 ? Math.abs($domColumns.eq(0).position().left) : 0;
 
           if(deltaX < 0 && currentColumn > 0) {
             var lastOffset = Math.abs($domColumns.eq(currentColumn - 1).position().left);
@@ -1822,8 +1857,8 @@
       expandedRowCount = 0;
 
       //sortedRows' keys go by column, then filterTerm
-      if(typeof sortedRows === 'undefined') {
-        sortedRows = {
+      if(this.sortedRows === null) {
+        this.sortedRows = {
           '': {
             '': options.tableData
           }
@@ -1912,6 +1947,11 @@
       $headerRow.empty();
       $summaryRow.empty();
       $columnSizers.empty();
+
+      //nothing to do if there are no columns to show
+      if(columns.length === 0) {
+        return;
+      }
 
       //build the column headers
       $headerWrapper.show(); //needs to be visible so column width calculation can be performed
@@ -2067,7 +2107,7 @@
         $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content'),
         $currentRowElement, scrollPosition;
 
-      expandedTableData = [];
+      this.expandedTableData = [];
 
       $dataContainerWrapper.hide();
 
@@ -2083,12 +2123,12 @@
         for(var j = 0, rowGroupLen = 1 + (row.expanded && typeof row.subRows !== 'undefined' ? row.subRows.length : 0); j < rowGroupLen; j++) {
           var rowData = rowGroupLen > 1 && j > 0 ? row.subRows[j - 1] : row;
 
-          expandedTableData.push(rowData);
+          this.expandedTableData.push(rowData);
 
           //render the rows as long as we haven't gone over the DOM row threshold
           if(i >= currentRow - currentDomRow && renderCount < maxTotalDomRows && j < maxRenderCount) {
             var staticHeight, dynamicHeight,
-              rowElements = renderRow.call(this, rowData, expandedTableData.length - 1);
+              rowElements = renderRow.call(this, rowData, this.expandedTableData.length - 1);
 
             //append row to table
             $tableBody.append(rowElements.dynamicRow);
@@ -2114,7 +2154,7 @@
 
       //size the scroll spacer to the theoretical max height of all the data
       $macroTable.find('div.macro-table-scroll-spacer')
-      .height(rowHeight * expandedTableData.length);
+      .height(rowHeight * this.expandedTableData.length);
 
       //return table to the old scoll position
       $currentRowElement = $tableBody.find('tr').filter(':nth-child('+(currentDomRow + 1)+')');
@@ -2139,9 +2179,7 @@
       this._setOption('columns', columns);
 
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
-      if(typeof this.options.onColumnReorder === 'function') {
-        this.options.onColumnReorder(columns);
-      }
+      this.element.trigger('columnreorder', columns);
       rebuildSearchIndexColumns.bind(this)('move', columnToReorderIndex, newIndex);
     },
 
@@ -2159,9 +2197,7 @@
       this._setOption('columns', columns);
 
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
-      if(typeof this.options.onColumnRemove === 'function') {
-        this.options.onColumnRemove(columns);
-      }
+      this.element.trigger('columnremove', columns);
       rebuildSearchIndexColumns.bind(this)('delete', columnToRemoveIndex);
     },
 
@@ -2183,9 +2219,7 @@
       columns.splice(newIndex, 0, columnToAdd);
 
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
-      if(typeof this.options.onColumnAdd === 'function') {
-        this.options.onColumnAdd(columns);
-      }
+      this.element.trigger('columnadd', columns);
       rebuildSearchIndexColumns.bind(this)('add');
     },
 
@@ -2223,7 +2257,7 @@
         } else {
 
           options.sortByColumn = '';
-          renderRowDataSet = sortedRows[''][''];
+          renderRowDataSet = this.sortedRows[''][''];
         }
 
       //columnToSort is a column field name
@@ -2244,7 +2278,7 @@
           }
         }*/
 
-        renderRowDataSet = sortedRows[columnToSort][''];
+        renderRowDataSet = this.sortedRows[columnToSort][''];
       }
 
       renderRowDataSet = postSortFilter.bind(this)(renderRowDataSet, null, callback); //possibly trigger webworker
@@ -2351,10 +2385,10 @@
 
       if(this.options.rowsSelectable === true && selectedRowCount !== 0) {
 
-        for(var i = 0, len = expandedTableData.length; i < len; i++) {
+        for(var i = 0, len = this.expandedTableData.length; i < len; i++) {
 
-          if(expandedTableData[i].selected) {
-            selectedRows.push(expandedTableData[i]);
+          if(this.expandedTableData[i].selected) {
+            selectedRows.push(this.expandedTableData[i]);
           }
 
           if(selectedRows.length == selectedRowCount) {
@@ -2422,7 +2456,7 @@
         tableData = this.renderRowDataSet;
 
       if(byIndex && typeof tableData[scrollToRow] !== 'undefined') {
-        scrollToRow = expandedTableData.indexOf(tableData[scrollToRow]);
+        scrollToRow = this.expandedTableData.indexOf(tableData[scrollToRow]);
       } else if(typeof scrollToRow === 'undefined') {
         scrollToRow = 0;
       }
@@ -2431,6 +2465,7 @@
 
       var rowsToScroll = scrollToRow - currentRow;
       if(rowsToScroll !== 0) {
+        this.scrollToRowIndex = scrollToRow;
         this.element.find('div.macro-table-scroll-container').scrollTop(scrollTop + (rowsToScroll * options.rowHeight));
 
       } else {
@@ -2459,11 +2494,11 @@
      * @return {Object} row object or undefined if no row is focused
      */
     getFocusedRow: function() {
-      for(var i = expandedTableData.length - 1; i >= 0; i--) {
-        if(expandedTableData[i].focused === true) {
+      for(var i = this.expandedTableData.length - 1; i >= 0; i--) {
+        if(this.expandedTableData[i].focused === true) {
           return {
-            index: expandedTableData[i].id,
-            data: JSON.parse(JSON.stringify(expandedTableData[i].data)) //cloned object
+            index: this.expandedTableData[i].id,
+            data: JSON.parse(JSON.stringify(this.expandedTableData[i].data)) //cloned object
           };
         }
       }
@@ -2488,7 +2523,7 @@
      * @param  {Object} data  Object corresponding to columns
      */
     editRow: function(index, data) {
-      expandedTableData[index].data = data;
+      this.expandedTableData[index].data = data;
       this._refreshRows();
     },
 
