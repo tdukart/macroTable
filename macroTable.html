@@ -121,6 +121,8 @@
             columns = [],
             i;
 
+          tableOptions = tableOptions || {};
+
           for(i = 0; i < columnOptions.numColumns; i++) {
             columns.push({
               title: typeof columnOptions.columnTitles !== 'undefined' ? columnOptions.columnTitles[i] || 'Col '+i :  'Col '+i,
@@ -137,7 +139,8 @@
             summaryRow: tableOptions.summaryRow ? publicFunctions.generateTableData(1, columnOptions)[0].data : false,
             tableData: tableData,
             rowsSelectable: tableOptions.rowsSelectable,
-            columns: columns
+            columns: columns,
+            emptyInitializedMessage: tableOptions.emptyInitializedMessage
           })
 
           .on('columnreorder', function(columns) {
