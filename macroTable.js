@@ -72,37 +72,6 @@
 
 (function( $, undefined ) {
 
-  var rowSelectColumnWidth =16, //the static width of the checkbox column for selecting rows
-    expanderColumnWidth = 16, //the static width of the expand/collapse sub rows column
-    styledScrollbarWidth = 12,
-    unStyledScrollbarWidth = 16,
-    scrollBarWidth = navigator.userAgent.indexOf(' AppleWebKit/') !== -1 ? styledScrollbarWidth : unStyledScrollbarWidth,
-    resizeColumnMinWidth = 30,
-    defaultTableHeight = 200, //default the table to this height
-    displayRowWindow, //the max number of rows that will show in the provided table height
-    replaceRowWindow, //when a DOM row swap is triggered, this many rows will be removed and replaced at the other end of the table
-
-    //columns
-    maxTotalDomColumns = Infinity, //TODO: not implemented, currently allowing any number of columns to show
-    currentColumn = 0, //0-indexed, describes the left-most, visible data column (direct correlation with array index). default to first column
-    currentDomColumn = 0, //0-indexed, describes the left-most, visible DOM column. default to first column
-    //processedColumns = [], //once columns processed from options.columns, the elements and real widths go in here
-
-    //rows
-    maxTotalDomRows, //real DOM row count would only be less than this if the amount of data is less than this number (don't need the extra DOM rows to display total data)
-    scrollTop = 0, //default to top of table
-    scrollLeft = 0,//default to left of table
-    currentRow = 0, //0-indexed, describes the top-most, visible data row (direct correlation with array index). default to first row
-    currentDomRow = 0, //0-indexed, describes the top-most, visible DOM row. default to first row
-    triggerUpDomRow, //when scrolling up, when on this DOM row, a row swap will trigger
-    triggerDownDomRow, //when scrolling down, when on this DOM row, a row swap will trigger
-
-    summaryRowEnabled,
-
-    selectedRowCount = 0, //counter to keep track of selected rows, used to optimize selecting behavior comparing currently selected to length of total rows
-    expandedRowCount = 0, //counter to keep track of expanded rows, used to optimize selecting behavior comparing currently selected to length of total rows
-    rowsWithChildrenCount = 0; //counter for the total number of rows that can be expanded
-
   /** Truly Private functions */
 
   /**
@@ -174,8 +143,8 @@
 
     //add back previous selection of rows
     if(direction < 0) {
-      $tableBody.append($rows.filter(':lt('+(maxTotalDomRows - renderCount)+')'));
-      $staticTableBody.append($staticRows.filter(':lt('+(maxTotalDomRows - renderCount)+')'));
+      $tableBody.append($rows.filter(':lt('+(this.maxTotalDomRows - renderCount)+')'));
+      $staticTableBody.append($staticRows.filter(':lt('+(this.maxTotalDomRows - renderCount)+')'));
     } else if(direction > 0) {
       $tableBody.prepend($rows.filter(':gt('+(renderCount - 1)+')'));
       $staticTableBody.prepend($staticRows.filter(':gt('+(renderCount - 1)+')'));
@@ -213,7 +182,7 @@
         newLastDomRow = $tableRows.length - i + 1;
 
         if(distanceFromBottomToNewLastDomRow / i !== this.options.rowHeight) {
-          spacerMultiplier = Math.max(0, newLastDomRow - this.options.rowBuffer - displayRowWindow);
+          spacerMultiplier = Math.max(0, newLastDomRow - this.options.rowBuffer - this.displayRowWindow);
         }
         return false;
       }
@@ -240,11 +209,11 @@
   function scrollTableVertical(direction, rerender) {
     var rowBuffer = this.options.rowBuffer,
       reScrollNeeded = false,
-      rowNumber = currentRow,
+      rowNumber = this.currentRow,
       visibleRowCount = this.expandedTableData.length,
 
-      finalDomRowWindow = Math.max(0, visibleRowCount - rowBuffer - rowBuffer - displayRowWindow), //the final row window render starts at this row
-      isInFinalDomWindow = currentRow > finalDomRowWindow,
+      finalDomRowWindow = Math.max(0, visibleRowCount - rowBuffer - rowBuffer - this.displayRowWindow), //the final row window render starts at this row
+      isInFinalDomWindow = this.currentRow > finalDomRowWindow,
 
       $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
       $tableContainer = $tableContentWrapper.find('div.macro-table-data-container'),
@@ -255,21 +224,21 @@
       newRenderCount = 0; //number of new rows we need to remove and re-add with new values
 
     //a huge scroll, passed the normal row swap threshold (grab the thumb with the mouse and whip it all the way in one direction)
-    if(currentDomRow + direction > maxTotalDomRows || currentDomRow + direction <= 0 || rerender) {
+    if(this.currentDomRow + direction > this.maxTotalDomRows || this.currentDomRow + direction <= 0 || rerender) {
 
       //final dom window should always render the maxTotalDomRows number of rows
       if(isInFinalDomWindow) {
 
-        rebuildRows.call(this, visibleRowCount < maxTotalDomRows ? 0 : visibleRowCount - maxTotalDomRows, visibleRowCount);
-        currentDomRow = visibleRowCount < maxTotalDomRows ? rowNumber : maxTotalDomRows - (visibleRowCount - rowNumber);
+        rebuildRows.call(this, visibleRowCount < this.maxTotalDomRows ? 0 : visibleRowCount - this.maxTotalDomRows, visibleRowCount);
+        this.currentDomRow = visibleRowCount < this.maxTotalDomRows ? rowNumber : this.maxTotalDomRows - (visibleRowCount - rowNumber);
         reScrollNeeded = calculateAndApplyBottomMargin.call(this); //at the bottom, make sure the scroll margins are in place
 
       //not in final dom window, proceed as normal
       } else {
 
         var topRowBuffer = rowNumber < rowBuffer ? rowNumber : rowBuffer; //account for when on the first rowBuffer number of rows
-        rebuildRows.call(this, rowNumber - topRowBuffer, rowNumber - topRowBuffer + maxTotalDomRows);
-        currentDomRow = topRowBuffer;
+        rebuildRows.call(this, rowNumber - topRowBuffer, rowNumber - topRowBuffer + this.maxTotalDomRows);
+        this.currentDomRow = topRowBuffer;
       }
 
       //console.log('re-render',rowNumber,'(DOM row)',currentDomRow);
@@ -282,23 +251,23 @@
       //scrolling down
       if(direction > 0) {
 
-        currentDomRow = Math.min(currentDomRow + direction, Math.max(rowBuffer + rowBuffer + displayRowWindow, visibleRowCount - maxTotalDomRows)); //the DOM row that the table would be at, if a detach weren't about to happen
+        this.currentDomRow = Math.min(this.currentDomRow + direction, Math.max(rowBuffer + rowBuffer + this.displayRowWindow, visibleRowCount - this.maxTotalDomRows)); //the DOM row that the table would be at, if a detach weren't about to happen
 
         //convenience variables to make debugging the logic easier
-        var remainingDomRows = $tableRows.filter(':gt('+(currentDomRow - 1)+')').length,
-          moreRowRenderingNeeded = visibleRowCount - rowNumber > remainingDomRows && remainingDomRows <= maxTotalDomRows - rowBuffer - 1;
+        var remainingDomRows = $tableRows.filter(':gt('+(this.currentDomRow - 1)+')').length,
+          moreRowRenderingNeeded = visibleRowCount - rowNumber > remainingDomRows && remainingDomRows <= this.maxTotalDomRows - rowBuffer - 1;
 
         //render new rows appropriate to current DOM possition, or if a big jump landed into the final DOM window and need the remaining rows fleshed out
         if(!isInFinalDomWindow || moreRowRenderingNeeded) {
 
-          if(currentDomRow >= triggerDownDomRow) {
+          if(this.currentDomRow >= this.triggerDownDomRow) {
 
-            newRenderCount = currentDomRow - rowBuffer;
+            newRenderCount = this.currentDomRow - rowBuffer;
             if(newRenderCount <= 0) {
               console.warn('newRenderCount should never be less than 1 but it is',newRenderCount,'Probably due to overloaded scroll listener');
             } else {
 
-              currentDomRow -= rebuildRows.call(this, rowNumber + maxTotalDomRows - currentDomRow, rowNumber + maxTotalDomRows - currentDomRow + newRenderCount, direction);
+              this.currentDomRow -= rebuildRows.call(this, rowNumber + this.maxTotalDomRows - this.currentDomRow, rowNumber + this.maxTotalDomRows - this.currentDomRow + newRenderCount, direction);
               //console.log('scrolling down',rowNumber,'(DOM row)',currentDomRow);
 
               $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
@@ -314,16 +283,16 @@
       //scrolling up
       } else if(direction < 0) {
 
-        currentDomRow = Math.max(currentDomRow + direction, 0); //the DOM row that the table would be at, if a detach weren't about to happen
+        this.currentDomRow = Math.max(this.currentDomRow + direction, 0); //the DOM row that the table would be at, if a detach weren't about to happen
 
-        if(currentDomRow <= triggerUpDomRow && rowNumber > replaceRowWindow) {
+        if(this.currentDomRow <= this.triggerUpDomRow && rowNumber > this.replaceRowWindow) {
 
-          newRenderCount = maxTotalDomRows - currentDomRow - displayRowWindow - rowBuffer;
+          newRenderCount = this.maxTotalDomRows - this.currentDomRow - this.displayRowWindow - rowBuffer;
           if(newRenderCount <= 0) {
             console.warn('newRenderCount should never be less than 1 but it is',newRenderCount,'Probably due to overloaded scroll listener');
           } else {
 
-            currentDomRow += rebuildRows.call(this, rowNumber - currentDomRow - 1 - newRenderCount, rowNumber - currentDomRow, direction);
+            this.currentDomRow += rebuildRows.call(this, rowNumber - this.currentDomRow - 1 - newRenderCount, rowNumber - this.currentDomRow, direction);
             //console.log('scrolling up',rowNumber,'(DOM row)',currentDomRow);
 
             $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
@@ -333,7 +302,7 @@
       } //scroll up
     } //else
 
-    var scrollTop = $tableRows.length > 0 ? $tableRows.eq(currentDomRow).offset().top - $tableBody.offset().top : 0;
+    var scrollTop = $tableRows.length > 0 ? $tableRows.eq(this.currentDomRow).offset().top - $tableBody.offset().top : 0;
     //console.log('current dom row (top visible row)',currentDomRow,'currentRow',currentRow,'row index',expandedTableData[currentRow],'from top',scrollTop);
     $tableContainer.scrollTop(scrollTop);
     $staticTableContainer.scrollTop(scrollTop);
@@ -354,20 +323,20 @@
       dataContainerScrollLeft = $tableContainer.scrollLeft(),
       scrollContainerScrollLeft = $('div.macro-table-scroll-container', this.element).scrollLeft(),
       $domColumns = $('div.macro-table-header th', this.element),
-      $currrentColumn = $domColumns.eq(currentColumn),
+      $currrentColumn = $domColumns.eq(this.currentColumn),
       columnIterator = -1,
       endColumn;
 
     //scroll right
     if(scrollContainerScrollLeft > dataContainerScrollLeft &&
         scrollContainerScrollLeft >= dataContainerScrollLeft + $currrentColumn.outerWidth()) {
-      columnIterator = currentColumn + 1;
+      columnIterator = this.currentColumn + 1;
       endColumn = $domColumns.length;
 
     //scroll left
     } else if(scrollContainerScrollLeft < dataContainerScrollLeft &&
         scrollContainerScrollLeft <= dataContainerScrollLeft + $currrentColumn.outerWidth()) {
-      columnIterator = currentColumn;
+      columnIterator = this.currentColumn;
       endColumn = -1;
     } else {
       //console.log('no scroll left needed');
@@ -383,7 +352,7 @@
       if(scrollContainerScrollLeft >= newColumnScrollLeft &&
           scrollContainerScrollLeft < newColumnScrollLeft + $newColumn.outerWidth()) {
 
-        currentColumn = columnIterator;
+        this.currentColumn = columnIterator;
         $tableContainer.scrollLeft(newColumnScrollLeft);
         this.element.find('div.macro-table-header').scrollLeft(newColumnScrollLeft);
         break;
@@ -781,6 +750,142 @@
     widgetEventPrefix: 'macroTable',
 
     /**
+     * the static width of the checkbox column for selecting rows
+     * @type {Number}
+     */
+    rowSelectColumnWidth: 16,
+
+    /**
+     * the static width of the expand/collapse sub rows column
+     * @type {Number}
+     */
+    expanderColumnWidth: 16,
+
+    /**
+     * Width of scrollbars if the browser supports styling
+     * @type {Number}
+     */
+    styledScrollbarWidth: 12,
+
+    /**
+     * Width of scrollbars if the brwoser does not support styling
+     * @type {Number}
+     */
+    unStyledScrollbarWidth: 16,
+
+    /**
+     * The actual scrollbar widths
+     * @type {Number}
+     */
+    scrollBarWidth: null,
+
+    /**
+     * Min width a column can be resized
+     * @type {Number}
+     */
+    resizeColumnMinWidth: 30,
+
+    /**
+     * default the table to this height
+     * @type {Number}
+     */
+    defaultTableHeight: 200,
+
+    /**
+     * the max number of rows that will show in the provided table height
+     * @type {Number}
+     */
+    displayRowWindow: 0,
+
+    /**
+     * when a DOM row swap is triggered, this many rows will be removed and replaced at the other end of the table
+     * @type {Number}
+     */
+    replaceRowWindow: 0,
+
+    /**
+     * Limit of number of columns to display in the DOM
+     * TODO: not implemented, currently allowing any number of columns to show
+     * @type {Number}
+     */
+    maxTotalDomColumns: Infinity,
+
+    /**
+     * 0-indexed, describes the left-most, visible data column (direct correlation with array index). default to first column
+     * @type {Number}
+     */
+    currentColumn: 0,
+
+    /**
+     * 0-indexed, describes the left-most, visible DOM column. default to first column
+     * TODO: this currently is not used, see definition for maxTotalDomColumns
+     * @type {Number}
+     */
+    currentDomColumn: 0,
+
+    //processedColumns: [], //once columns processed from options.columns, the elements and real widths go in here
+
+    /**
+     * real DOM row count would only be less than this if the amount of data is less than this number (don't need the extra DOM rows to display total data)
+     * @type {Number}
+     */
+    maxTotalDomRows: 0,
+
+    /**
+     * Scroll position top of the table. default to top of table
+     * @type {Number}
+     */
+    scrollTop: 0,
+
+    /**
+     * Scroll position left of the table. default to left edge of table
+     * @type {Number}
+     */
+    scrollLeft: 0,
+
+    /**
+     * 0-indexed, describes the top-most, visible data row (direct correlation with array index). default to first row
+     * @type {Number}
+     */
+    currentRow: 0,
+
+    /**
+     * 0-indexed, describes the top-most, visible DOM row. default to first row
+     * @type {Number}
+     */
+    currentDomRow: 0,
+
+    /**
+     * when scrolling up, when on this DOM row, a row swap will trigger
+     * @type {Number}
+     */
+    triggerUpDomRow: 0,
+
+    /**
+     * when scrolling down, when on this DOM row, a row swap will trigger
+     * @type {Number}
+     */
+    triggerDownDomRow: 0,
+
+    /**
+     * counter to keep track of selected rows, used to optimize selecting behavior comparing currently selected to length of total rows
+     * @type {Number}
+     */
+    selectedRowCount: 0,
+
+    /**
+     * counter to keep track of expanded rows, used to optimize selecting behavior comparing currently selected to length of total rows
+     * @type {Number}
+     */
+    expandedRowCount: 0,
+
+    /**
+     * counter for the total number of rows that can be expanded
+     * @type {Number}
+     */
+    rowsWithChildrenCount: 0,
+
+    /**
      * Array matching the length of renderRowDataSet. Each index contains an array of values,
      * each index directly corresponding to the visibile columns in their current order.
      *
@@ -812,7 +917,6 @@
      * @type {Array}
      */
     renderRowDataSet: [],
-
 
     /**
      * Field set when scrollToRow() is called
@@ -1008,6 +1112,8 @@
         breakTableScroll = false,
         forceTableScrollRender = false;
 
+      this.scrollBarWidth = navigator.userAgent.indexOf(' AppleWebKit/') !== -1 ? this.styledScrollbarWidth : this.unStyledScrollbarWidth;
+
       $macroTable.hide()
       .empty()
       .html('<div class="macro-table-header-wrapper">'+
@@ -1096,7 +1202,7 @@
         self.expandedTableData[index].expanded = !!isExpanded;
 
         if(isExpanded) {
-          expandedRowCount++;
+          self.expandedRowCount++;
           //apply + concat the subRows to remove to the argument array provides one-line solution to an otherwise loop-related solution
           Array.prototype.splice.apply(self.expandedTableData, [index + 1, 0].concat(self.expandedTableData[index].subRows));
 
@@ -1107,19 +1213,19 @@
           }
 
         } else {
-          expandedRowCount--;
+          self.expandedRowCount--;
           var removedRows = self.expandedTableData.splice(index + 1, self.expandedTableData[index].subRows.length);
 
           //clean up selected count from removed rows
           for(var i = 0, len = removedRows.length; i < len; i++) {
             if(removedRows[i].selected) {
               removedRows[i].selected = false;
-              selectedRowCount--;
+              self.selectedRowCount--;
             }
           }
 
           //by hiding the sub rows, all remaining rows are selected, so make select toggle checkbox reflect that
-          if(selectedRowCount == self.expandedTableData.length) {
+          if(self.selectedRowCount == self.expandedTableData.length) {
             $selectAllHeaderCheckbox.attr('checked', true); //click the box again and it will deselect all rows
             $selectAllHeaderCheckbox[0].indeterminate = false;
           }
@@ -1251,7 +1357,7 @@
             isToggled = true;
             $checkboxes.attr('checked', true);
             $tableRows.addClass('macro-table-highlight macro-table-selected-row');
-            selectedRowCount = self.expandedTableData.length;
+            self.selectedRowCount = self.expandedTableData.length;
 
           //header checkbox deselected
           } else {
@@ -1259,7 +1365,7 @@
             isToggled = false;
             $checkboxes.attr('checked', false);
             $tableRows.removeClass('macro-table-highlight macro-table-selected-row');
-            selectedRowCount = 0;
+            self.selectedRowCount = 0;
           }
 
           //set the row data structure to the appropriate selected state
@@ -1284,7 +1390,7 @@
             $checkboxes.attr('checked', false);
           }
 
-          thisCurrentRow = self.expandedTableData[currentRow];
+          thisCurrentRow = self.expandedTableData[self.currentRow];
 
           //set the row data structure to the appropriate selected state
           self.expandedRowIndexes = [];
@@ -1302,7 +1408,7 @@
               }
 
               //(optimization) all expandable rows accounted for, stop the loop
-              if(expandedRowCount == rowsWithChildrenCount) {
+              if(self.expandedRowCount == self.rowsWithChildrenCount) {
                 break;
               }
             }
@@ -1351,21 +1457,21 @@
             $checkboxRow.addClass('macro-table-highlight macro-table-selected-row');
             $dataRow.addClass('macro-table-highlight macro-table-selected-row');
             self.expandedTableData[dataRowIndex].selected = true;
-            selectedRowCount++;
+            self.selectedRowCount++;
           } else {
             $checkboxRow.removeClass('macro-table-highlight macro-table-selected-row');
             $dataRow.removeClass('macro-table-highlight macro-table-selected-row');
             self.expandedTableData[dataRowIndex].selected = false;
-            selectedRowCount--;
+            self.selectedRowCount--;
           }
 
           //set header checkbox state
-          if(selectedRowCount === 0) { //no rows selected
+          if(self.selectedRowCount === 0) { //no rows selected
 
             $selectAllHeaderCheckbox.attr('checked', false);
             $selectAllHeaderCheckbox[0].indeterminate = false;
 
-          } else if(selectedRowCount == self.expandedTableData.length) { //all rows selected
+          } else if(self.selectedRowCount == self.expandedTableData.length) { //all rows selected
 
             $selectAllHeaderCheckbox.attr('checked', true);
             $selectAllHeaderCheckbox[0].indeterminate = false;
@@ -1407,12 +1513,12 @@
           self._refreshRows();
 
           //set header checkbox state
-          if(expandedRowCount === 0) { //no rows expanded
+          if(self.expandedRowCount === 0) { //no rows expanded
 
             $expandAllHeaderCheckbox.attr('checked', false);
             //$expandAllHeaderCheckbox[0].indeterminate = false;
 
-          } else if(expandedRowCount == rowsWithChildrenCount) { //all expandable rows expanded
+          } else if(self.expandedRowCount == self.rowsWithChildrenCount) { //all expandable rows expanded
 
             $expandAllHeaderCheckbox.attr('checked', true);
             //$expandAllHeaderCheckbox[0].indeterminate = false;
@@ -1440,10 +1546,10 @@
 
         return Math.max(
           Math.min(
-            $macroTable.outerWidth() - scrollBarWidth - $resizer.outerWidth(), //max left position
+            $macroTable.outerWidth() - self.scrollBarWidth - $resizer.outerWidth(), //max left position
             cursorOffset //current cursor position
           ),
-          $columnToResize.offset().left + resizeColumnMinWidth //min resize position
+          $columnToResize.offset().left + self.resizeColumnMinWidth //min resize position
         );
       }
 
@@ -1469,7 +1575,7 @@
               widthDelta = $resizer.position().left - resizePositionStart,
               marginAdded = 0,
               totalColumnWidth = 0,
-              tableViewportWidth = $macroTable.parent().width() - scrollBarWidth,
+              tableViewportWidth = $macroTable.parent().width() - self.scrollBarWidth,
               newWidth = $columnSizers.width() + widthDelta,
               $dynamicRows =  $dataContainer.find('tr'),
               $staticRows = $staticDataContainer.find('tr'),
@@ -1521,7 +1627,7 @@
             .width(newTotalColumnWidth + marginAdded);
 
             $macroTable.find('div.macro-table-header div.macro-table-scroll-wrapper')
-            .width(newTotalColumnWidth + marginAdded + scrollBarWidth);
+            .width(newTotalColumnWidth + marginAdded + self.scrollBarWidth);
 
             $macroTable.find('div.macro-table-scroll-spacer')
             .width(newTotalColumnWidth + marginAdded);
@@ -1679,7 +1785,7 @@
             if((isScrollingLeft || isScrollingRight) && $macroTable.hasClass('macro-table-column-moving')) {
               if(typeof scrollColumnTimer === 'undefined') {
                 scrollColumnTimer = setTimeout(function() {
-                  var currenColumnWidth = $header.find('col').eq(currentColumn).outerWidth();
+                  var currenColumnWidth = $header.find('col').eq(self.currentColumn).outerWidth();
                   scrollColumnTimer = undefined;
 
                   $scroll.scrollLeft(
@@ -1774,22 +1880,22 @@
       .bind('mousewheel', function(e, delta, deltaX, deltaY) {
         e.preventDefault();
         if(deltaY < 0) {
-          $scroll.scrollTop(scrollTop + rowHeight);
+          $scroll.scrollTop(self.scrollTop + rowHeight);
         } else if(deltaY > 0) {
-          $scroll.scrollTop(scrollTop - rowHeight);
+          $scroll.scrollTop(self.scrollTop - rowHeight);
         }
 
         if(deltaX !== 0) {
           var $domColumns = $header.find('th'),
             offset = $domColumns.length !== 0 ? Math.abs($domColumns.eq(0).position().left) : 0;
 
-          if(deltaX < 0 && currentColumn > 0) {
-            var lastOffset = Math.abs($domColumns.eq(currentColumn - 1).position().left);
-            console.log('left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',currentColumn);
+          if(deltaX < 0 && self.currentColumn > 0) {
+            var lastOffset = Math.abs($domColumns.eq(self.currentColumn - 1).position().left);
+            console.log('left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',self.currentColumn);
             $scroll.scrollLeft(offset - lastOffset);
-          } else if(deltaX > 0 && currentColumn < $domColumns.length - 1) {
-            var nextOffset = Math.abs($domColumns.eq(currentColumn + 1).position().left);
-            console.log('right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',currentColumn);
+          } else if(deltaX > 0 && self.currentColumn < $domColumns.length - 1) {
+            var nextOffset = Math.abs($domColumns.eq(self.currentColumn + 1).position().left);
+            console.log('right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',self.currentColumn);
             $scroll.scrollLeft(offset + nextOffset);
           }
         }
@@ -1798,25 +1904,25 @@
 
       //scroll function for the scroll container, using the scrollbars
       $scroll.scroll(function(e) {
-        var lastScrollTop = scrollTop,
-          lastTableScrollLeft = scrollLeft;
+        var lastScrollTop = self.scrollTop,
+          lastTableScrollLeft = self.scrollLeft;
 
-        scrollTop = $(this).scrollTop();
-        scrollLeft = $(this).scrollLeft();
+        self.scrollTop = $(this).scrollTop();
+        self.scrollLeft = $(this).scrollLeft();
 
-        var rowsToScroll = Math.abs(~~(scrollTop / rowHeight) - ~~(lastScrollTop / rowHeight));
+        var rowsToScroll = Math.abs(~~(self.scrollTop / rowHeight) - ~~(lastScrollTop / rowHeight));
         if(rowsToScroll > 0) {
-          if(lastScrollTop < scrollTop) {
+          if(lastScrollTop < self.scrollTop) {
 
-            currentRow += rowsToScroll;
+            self.currentRow += rowsToScroll;
             if(!breakTableScroll) {
               scrollTableVertical.call(self, rowsToScroll, forceTableScrollRender);
               //console.log('scrolling down to row',currentRow,'by',rowsToScroll,'rows');
             }
 
-          } else if (lastScrollTop > scrollTop){
+          } else if (lastScrollTop > self.scrollTop){
 
-            currentRow -= rowsToScroll;
+            self.currentRow -= rowsToScroll;
             if(!breakTableScroll) {
               scrollTableVertical.call(self, -rowsToScroll, forceTableScrollRender);
               //console.log('scrolling up to row',currentRow,'by',rowsToScroll,'rows');
@@ -1824,7 +1930,7 @@
           }
         }
 
-        if(scrollLeft != lastTableScrollLeft) {
+        if(self.scrollLeft != lastTableScrollLeft) {
           scrollTableHorizontal.call(self);
         }
         //console.log('Scrolling .macro-table-scroll-container: lastScrollTop',lastScrollTop,'scrollTop',scrollTop,'calculatedRow',calculatedRow,'lastCalculatedRow',lastCalculatedRow,'rowsToScroll',rowsToScroll);
@@ -1848,13 +1954,13 @@
         options.sortByColumn = '';
       }
 
-      scrollTop = 0;
-      currentRow = 0;
-      currentDomRow = 0;
-      currentColumn = 0;
-      currentDomColumn = 0;
-      selectedRowCount = 0;
-      expandedRowCount = 0;
+      this.scrollTop = 0;
+      this.currentRow = 0;
+      this.currentDomRow = 0;
+      this.currentColumn = 0;
+      this.currentDomColumn = 0;
+      this.selectedRowCount = 0;
+      this.expandedRowCount = 0;
 
       //sortedRows' keys go by column, then filterTerm
       if(this.sortedRows === null) {
@@ -1879,7 +1985,7 @@
       this._resizeTable(options.height, options.width);
       this._sortTable(options.sortByColumn, function() {
         //initialize the global count for rows with children
-        rowsWithChildrenCount = countRowsWithChildren.call(this);
+        this.rowsWithChildrenCount = countRowsWithChildren.call(this);
         this._renderHeaderRowControls();
 
         if(this.renderRowDataSet.length > 0) {
@@ -1894,7 +2000,7 @@
         }
       });
 
-      console.log('replaceRowWindow',replaceRowWindow,'maxTotalDomRows',maxTotalDomRows,'maxTotalDomColumns',maxTotalDomColumns,'middleDomRow',~~(maxTotalDomRows / 2),'triggerUpDomRow',triggerUpDomRow,'triggerDownDomRow',triggerDownDomRow);
+      console.log('replaceRowWindow',this.replaceRowWindow,'maxTotalDomRows',this.maxTotalDomRows,'maxTotalDomColumns',this.maxTotalDomColumns,'middleDomRow',~~(this.maxTotalDomRows / 2),'triggerUpDomRow',this.triggerUpDomRow,'triggerDownDomRow',this.triggerDownDomRow);
     },
 
     /**
@@ -1903,18 +2009,18 @@
      * @private
      */
     _initializeScrollBarOffsets: function() {
-      if(scrollBarWidth === styledScrollbarWidth) {
+      if(this.scrollBarWidth === this.styledScrollbarWidth) {
         this.element.addClass('has-styled-scrollbars');
       }
 
-      this.element.find('div.macro-table-header-wrapper').css('margin-right', scrollBarWidth).end()
+      this.element.find('div.macro-table-header-wrapper').css('margin-right', this.scrollBarWidth).end()
       .find('div.macro-table-scroll-shim').css({
-        width: scrollBarWidth,
-        right: -scrollBarWidth
+        width: this.scrollBarWidth,
+        right: -this.scrollBarWidth
       }).end()
       .find('div.macro-table-data-veil').css({
-        right: scrollBarWidth,
-        bottom: scrollBarWidth
+        right: this.scrollBarWidth,
+        bottom: this.scrollBarWidth
       });
     },
 
@@ -1939,7 +2045,7 @@
         $summaryRow = $header.find('tr.macro-table-summary-row'),
 
         totalColumnWidth = 0,
-        tableViewportWidth = $macroTable.parent().width() - scrollBarWidth,
+        tableViewportWidth = $macroTable.parent().width() - this.scrollBarWidth,
         marginAdded;
 
       $headerWrapper.hide();
@@ -1958,7 +2064,7 @@
       for(var i = columns.length - 1; i >= 0; i--) {
         var columnWidth = typeof columns[i].width !== 'undefined' ? parseInt(columns[i].width, 10) : this.options.defaultColumnWidth;
 
-        if(i < maxTotalDomColumns) { //TODO: right now, this is always true because we show all columns in the DOM, always
+        if(i < this.maxTotalDomColumns) { //TODO: right now, this is always true because we show all columns in the DOM, always
           var $summaryColumn,
             $colSizer = $(document.createElement('col')).width(columnWidth),
             $headerColumn = $(document.createElement('th'))
@@ -2013,10 +2119,10 @@
       .width(totalColumnWidth + marginAdded);
 
       $leftScrollWrapperBody.width(totalColumnWidth + marginAdded);
-      $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + scrollBarWidth);
+      $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + this.scrollBarWidth);
 
       $header.add($macroTable.find('div.macro-table-data-container')).scrollLeft(
-        $header.scrollLeft() + $headerRow.find('th').filter(':nth-child('+(currentColumn + 1)+')').position().left //scroll position of old column
+        $header.scrollLeft() + $headerRow.find('th').filter(':nth-child('+(this.currentColumn + 1)+')').position().left //scroll position of old column
       );
     },
 
@@ -2040,7 +2146,7 @@
       //set up table for rows to have checkbox columns, sizing handled in .resizeTable()
       if(options.rowsSelectable === true && this.renderRowDataSet.length > 0) {
         var $checboxColumnSizer = $(document.createElement('col')).addClass('macro-table-row-selector-column')
-          .width(rowSelectColumnWidth),
+          .width(this.rowSelectColumnWidth),
           $checkboxColumn = $(document.createElement('th')).html('<input type="checkbox" class="macro-table-checkbox macro-table-select-toggle" />');
 
         $staticColumnSizers.append($checboxColumnSizer);
@@ -2057,10 +2163,10 @@
       //WARNING: assuming at this point rowsWithChildrenCount has been initialized and is up to date
 
       //set up table for rows with expandable children
-      if(rowsWithChildrenCount > 0) {
+      if(this.rowsWithChildrenCount > 0) {
         var timestamp = +new Date(),
           $expanderColumnSizer = $(document.createElement('col')).addClass('macro-table-row-expander-column')
-          .width(expanderColumnWidth),
+          .width(this.expanderColumnWidth),
           $expanderColumn = $(document.createElement('th')).addClass('macro-table-row-expander-cell')
           .html(
             '<div class="macro-table-expand-toggle-container">'+
@@ -2081,7 +2187,7 @@
       }
 
       //enable/disable static columns depending on settings
-      if(this.renderRowDataSet.length > 0 && (options.rowsSelectable === true || rowsWithChildrenCount > 0 /*|| other.settings.that.enable.static.column */)) {
+      if(this.renderRowDataSet.length > 0 && (options.rowsSelectable === true || this.rowsWithChildrenCount > 0 /*|| other.settings.that.enable.static.column */)) {
         $macroTable.addClass('macro-table-static-column-enabled');
       } else {
         $macroTable.removeClass('macro-table-static-column-enabled');
@@ -2098,7 +2204,7 @@
     _renderTableRows: function(tableData) {
       var options = this.options,
         rowHeight = options.rowHeight,
-        maxRenderCount = maxTotalDomRows,
+        maxRenderCount = this.maxTotalDomRows,
         $macroTable = this.element,
         $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
         $dataContainer = $dataContainerWrapper.find('div.macro-table-data-container'),
@@ -2126,7 +2232,7 @@
           this.expandedTableData.push(rowData);
 
           //render the rows as long as we haven't gone over the DOM row threshold
-          if(i >= currentRow - currentDomRow && renderCount < maxTotalDomRows && j < maxRenderCount) {
+          if(i >= this.currentRow - this.currentDomRow && renderCount < this.maxTotalDomRows && j < maxRenderCount) {
             var staticHeight, dynamicHeight,
               rowElements = renderRow.call(this, rowData, this.expandedTableData.length - 1);
 
@@ -2157,7 +2263,7 @@
       .height(rowHeight * this.expandedTableData.length);
 
       //return table to the old scoll position
-      $currentRowElement = $tableBody.find('tr').filter(':nth-child('+(currentDomRow + 1)+')');
+      $currentRowElement = $tableBody.find('tr').filter(':nth-child('+(this.currentDomRow + 1)+')');
       scrollPosition = $dataContainer.scrollTop() + ($currentRowElement.length === 0 ? 0 : $currentRowElement.position().top);
 
       $dataContainer.add($staticDataContainer)
@@ -2299,8 +2405,8 @@
      * @private
      */
     _reRender: function() {
-      var scrollPositionLeft = currentColumn,
-        scrollPositionTop = currentRow; //FIXME: this will be broken if looking at a subRow
+      var scrollPositionLeft = this.currentColumn,
+        scrollPositionTop = this.currentRow; //FIXME: this will be broken if looking at a subRow
 
       //this._init(); //causes currentColumn and currentRow to reset to 0
       this._renderTableHeader();
@@ -2333,7 +2439,7 @@
         options = this.options,
         rowHeight = options.rowHeight,
         headerHeight = $macroTable.find('div.macro-table-scroll-shim').outerHeight() - 1,
-        rowSelectorOffset = options.rowsSelectable === true ? rowSelectColumnWidth : 0,
+        rowSelectorOffset = options.rowsSelectable === true ? this.rowSelectColumnWidth : 0,
         middleDomRow;
 
       //initialized undefined dimensions with parent dimensions
@@ -2341,21 +2447,21 @@
       width = width || $macroTable.parent().width();
 
       //determine how many rows will fit in the provided height
-      displayRowWindow = height < rowHeight ? ~~(defaultTableHeight / rowHeight) : ~~((height - rowHeight - scrollBarWidth) / rowHeight);
+      this.displayRowWindow = height < rowHeight ? ~~(this.defaultTableHeight / rowHeight) : ~~((height - rowHeight - this.scrollBarWidth) / rowHeight);
 
-      if(options.rowBuffer < displayRowWindow) {
-        console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',displayRowWindow,'. rowBuffer value being changed to',displayRowWindow);
-        options.rowBuffer = displayRowWindow;
+      if(options.rowBuffer < this.displayRowWindow) {
+        console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',this.displayRowWindow,'. rowBuffer value being changed to',this.displayRowWindow);
+        options.rowBuffer = this.displayRowWindow;
       }
 
       //size the data container wrapper
       $macroTable.find('div.macro-table-data-container-wrapper')
-      .height(height - headerHeight - scrollBarWidth - 1) //-1 to account for bottom border of header
-      .width(width - scrollBarWidth - 1); //-1 to account for left border
+      .height(height - headerHeight - this.scrollBarWidth - 1) //-1 to account for bottom border of header
+      .width(width - this.scrollBarWidth - 1); //-1 to account for left border
 
       //size the data container
       $macroTable.find('div.macro-table-data-container, div.macro-table-static-data-container')
-      .height(height - headerHeight - scrollBarWidth);
+      .height(height - headerHeight - this.scrollBarWidth);
 
       //size the scroll container
       $macroTable.find('div.macro-table-scroll-container')
@@ -2363,14 +2469,14 @@
 
       //size the vertical drop guide for the resizing functionality
       $macroTable.find('div.macro-table-resize-guide')
-      .height(height - scrollBarWidth);
+      .height(height - this.scrollBarWidth);
 
       //set globals based on new table dimensions
-      replaceRowWindow = options.rowBuffer / 2;
-      maxTotalDomRows = displayRowWindow + (options.rowBuffer * 2);
-      middleDomRow = ~~(maxTotalDomRows / 2);
-      triggerUpDomRow = middleDomRow - ~~(displayRowWindow / 2) - replaceRowWindow;
-      triggerDownDomRow = middleDomRow - ~~(displayRowWindow / 2) + replaceRowWindow;
+      this.replaceRowWindow = options.rowBuffer / 2;
+      this.maxTotalDomRows = this.displayRowWindow + (options.rowBuffer * 2);
+      middleDomRow = ~~(this.maxTotalDomRows / 2);
+      this.triggerUpDomRow = middleDomRow - ~~(this.displayRowWindow / 2) - this.replaceRowWindow;
+      this.triggerDownDomRow = middleDomRow - ~~(this.displayRowWindow / 2) + this.replaceRowWindow;
     },
 
     /** Public methods */
@@ -2383,7 +2489,7 @@
     getSelectedRows: function() {
       var selectedRows = [];
 
-      if(this.options.rowsSelectable === true && selectedRowCount !== 0) {
+      if(this.options.rowsSelectable === true && this.selectedRowCount !== 0) {
 
         for(var i = 0, len = this.expandedTableData.length; i < len; i++) {
 
@@ -2391,7 +2497,7 @@
             selectedRows.push(this.expandedTableData[i]);
           }
 
-          if(selectedRows.length == selectedRowCount) {
+          if(selectedRows.length == this.selectedRowCount) {
             break;
           }
         }
@@ -2463,10 +2569,10 @@
 
       console.log('scroll to row',scrollToRow);
 
-      var rowsToScroll = scrollToRow - currentRow;
+      var rowsToScroll = scrollToRow - this.currentRow;
       if(rowsToScroll !== 0) {
         this.scrollToRowIndex = scrollToRow;
-        this.element.find('div.macro-table-scroll-container').scrollTop(scrollTop + (rowsToScroll * options.rowHeight));
+        this.element.find('div.macro-table-scroll-container').scrollTop(this.scrollTop + (rowsToScroll * options.rowHeight));
 
       } else {
         this._refreshRows();
@@ -2484,7 +2590,7 @@
         columnOffset = $column.length > 0 ? $column.position().left : 0,
         $scroll = this.element.find('div.macro-table-scroll-container');
 
-      scrollLeft = -1; //force a scroll
+      this.scrollLeft = -1; //force a scroll
 
       $scroll.scrollLeft($scroll.scrollLeft() + columnOffset);
     },
