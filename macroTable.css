@@ -1,3 +1,65 @@
+.icon {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.icon::before,
+.icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+}
+
+.icon--delete::before,
+.icon--delete::after {
+  width: 2px;
+  height: 10px;
+  margin-top: -5px;
+  margin-left: -1px;
+  background: #dddddd;
+  /* css3 */
+  -webkit-transform: rotate3d(0, 0, 1, 45deg);
+  -moz-transform: rotate3d(0, 0, 1, 45deg);
+  -ms-transform: rotate3d(0, 0, 1, 45deg);
+  -o-transform: rotate3d(0, 0, 1, 45deg);
+  transform: rotate3d(0, 0, 1, 45deg);
+}
+
+.icon--delete::after {
+  -webkit-transform: rotate3d(0, 0, 1, -45deg);
+  -moz-transform: rotate3d(0, 0, 1, -45deg);
+  -ms-transform: rotate3d(0, 0, 1, -45deg);
+  -o-transform: rotate3d(0, 0, 1, -45deg);
+  transform: rotate3d(0, 0, 1, -45deg);
+}
+
+.icon--vertical-handle::before,
+.icon--vertical-handle::after {
+  top: 0;
+  left: 0;
+  height: 20px;
+  width: 2px;
+  background-color: #dddddd;
+  margin-left: 2px;
+}
+
+.icon--vertical-handle::after {
+  margin-left: 6px;
+}
+
+.icon--vertical-handle:hover::before,
+.icon--vertical-handle:hover::after,
+.icon--delete:hover::before,
+.icon--delete:hover::after,
+/* firefox breaks "button .child:hover" */
+button:hover .icon--delete::before,
+button:hover .icon--delete::after {
+  background: #bbbbbb;
+}
+
+
 /* Basic table styles and shadows */
 
 .macro-table {
@@ -197,6 +259,20 @@
   cursor: inherit;
 }
 
+.macro-table-remove-column {
+  display: none;
+  top: 4px;
+  position: absolute;
+  height: 12px;
+  width: 12px;
+  cursor: pointer;
+
+  /* clear button styling */
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
 .macro-table-reorder-handle {
   display: none;
   top: 4px;
@@ -207,31 +283,16 @@
   cursor: -moz-grab;
 }
 
+.macro-table-header-active .macro-table-remove-column,
 .macro-table-header-active .macro-table-reorder-handle {
   display: block;
 }
 
+.macro-table-resizing .macro-table-remove-column,
+.macro-table.macro-table-column-moving .macro-table-remove-column,
+.macro-table-resizing .macro-table-reorder-handle,
 .macro-table.macro-table-column-moving .macro-table-reorder-handle {
   display: none;
-}
-
-.macro-table-reorder-handle::before,
-.macro-table-reorder-handle::after {
-  content: "";
-  position: absolute;
-  height: 20px;
-  width: 2px;
-  background-color: rgba(0, 0, 0, .1);
-  margin-left: 2px;
-}
-
-.macro-table-reorder-handle::after {
-  margin-left: 6px;
-}
-
-.macro-table-reorder-handle:hover::before,
-.macro-table-reorder-handle:hover::after {
-  background-color: rgba(0, 0, 0, .3);
 }
 
 .macro-table-reorder-guide {
@@ -251,7 +312,7 @@
 
 .macro-table-column-moving .macro-table-reorder-guide,
 .macro-table-column-moving .macro-table-resize-guide {
-  pointer-events: none; /* this rule is what allows the reordering to work, making mouse events pass through. not supported in ie! */
+  /*pointer-events: none; /* this rule is what allows the reordering to work, making mouse events pass through. not supported in ie! */
 }
 
 .macro-table.macro-table-column-moving {
@@ -334,6 +395,32 @@
   border-top-width: 0;
 }
 
+/* table message rules */
+
+.macro-table-message-wrapper {
+  display: none;
+  position: absolute;
+  right: 50%;
+  top: 25%;
+}
+
+.macro-table-display-message .macro-table-message-wrapper {
+  display: block;
+}
+
+.macro-table-message {
+  text-align: center;
+  position: relative;
+  left: 50%;
+  background-color: #fff;
+  padding: 1em;
+  border: 1px solid #ccc;
+  -moz-box-shadow: 2px 2px 2px 0px #ccc;
+  -webkit-box-shadow: 2px 2px 2px 0px #ccc;
+  box-shadow: 2px 2px 2px 0px #ccc;
+}
+
+
 .macro-table-scroll-container {
   position: absolute;
   overflow: scroll;
@@ -382,7 +469,7 @@
 
 .macro-table-expand-toggle-container { /* needed because firefox doesn't support relative positioning in table cells */
   position: relative;
-  height: 30px; /* chrome doesn't support height 100% for relatively positioned blocks inside table cells...*/
+  height: 29px; /* 30(default height of row) - 1(border-bottom) *//* chrome doesn't support height 100% for relatively positioned blocks inside table cells...*/
   width: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
