@@ -70,7 +70,7 @@
 
 })(jQuery);
 
-(function( $, undefined ) {
+(function($, window, document, undefined) {
 
   /** Truly Private functions */
 
@@ -366,7 +366,8 @@
 
   /**
    * Build a table row containing a column for each field
-   * @param {Object} data A row of data to be rendered by field
+   * Assumes the row object is not malformed (has "data" and "index" fields, etc.)
+   * @param {Object} row A row of data to be rendered by field
    * @param {Number} index The row number being rendered in the expandedTableData datastructure
    */
   function renderRow(row, index) {
@@ -637,7 +638,9 @@
       rowData = [];
 
       for(j = 0, columnsLength = columns.length; j < columnsLength; j++) {
-        rowData.push(tableData[i].data[columns[j].field]);
+        if(typeof tableData[i].data !== 'undefined') {
+          rowData.push(tableData[i].data[columns[j].field]);
+        }
       }
 
       this.searchIndex.push({
@@ -920,7 +923,7 @@
 
     /**
      * Field set when scrollToRow() is called
-     * 
+     *
      * Keeps track of the intended scrollTo row in case the padding/margin
      * hasn't yet been added to the table to handle larger rows in the final
      * scroll window or to buffer so that the final row can be scrolled into view
@@ -1983,22 +1986,26 @@
 
       //resize the table, re-calculate the global variables and populate the data rows
       this._resizeTable(options.height, options.width);
-      this._sortTable(options.sortByColumn, function() {
-        //initialize the global count for rows with children
-        this.rowsWithChildrenCount = countRowsWithChildren.call(this);
-        this._renderHeaderRowControls();
 
-        if(this.renderRowDataSet.length > 0) {
-          this.element.removeClass('macro-table-display-message');
-        } else {
-          this.element.addClass('macro-table-display-message');
-          if(options.filterTerm === '') {
-            this.element.find('div.macro-table-message').text(options.emptyInitializedMessage);
+      if(this._validateTableData(options.tableData)) {
+
+        this._sortTable(options.sortByColumn, function() {
+          //initialize the global count for rows with children
+          this.rowsWithChildrenCount = countRowsWithChildren.call(this);
+          this._renderHeaderRowControls();
+
+          if(this.renderRowDataSet.length > 0) {
+            this.element.removeClass('macro-table-display-message');
           } else {
-            this.element.find('div.macro-table-message').text(options.emptyFilteredMessage);
+            this.element.addClass('macro-table-display-message');
+            if(options.filterTerm === '') {
+              this.element.find('div.macro-table-message').text(options.emptyInitializedMessage);
+            } else {
+              this.element.find('div.macro-table-message').text(options.emptyFilteredMessage);
+            }
           }
-        }
-      });
+        });
+      }
 
       console.log('replaceRowWindow',this.replaceRowWindow,'maxTotalDomRows',this.maxTotalDomRows,'maxTotalDomColumns',this.maxTotalDomColumns,'middleDomRow',~~(this.maxTotalDomRows / 2),'triggerUpDomRow',this.triggerUpDomRow,'triggerDownDomRow',this.triggerDownDomRow);
     },
@@ -2374,12 +2381,12 @@
         //TODO: what's the point of this for loop?
         /*for(var columnIndex = options.columns.length - 1; columnIndex >= 0; columnIndex--) { //TODO: make this a helper function?
           if(options.columns[columnIndex].field == columnToSort) {
-            
+
             columnData = options.columns[columnIndex];
 
             //when this function is called with columnToSort as a String value, we know this is an internal
             //re-rendering without intention of changing the sort order direction
-            
+
             break;
           }
         }*/
@@ -2477,6 +2484,27 @@
       middleDomRow = ~~(this.maxTotalDomRows / 2);
       this.triggerUpDomRow = middleDomRow - ~~(this.displayRowWindow / 2) - this.replaceRowWindow;
       this.triggerDownDomRow = middleDomRow - ~~(this.displayRowWindow / 2) + this.replaceRowWindow;
+    },
+
+    /**
+     * Loop through the tableData and make sure it isn't malformed
+     * This function is called recursively because of the nature of tableData subrows (multi-levels deep)
+     * @param  {Array} tableData Array of row objects that should contain "index" and "data" fields, as well as optional "subrow" arrays
+     * @return {Boolean}         Returns true if tableData is valid
+     */
+    _validateTableData: function(tableData) {
+      var isValid = true,
+        row, i;
+
+      for(i = tableData.length; i--;) {
+        row = tableData[i];
+        isValid = typeof row.index !== 'undefined' && typeof row.data !== 'undefined';
+        if(typeof row.subrows !== 'undefined') {
+          isValid = isValid && this._validateTableData(row.subrows);
+        }
+      }
+
+      return isValid;
     },
 
     /** Public methods */
@@ -2647,4 +2675,4 @@
       // In jQuery UI 1.9 and above, you would define _destroy instead of destroy and not call the base method
     }
   });
-})( jQuery );
+})(jQuery, window, document);
