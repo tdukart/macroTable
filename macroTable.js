@@ -1950,7 +1950,8 @@
      * @private
      */
     _init: function() {
-      var options = this.options;
+      var options = this.options,
+        isTableDataValid = this._validateTableData(options.tableData);
 
       //validate sortByColumn
       if(validateSortByColumn.call(this, options.sortByColumn) < 0) {
@@ -1969,12 +1970,12 @@
       if(this.sortedRows === null) {
         this.sortedRows = {
           '': {
-            '': options.tableData
+            '': isTableDataValid ? options.tableData : []
           }
         };
       }
 
-      if(options.tableData.length !== 0 && this.renderRowDataSet.length === 0) {
+      if(isTableDataValid && options.tableData.length !== 0 && this.renderRowDataSet.length === 0) {
         this.renderRowDataSet = options.tableData;
       }
 
@@ -1987,25 +1988,22 @@
       //resize the table, re-calculate the global variables and populate the data rows
       this._resizeTable(options.height, options.width);
 
-      if(this._validateTableData(options.tableData)) {
+      this._sortTable(options.sortByColumn, function() {
+        //initialize the global count for rows with children
+        this.rowsWithChildrenCount = countRowsWithChildren.call(this);
+        this._renderHeaderRowControls();
 
-        this._sortTable(options.sortByColumn, function() {
-          //initialize the global count for rows with children
-          this.rowsWithChildrenCount = countRowsWithChildren.call(this);
-          this._renderHeaderRowControls();
-
-          if(this.renderRowDataSet.length > 0) {
-            this.element.removeClass('macro-table-display-message');
+        if(this.renderRowDataSet.length > 0) {
+          this.element.removeClass('macro-table-display-message');
+        } else {
+          this.element.addClass('macro-table-display-message');
+          if(options.filterTerm === '') {
+            this.element.find('div.macro-table-message').text(options.emptyInitializedMessage);
           } else {
-            this.element.addClass('macro-table-display-message');
-            if(options.filterTerm === '') {
-              this.element.find('div.macro-table-message').text(options.emptyInitializedMessage);
-            } else {
-              this.element.find('div.macro-table-message').text(options.emptyFilteredMessage);
-            }
+            this.element.find('div.macro-table-message').text(options.emptyFilteredMessage);
           }
-        });
-      }
+        }
+      });
 
       console.log('replaceRowWindow',this.replaceRowWindow,'maxTotalDomRows',this.maxTotalDomRows,'maxTotalDomColumns',this.maxTotalDomColumns,'middleDomRow',~~(this.maxTotalDomRows / 2),'triggerUpDomRow',this.triggerUpDomRow,'triggerDownDomRow',this.triggerDownDomRow);
     },
