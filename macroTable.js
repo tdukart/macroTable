@@ -1077,9 +1077,9 @@
         case 'tableData':
           this.renderRowDataSet = [];
           this.searchIndex = []; //reset search index
-          sortedRows = null; //let _init reinitialize this
+          this.sortedRows = null; //let _init reinitialize this
           options.sortByColumn = '';
-          //TOD call function here that will reset the column arrows indicating the sort order
+          //TODO call function here that will reset the column arrows indicating the sort order
         case 'filterTerm':
         case 'summaryRow':
           //TODO: make summaryRow not need to call init()

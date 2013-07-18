@@ -47,8 +47,8 @@
 
     <div id="qunit"></div>
 
-    <script type="text/javascript" src="http://code.jquery.com/jquery-1.8.2.js"></script>
-    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.23/jquery-ui.js"></script>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-2.0.3.js"></script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.js"></script>
     <script type="text/javascript" src="http://code.jquery.com/qunit/qunit-1.11.0.js"></script>
     <script type="text/javascript" src="macroTable.js"></script>
 
@@ -75,7 +75,7 @@
         publicFunctions.generateTableData = function(numRows, columnOptions, subRowsIndexes, columnValueOverrides) {
           var tableData = [],
             columnData = {},
-            i, j, k, len;
+            i, j, k, len, sublen;
 
           subRowsIndexes = subRowsIndexes || {};
           columnValueOverrides = columnValueOverrides || {};
@@ -100,7 +100,7 @@
 
                 columnData = {};
                 for(k = 0; k < columnOptions.numColumns; k++) {
-                  columnData[columnOptions.columnFields[k] || 'column'+k] = i+'-'+j+'<'+k+'>'+(typeof columnValueOverrides[i] !== 'undefined' &&
+                  columnData[typeof columnOptions.columnFields !== 'undefined' && typeof columnOptions.columnFields[k] !== 'undefined' ? columnOptions.columnFields[k] : 'column'+k] = i+'-'+j+'<'+k+'>'+(typeof columnValueOverrides[i] !== 'undefined' &&
                     typeof columnValueOverrides[i].subRows !== 'undefined' &&
                     typeof columnValueOverrides[i].subRows[k] !== 'undefined' ? columnValueOverrides[i].subRows[k] : '');
                 }
@@ -117,11 +117,11 @@
         };
 
         publicFunctions.initializeTable = function(numRows, columnOptions, tableOptions) {
-          var tableData = publicFunctions.generateTableData(numRows, columnOptions),
+          tableOptions = tableOptions || {};
+
+          var tableData = publicFunctions.generateTableData(numRows, columnOptions, tableOptions.subRowsIndexes),
             columns = [],
             i;
-
-          tableOptions = tableOptions || {};
 
           for(i = 0; i < columnOptions.numColumns; i++) {
             columns.push({
@@ -129,9 +129,7 @@
               field: typeof columnOptions.columnFields !== 'undefined' ? columnOptions.columnFields[i] || 'column'+i : 'column'+i,
               sortable: typeof columnOptions.columnsSortable !== 'undefined' ? columnOptions.columnsSortable[i] : undefined, //or undefined
               resizable: typeof columnOptions.columnResizable !== 'undefined' && typeof columnOptions.columnResizable[i] ? columnOptions.columnResizable[i] : true,
-              formatter: typeof columnOptions.columnFormatters !== 'undefined' &&  typeof columnOptions.columnFormatters[i] === 'function' ? columnOptions.columnFormatters[i] : function(text) {
-                return text+' blah';
-              }
+              formatter: typeof columnOptions.columnFormatters !== 'undefined' &&  typeof columnOptions.columnFormatters[i] === 'function' ? columnOptions.columnFormatters[i] : undefined
             });
           }
 
@@ -170,6 +168,9 @@
             }
           },
           columnFormatters: {
+            0: function(text) {
+              return text + '<em>(Form)</em>';
+            },
             1: function(text) {
               //class added at random to try and screw up sorting
               return '<span class="'+~~((Math.random()*1000)+1)+'">'+text+'</span>';
@@ -272,7 +273,7 @@
         $('#summary-row-disable').click(function(e) {
           e.preventDefault();
 
-          $('#table').macroTable('option', { 
+          $('#table').macroTable('option', {
             summaryRow: false
           });
         });
@@ -291,7 +292,7 @@
           $('#table').macroTable('filterTable',$('#search-field-input').val(), true);
         });
 
-      });//]]>  
+      });//]]>
     </script>
     <script type="text/javascript" src="macroTableTest.js"></script>
   </body>
