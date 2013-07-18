@@ -8,7 +8,7 @@ this.onmessage = function(e) {
     i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow, tableData, searchIndex, filter;
 
   if(typeof e.data !== 'undefined' && e.data.hasOwnProperty('searchIndex') && e.data.searchIndex instanceof Array &&
-      e.data.hasOwnProperty('tableData') && e.data.tableData instanceof Array && 
+      e.data.hasOwnProperty('tableData') && e.data.tableData instanceof Array &&
       e.data.hasOwnProperty('filter') && typeof e.data.filter === 'string') {
 
     filter = e.data.filter.toLowerCase(); //string to match against row data
