@@ -789,10 +789,16 @@
     resizeColumnMinWidth: 30,
 
     /**
-     * default the table to this height
+     * default the table to this height (in pixels)
      * @type {Number}
      */
     defaultTableHeight: 200,
+
+    /**
+     * default the table to this width (in pixels)
+     * @type {Number}
+     */
+    defaultTableWidth: 200,
 
     /**
      * the max number of rows that will show in the provided table height
@@ -1578,7 +1584,7 @@
               widthDelta = $resizer.position().left - resizePositionStart,
               marginAdded = 0,
               totalColumnWidth = 0,
-              tableViewportWidth = $macroTable.parent().width() - self.scrollBarWidth,
+              tableViewportWidth = this._getTableWidth() - self.scrollBarWidth,
               newWidth = $columnSizers.width() + widthDelta,
               $dynamicRows =  $dataContainer.find('tr'),
               $staticRows = $staticDataContainer.find('tr'),
@@ -2008,6 +2014,16 @@
       console.log('replaceRowWindow',this.replaceRowWindow,'maxTotalDomRows',this.maxTotalDomRows,'maxTotalDomColumns',this.maxTotalDomColumns,'middleDomRow',~~(this.maxTotalDomRows / 2),'triggerUpDomRow',this.triggerUpDomRow,'triggerDownDomRow',this.triggerDownDomRow);
     },
 
+    _getTableWidth: function() {
+      var parentWidth = this.element.parent().width();
+      return parentWidth && parentWidth > 0 ? parentWidth : this.defaultTableWidth;
+    },
+
+    _getTableHeight: function() {
+      var parentHeight = this.element.parent().height();
+      return parentHeight && parentHeight > 0 ? parentHeight : this.defaultTableHeight;
+    },
+
     /**
      * @method _initializeScrollBarOffsets
      * convenience function for initializing element offsets for scrollbar widths
@@ -2050,7 +2066,7 @@
         $summaryRow = $header.find('tr.macro-table-summary-row'),
 
         totalColumnWidth = 0,
-        tableViewportWidth = $macroTable.parent().width() - this.scrollBarWidth,
+        tableViewportWidth = this._getTableWidth() - this.scrollBarWidth,
         marginAdded;
 
       $headerWrapper.hide();
@@ -2448,8 +2464,9 @@
         middleDomRow;
 
       //initialized undefined dimensions with parent dimensions
-      height = height || $macroTable.parent().height();
-      width = width || $macroTable.parent().width();
+      height = height || this._getTableHeight();
+      width = width || this._getTableWidth();
+      headerHeight = headerHeight > 0 ? headerHeight : rowHeight;
 
       //determine how many rows will fit in the provided height
       this.displayRowWindow = height < rowHeight ? ~~(this.defaultTableHeight / rowHeight) : ~~((height - rowHeight - this.scrollBarWidth) / rowHeight);
