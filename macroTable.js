@@ -70,7 +70,7 @@
 
 })(jQuery);
 
-(function( $, undefined ) {
+(function($, window, document, undefined) {
 
   /** Truly Private functions */
 
@@ -366,7 +366,8 @@
 
   /**
    * Build a table row containing a column for each field
-   * @param {Object} data A row of data to be rendered by field
+   * Assumes the row object is not malformed (has "data" and "index" fields, etc.)
+   * @param {Object} row A row of data to be rendered by field
    * @param {Number} index The row number being rendered in the expandedTableData datastructure
    */
   function renderRow(row, index) {
@@ -637,7 +638,9 @@
       rowData = [];
 
       for(j = 0, columnsLength = columns.length; j < columnsLength; j++) {
-        rowData.push(tableData[i].data[columns[j].field]);
+        if(typeof tableData[i].data !== 'undefined') {
+          rowData.push(tableData[i].data[columns[j].field]);
+        }
       }
 
       this.searchIndex.push({
@@ -786,10 +789,10 @@
     resizeColumnMinWidth: 30,
 
     /**
-     * default the table to this height
+     * default the table to this height (in rows)
      * @type {Number}
      */
-    defaultTableHeight: 200,
+    defaultTableHeightInRows: 10,
 
     /**
      * the max number of rows that will show in the provided table height
@@ -920,7 +923,7 @@
 
     /**
      * Field set when scrollToRow() is called
-     * 
+     *
      * Keeps track of the intended scrollTo row in case the padding/margin
      * hasn't yet been added to the table to handle larger rows in the final
      * scroll window or to buffer so that the final row can be scrolled into view
@@ -1575,7 +1578,7 @@
               widthDelta = $resizer.position().left - resizePositionStart,
               marginAdded = 0,
               totalColumnWidth = 0,
-              tableViewportWidth = $macroTable.parent().width() - self.scrollBarWidth,
+              tableViewportWidth = self._getFallbackWidthToResize() - self.scrollBarWidth,
               newWidth = $columnSizers.width() + widthDelta,
               $dynamicRows =  $dataContainer.find('tr'),
               $staticRows = $staticDataContainer.find('tr'),
@@ -1947,7 +1950,8 @@
      * @private
      */
     _init: function() {
-      var options = this.options;
+      var options = this.options,
+        isTableDataValid = this._validateTableData(options.tableData);
 
       //validate sortByColumn
       if(validateSortByColumn.call(this, options.sortByColumn) < 0) {
@@ -1966,12 +1970,12 @@
       if(this.sortedRows === null) {
         this.sortedRows = {
           '': {
-            '': options.tableData
+            '': isTableDataValid ? options.tableData : []
           }
         };
       }
 
-      if(options.tableData.length !== 0 && this.renderRowDataSet.length === 0) {
+      if(isTableDataValid && options.tableData.length !== 0 && this.renderRowDataSet.length === 0) {
         this.renderRowDataSet = options.tableData;
       }
 
@@ -1983,6 +1987,7 @@
 
       //resize the table, re-calculate the global variables and populate the data rows
       this._resizeTable(options.height, options.width);
+
       this._sortTable(options.sortByColumn, function() {
         //initialize the global count for rows with children
         this.rowsWithChildrenCount = countRowsWithChildren.call(this);
@@ -2001,6 +2006,42 @@
       });
 
       console.log('replaceRowWindow',this.replaceRowWindow,'maxTotalDomRows',this.maxTotalDomRows,'maxTotalDomColumns',this.maxTotalDomColumns,'middleDomRow',~~(this.maxTotalDomRows / 2),'triggerUpDomRow',this.triggerUpDomRow,'triggerDownDomRow',this.triggerDownDomRow);
+    },
+
+    /**
+     * Return the width the table should fallback to. This method should be called if no other value is available
+     * @return {Number} The width (in pixels) the table should fit its width to
+     */
+    _getFallbackWidthToResize: function() {
+      var options = this.options,
+        parentWidth = this.element.parent().width();
+
+      return !options.width || options.width < 0 ? parentWidth : options.width;
+    },
+
+    /**
+     * Return the height the table should fallback to. This method should be called if no other value is available.
+     * First the user-defined height will be checked. If that fails, it will try the parent element's height,
+     * and then a more or less hard-coded minimum default as a last resort.
+     * @return {Number} The height (in pixels) the table should fit its height to
+     */
+    _getFallbackHeightToResize: function() {
+      var options = this.options,
+        parentHeight = this.element.parent().height(),
+        minimumHeight = this.defaultTableHeightInRows * options.rowHeight;
+
+      //if we can use the user-defined height, great
+      if(options.height && options.height > minimumHeight) {
+        return options.height;
+
+      } else if(!parentHeight || parentHeight < minimumHeight) {
+        console.warn('_getFallbackHeightToResize:: No height desernable from parent, defaulting to '+this.defaultTableHeightInRows+' rows worth');
+        return minimumHeight;
+
+      } else {
+        console.warn('_getFallbackHeightToResize:: Parent container element has a height, using that');
+        return parentHeight;
+      }
     },
 
     /**
@@ -2045,7 +2086,7 @@
         $summaryRow = $header.find('tr.macro-table-summary-row'),
 
         totalColumnWidth = 0,
-        tableViewportWidth = $macroTable.parent().width() - this.scrollBarWidth,
+        tableViewportWidth = this._getFallbackWidthToResize() - this.scrollBarWidth,
         marginAdded;
 
       $headerWrapper.hide();
@@ -2374,12 +2415,12 @@
         //TODO: what's the point of this for loop?
         /*for(var columnIndex = options.columns.length - 1; columnIndex >= 0; columnIndex--) { //TODO: make this a helper function?
           if(options.columns[columnIndex].field == columnToSort) {
-            
+
             columnData = options.columns[columnIndex];
 
             //when this function is called with columnToSort as a String value, we know this is an internal
             //re-rendering without intention of changing the sort order direction
-            
+
             break;
           }
         }*/
@@ -2443,11 +2484,12 @@
         middleDomRow;
 
       //initialized undefined dimensions with parent dimensions
-      height = height || $macroTable.parent().height();
-      width = width || $macroTable.parent().width();
+      height = height || this._getFallbackHeightToResize();
+      width = width || this._getFallbackWidthToResize();
+      headerHeight = headerHeight > 0 ? headerHeight : rowHeight;
 
       //determine how many rows will fit in the provided height
-      this.displayRowWindow = height < rowHeight ? ~~(this.defaultTableHeight / rowHeight) : ~~((height - rowHeight - this.scrollBarWidth) / rowHeight);
+      this.displayRowWindow = height < rowHeight ? this.defaultTableHeightInRows : ~~((height - rowHeight - this.scrollBarWidth) / rowHeight);
 
       if(options.rowBuffer < this.displayRowWindow) {
         console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',this.displayRowWindow,'. rowBuffer value being changed to',this.displayRowWindow);
@@ -2477,6 +2519,27 @@
       middleDomRow = ~~(this.maxTotalDomRows / 2);
       this.triggerUpDomRow = middleDomRow - ~~(this.displayRowWindow / 2) - this.replaceRowWindow;
       this.triggerDownDomRow = middleDomRow - ~~(this.displayRowWindow / 2) + this.replaceRowWindow;
+    },
+
+    /**
+     * Loop through the tableData and make sure it isn't malformed
+     * This function is called recursively because of the nature of tableData subrows (multi-levels deep)
+     * @param  {Array} tableData Array of row objects that should contain "index" and "data" fields, as well as optional "subrow" arrays
+     * @return {Boolean}         Returns true if tableData is valid
+     */
+    _validateTableData: function(tableData) {
+      var isValid = true,
+        row, i;
+
+      for(i = tableData.length; i--;) {
+        row = tableData[i];
+        isValid = typeof row.index !== 'undefined' && typeof row.data !== 'undefined';
+        if(typeof row.subrows !== 'undefined') {
+          isValid = isValid && this._validateTableData(row.subrows);
+        }
+      }
+
+      return isValid;
     },
 
     /** Public methods */
@@ -2647,4 +2710,4 @@
       // In jQuery UI 1.9 and above, you would define _destroy instead of destroy and not call the base method
     }
   });
-})( jQuery );
+})(jQuery, window, document);
