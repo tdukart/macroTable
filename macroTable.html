@@ -9,7 +9,6 @@
 
     <style>
       .wrapper {
-        height: 300px;
       }
       #qunit-fixture {
         position: static;
@@ -131,6 +130,7 @@
           }
 
           $tableElement.macroTable({
+            height: 400,
             summaryRow: tableOptions.summaryRow ? publicFunctions.generateTableData(1, columnOptions)[0].data : false,
             tableData: tableData,
             rowsSelectable: tableOptions.rowsSelectable,
@@ -156,7 +156,7 @@
         };
 
         var columnOptions = {
-          numColumns: 6,
+          numColumns: 10,
           columnResizable: {
             1: false
           },

@@ -789,16 +789,10 @@
     resizeColumnMinWidth: 30,
 
     /**
-     * default the table to this height (in pixels)
+     * default the table to this height (in rows)
      * @type {Number}
      */
-    defaultTableHeight: 200,
-
-    /**
-     * default the table to this width (in pixels)
-     * @type {Number}
-     */
-    defaultTableWidth: 200,
+    defaultTableHeightInRows: 10,
 
     /**
      * the max number of rows that will show in the provided table height
@@ -1584,7 +1578,7 @@
               widthDelta = $resizer.position().left - resizePositionStart,
               marginAdded = 0,
               totalColumnWidth = 0,
-              tableViewportWidth = this._getTableWidth() - self.scrollBarWidth,
+              tableViewportWidth = self._getFallbackWidthToResize() - self.scrollBarWidth,
               newWidth = $columnSizers.width() + widthDelta,
               $dynamicRows =  $dataContainer.find('tr'),
               $staticRows = $staticDataContainer.find('tr'),
@@ -2014,14 +2008,40 @@
       console.log('replaceRowWindow',this.replaceRowWindow,'maxTotalDomRows',this.maxTotalDomRows,'maxTotalDomColumns',this.maxTotalDomColumns,'middleDomRow',~~(this.maxTotalDomRows / 2),'triggerUpDomRow',this.triggerUpDomRow,'triggerDownDomRow',this.triggerDownDomRow);
     },
 
-    _getTableWidth: function() {
-      var parentWidth = this.element.parent().width();
-      return parentWidth && parentWidth > 0 ? parentWidth : this.defaultTableWidth;
+    /**
+     * Return the width the table should fallback to. This method should be called if no other value is available
+     * @return {Number} The width (in pixels) the table should fit its width to
+     */
+    _getFallbackWidthToResize: function() {
+      var options = this.options,
+        parentWidth = this.element.parent().width();
+
+      return !options.width || options.width < 0 ? parentWidth : options.width;
     },
 
-    _getTableHeight: function() {
-      var parentHeight = this.element.parent().height();
-      return parentHeight && parentHeight > 0 ? parentHeight : this.defaultTableHeight;
+    /**
+     * Return the height the table should fallback to. This method should be called if no other value is available.
+     * First the user-defined height will be checked. If that fails, it will try the parent element's height,
+     * and then a more or less hard-coded minimum default as a last resort.
+     * @return {Number} The height (in pixels) the table should fit its height to
+     */
+    _getFallbackHeightToResize: function() {
+      var options = this.options,
+        parentHeight = this.element.parent().height(),
+        minimumHeight = this.defaultTableHeightInRows * options.rowHeight;
+
+      //if we can use the user-defined height, great
+      if(options.height && options.height > minimumHeight) {
+        return options.height;
+
+      } else if(!parentHeight || parentHeight < minimumHeight) {
+        console.warn('_getFallbackHeightToResize:: No height desernable from parent, defaulting to '+this.defaultTableHeightInRows+' rows worth');
+        return minimumHeight;
+
+      } else {
+        console.warn('_getFallbackHeightToResize:: Parent container element has a height, using that');
+        return parentHeight;
+      }
     },
 
     /**
@@ -2066,7 +2086,7 @@
         $summaryRow = $header.find('tr.macro-table-summary-row'),
 
         totalColumnWidth = 0,
-        tableViewportWidth = this._getTableWidth() - this.scrollBarWidth,
+        tableViewportWidth = this._getFallbackWidthToResize() - this.scrollBarWidth,
         marginAdded;
 
       $headerWrapper.hide();
@@ -2464,12 +2484,12 @@
         middleDomRow;
 
       //initialized undefined dimensions with parent dimensions
-      height = height || this._getTableHeight();
-      width = width || this._getTableWidth();
+      height = height || this._getFallbackHeightToResize();
+      width = width || this._getFallbackWidthToResize();
       headerHeight = headerHeight > 0 ? headerHeight : rowHeight;
 
       //determine how many rows will fit in the provided height
-      this.displayRowWindow = height < rowHeight ? ~~(this.defaultTableHeight / rowHeight) : ~~((height - rowHeight - this.scrollBarWidth) / rowHeight);
+      this.displayRowWindow = height < rowHeight ? this.defaultTableHeightInRows : ~~((height - rowHeight - this.scrollBarWidth) / rowHeight);
 
       if(options.rowBuffer < this.displayRowWindow) {
         console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',this.displayRowWindow,'. rowBuffer value being changed to',this.displayRowWindow);

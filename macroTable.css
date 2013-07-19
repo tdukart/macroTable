@@ -422,7 +422,7 @@ button:hover .icon--delete::after {
 
 
 .macro-table-scroll-container {
-  position: absolute;
+  position: relative;
   overflow: scroll;
   padding: 0;
   margin: 0;
