@@ -789,12 +789,6 @@
     resizeColumnMinWidth: 30,
 
     /**
-     * default the table to this height (in rows)
-     * @type {Number}
-     */
-    defaultTableHeightInRows: 10,
-
-    /**
      * the max number of rows that will show in the provided table height
      * @type {Number}
      */
@@ -980,7 +974,6 @@
     options: {
       height: undefined, //default height of table, if not defined will fit to parent
       width: undefined, //defailt width of table, if not defined will fit to parent
-      rowHeight: 30, //render height of a table row, in pixels
       rowBuffer: 5, //the max number of DOM rows that can be above and below the displaying row window
       /**
        * Array of objects whose order directly correlates to the display order of columns
@@ -1022,7 +1015,17 @@
        * @type {String}
        */
       emptyInitializedMessage: 'No data to display',
-      emptyFilteredMessage: 'No matching rows found'
+      emptyFilteredMessage: 'No matching rows found',
+
+      /* Stuff users really don't need to be changing, but shouldn't be magic numbers: */
+
+      rowHeight: 30, //render height of a table row, in pixels
+
+      /**
+       * default the table to this height (in rows)
+       * @type {Number}
+       */
+      defaultTableHeightInRows: 10
     },
 
     /** "Private" methods */
@@ -2028,14 +2031,15 @@
     _getFallbackHeightToResize: function() {
       var options = this.options,
         parentHeight = this.element.parent().height(),
-        minimumHeight = this.defaultTableHeightInRows * options.rowHeight;
+        minimumHeight = options.defaultTableHeightInRows * options.rowHeight;
 
       //if we can use the user-defined height, great
       if(options.height && options.height > minimumHeight) {
         return options.height;
 
       } else if(!parentHeight || parentHeight < minimumHeight) {
-        console.warn('_getFallbackHeightToResize:: No height desernable from parent, defaulting to '+this.defaultTableHeightInRows+' rows worth');
+        minimumHeight += this.element.find('div.macro-table-scroll-shim').outerHeight() + this.scrollBarWidth - 1;
+        console.warn('_getFallbackHeightToResize:: No height desernable from parent, defaulting to '+options.defaultTableHeightInRows+' rows worth');
         return minimumHeight;
 
       } else {
@@ -2489,12 +2493,15 @@
       headerHeight = headerHeight > 0 ? headerHeight : rowHeight;
 
       //determine how many rows will fit in the provided height
-      this.displayRowWindow = height < rowHeight ? this.defaultTableHeightInRows : ~~((height - rowHeight - this.scrollBarWidth) / rowHeight);
+      this.displayRowWindow = height < rowHeight ? options.defaultTableHeightInRows : ~~((height - rowHeight - this.scrollBarWidth) / rowHeight);
 
       if(options.rowBuffer < this.displayRowWindow) {
         console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',this.displayRowWindow,'. rowBuffer value being changed to',this.displayRowWindow);
         options.rowBuffer = this.displayRowWindow;
       }
+
+      //set table itself to correct height to prevent any accidental block sizing funniness
+      $macroTable.height(height).width(width);
 
       //size the data container wrapper
       $macroTable.find('div.macro-table-data-container-wrapper')
