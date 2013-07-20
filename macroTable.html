@@ -8,13 +8,14 @@
     <link rel="stylesheet" type="text/css" href="http://code.jquery.com/qunit/qunit-1.11.0.css">
 
     <style>
-      .wrapper {
-        /*height: 500px;*/
-      }
       #qunit-fixture {
         position: static;
         width: auto;
         height: auto;
+      }
+
+      #qunit-fixture .wrapper {
+        /*height: 500px;*/
       }
     </style>
 
@@ -112,7 +113,7 @@
           return tableData;
         };
 
-        publicFunctions.initializeTable = function(numRows, columnOptions, tableOptions, delayDomInsertion) {
+        publicFunctions.initializeTable = function(numRows, columnOptions, tableOptions, delayDomInsertion, height, width) {
           tableOptions = tableOptions || {};
 
           var $tableElement = delayDomInsertion ? $(document.createElement('div')) : $('#table'),
@@ -131,7 +132,8 @@
           }
 
           $tableElement.macroTable({
-            height: 400,
+            height: height,
+            width: width,
             summaryRow: tableOptions.summaryRow ? publicFunctions.generateTableData(1, columnOptions)[0].data : false,
             tableData: tableData,
             rowsSelectable: tableOptions.rowsSelectable,
