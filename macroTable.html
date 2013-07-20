@@ -1,6 +1,7 @@
+<!DOCTYPE html>
 <html>
   <head>
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8" />
     <title> Macro Table Test</title>
 
     <link rel="stylesheet" type="text/css" href="macroTable.css">
@@ -8,13 +9,7 @@
 
     <style>
       .wrapper {
-        position: relative;
-        top: 10px;
-        left: 10px;
-        right: 10px;
-        bottom: 10px;
-        width: 300px;
-        height: 300px;
+        /*height: 500px;*/
       }
       #qunit-fixture {
         position: static;
@@ -38,6 +33,7 @@
       <li><button id="get-selected-rows">Get Selected Rows</button></li>
       <li><button id="get-all-rows">Get Table Snapshot</button></li>
       <li><button id="scroll-to-row">Scroll to Row</button><input id="scroll-to-row-input" value="177" /></li>
+      <li><button id="table-data-row-number">Load Number of Rows</button><input id="number-of-rows-to-render" value="100" /></li>
       <li><button id="table-data-standard">Load Standard Table Data</button></li>
       <li><button id="table-data-edge">Load Edgecase Table Data</button></li>
       <li><button id="summary-row-disable">Disable Summary Row</button></li>
@@ -52,7 +48,7 @@
     <script type="text/javascript" src="http://code.jquery.com/qunit/qunit-1.11.0.js"></script>
     <script type="text/javascript" src="macroTable.js"></script>
 
-    <script type="text/javascript">//<![CDATA[
+    <script type="text/javascript">
       var publicFunctions = {};
       $(function() {
 
@@ -116,10 +112,11 @@
           return tableData;
         };
 
-        publicFunctions.initializeTable = function(numRows, columnOptions, tableOptions) {
+        publicFunctions.initializeTable = function(numRows, columnOptions, tableOptions, delayDomInsertion) {
           tableOptions = tableOptions || {};
 
-          var tableData = publicFunctions.generateTableData(numRows, columnOptions, tableOptions.subRowsIndexes),
+          var $tableElement = delayDomInsertion ? $(document.createElement('div')) : $('#table'),
+            tableData = numRows instanceof Array ? numRows : publicFunctions.generateTableData(numRows, columnOptions, tableOptions.subRowsIndexes),
             columns = [],
             i;
 
@@ -133,7 +130,8 @@
             });
           }
 
-          $('#table').macroTable({
+          $tableElement.macroTable({
+            height: 400,
             summaryRow: tableOptions.summaryRow ? publicFunctions.generateTableData(1, columnOptions)[0].data : false,
             tableData: tableData,
             rowsSelectable: tableOptions.rowsSelectable,
@@ -151,11 +149,15 @@
             console.log('Expanded rows:',expandedRows);
           });
 
+          if(delayDomInsertion) {
+            $('#table').replaceWith($tableElement);
+          }
+
           return tableData;
         };
 
         var columnOptions = {
-          numColumns: 6,
+          numColumns: 10,
           columnResizable: {
             1: false
           },
@@ -185,10 +187,140 @@
         };
 
         $('#initialize-table').click(function() {
-          publicFunctions.initializeTable(100, columnOptions, {
+          var test = [{
+              "site_id": "13325",
+              "site_name": "0000_CC_NEW",
+              "destination_id": "13325",
+              "valid_from": "2013-06-10 20:11:44",
+              "valid_to": "2020-01-01 00:00:00",
+              "action_type": "0",
+              "rollup_by": "total",
+              "funnel_map": "other",
+              "attributions": "0",
+              "break_attribution": "0",
+              "use_optimization": "0",
+              "optimization_value": "0",
+              "immediate_action": "0",
+              "window_open_hour": "0",
+              "window_close_hour": "0",
+              "window_open_day": "0",
+              "window_close_day": "2",
+              "prerequisite_action_type": null,
+              "pixel_implemented_at": "1970-09-10 00:00:00",
+              "weight": "0",
+              "last_updated": "2013-06-10 20:11:44",
+              "details_id": "0",
+              "name": "Andrew Nan Action",
+              "pixel_implementation": "NULL",
+              "fbx_cookie_sync": false,
+              "id": "614",
+              "assumed_placements": 0,
+              "events": [
+                  {
+                      "id": "614",
+                      "event_type": "user",
+                      "event_name": "action13"
+                  }
+              ],
+              "data": {
+                  "name": "Andrew Nan Action",
+                  "action_type": "0",
+                  "pixel": null,
+                  "event_rule": null,
+                  "attributions": "0"
+              }
+          },
+          {
+              "site_id": "13325",
+              "site_name": "0000_CC_NEW",
+              "destination_id": "13325",
+              "valid_from": "2013-03-11 22:01:13",
+              "valid_to": "2020-01-01 00:00:00",
+              "action_type": "13",
+              "rollup_by": "total",
+              "funnel_map": "other",
+              "attributions": "0",
+              "break_attribution": "0",
+              "use_optimization": "0",
+              "optimization_value": "0",
+              "immediate_action": "0",
+              "window_open_hour": "0",
+              "window_close_hour": "0",
+              "window_open_day": "0",
+              "window_close_day": "0",
+              "prerequisite_action_type": null,
+              "pixel_implemented_at": "1970-09-10 00:00:00",
+              "weight": "0",
+              "last_updated": "2013-03-11 22:01:13",
+              "details_id": "0",
+              "name": "Every time",
+              "pixel_implementation": "NULL",
+              "fbx_cookie_sync": false,
+              "id": "27",
+              "assumed_placements": 0,
+              "events": [
+                  {
+                      "id": "27",
+                      "event_type": "user",
+                      "event_name": "action13"
+                  }
+              ],
+              "data": {
+                  "name": "Every time",
+                  "action_type": "13",
+                  "pixel": null,
+                  "event_rule": null,
+                  "attributions": "0"
+              }
+          },
+          {
+              "site_id": "13325",
+              "site_name": "0000_CC_NEW",
+              "destination_id": "13325",
+              "valid_from": "2013-06-18 16:36:42",
+              "valid_to": "2020-01-01 00:00:00",
+              "action_type": "8",
+              "rollup_by": "users_daily",
+              "funnel_map": "other",
+              "attributions": "0",
+              "break_attribution": "1",
+              "use_optimization": "0",
+              "optimization_value": "0",
+              "immediate_action": "0",
+              "window_open_hour": "23",
+              "window_close_hour": "27",
+              "window_open_day": "0",
+              "window_close_day": "0",
+              "prerequisite_action_type": null,
+              "pixel_implemented_at": "1970-09-10 00:00:00",
+              "weight": "0",
+              "last_updated": "2013-06-18 16:36:42",
+              "details_id": "0",
+              "name": "Andrew Nan Action 2",
+              "pixel_implementation": "NULL",
+              "fbx_cookie_sync": true,
+              "id": "625",
+              "assumed_placements": 0,
+              "events": [
+                  {
+                      "id": "625",
+                      "event_type": "user",
+                      "event_name": "action14"
+                  }
+              ],
+              "data": {
+                  "name": "Andrew Nan Action 2",
+                  "action_type": "8",
+                  "pixel": null,
+                  "event_rule": null,
+                  "attributions": "0"
+              }
+          }];
+          //publicFunctions.initializeTable(100, columnOptions, {
+          publicFunctions.initializeTable(test, columnOptions, {
             summaryRow: true,
             rowsSelectable: true,
-          });
+          }, false);
         })
 
         $(window).resize(function() {
@@ -220,6 +352,17 @@
           var viewableData = $('#table').macroTable('getTableSnapshot');
           console.log('Currently Viewable Data:',viewableData);
         });
+
+        $('#table-data-row-number').click(function(e) {
+          e.preventDefault();
+
+          $('#table').macroTable('option', {
+            tableData: publicFunctions.generateTableData($('#number-of-rows-to-render').val(), columnOptions, {
+              'all': 3
+            })
+          });
+        });
+
 
         $('#table-data-standard').click(function(e) {
           e.preventDefault();
@@ -292,7 +435,7 @@
           $('#table').macroTable('filterTable',$('#search-field-input').val(), true);
         });
 
-      });//]]>
+      });
     </script>
     <script type="text/javascript" src="macroTableTest.js"></script>
   </body>

@@ -222,6 +222,7 @@
     ok($('#table td.macro-table-subrow-hierarchy-line-right').length === 0, 'No subrow dotted hierarchy lines present');
   });
 
+  //TODO: test case for malformed rows (missing "data" and/or "index" fields, including subrows)
 
 
 

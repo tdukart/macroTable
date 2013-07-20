@@ -422,7 +422,7 @@ button:hover .icon--delete::after {
 
 
 .macro-table-scroll-container {
-  position: absolute;
+  position: relative;
   overflow: scroll;
   padding: 0;
   margin: 0;
@@ -519,9 +519,9 @@ button:hover .icon--delete::after {
 
 .macro-table-expand-toggle + .macro-table-expand-toggle-label::before {
   content: "";
-  width: 8px; 
-  height: 2px; 
-  background-color: #666; 
+  width: 8px;
+  height: 2px;
+  background-color: #666;
   position: absolute;
   top: 50%;
   right: 50%;
@@ -530,9 +530,9 @@ button:hover .icon--delete::after {
 
 .macro-table-expand-toggle + .macro-table-expand-toggle-label::after {
   content: "";
-  width: 2px; 
+  width: 2px;
   height: 8px;
-  background-color: #666; 
+  background-color: #666;
   position: absolute;
   top: 50%;
   right: 50%;
@@ -545,8 +545,8 @@ button:hover .icon--delete::after {
 
 .macro-table-row-expander + .macro-table-row-expander-label::before {
   content: "";
-  width: 0; 
-  height: 0; 
+  width: 0;
+  height: 0;
   border-top: 3px solid transparent;
   border-bottom: 3px solid transparent;
   border-left: 5px solid #666;
@@ -558,8 +558,8 @@ button:hover .icon--delete::after {
 
 .macro-table-row-expander:checked + .macro-table-row-expander-label::before {
   content: "";
-  width: 0; 
-  height: 0; 
+  width: 0;
+  height: 0;
   border-left: 3px solid transparent;
   border-right: 3px solid transparent;
   border-top: 5px solid #666;
