@@ -128,6 +128,9 @@
               sortable: typeof columnOptions.columnsSortable !== 'undefined' ? columnOptions.columnsSortable[i] : undefined, //or undefined
               resizable: typeof columnOptions.columnResizable !== 'undefined' && typeof columnOptions.columnResizable[i] ? columnOptions.columnResizable[i] : true,
               formatter: typeof columnOptions.columnFormatters !== 'undefined' &&  typeof columnOptions.columnFormatters[i] === 'function' ? columnOptions.columnFormatters[i] : undefined
+              formatter: typeof columnOptions.columnFormatters !== 'undefined' &&  typeof columnOptions.columnFormatters[i] === 'function' ? columnOptions.columnFormatters[i] : undefined,
+              onCellClick: typeof columnOptions.columnOnCellClickers !== 'undefined' && typeof columnOptions.columnOnCellClickers[i] === 'function' ?
+                columnOptions.columnOnCellClickers[i] : undefined
             });
           }
 
@@ -178,6 +181,17 @@
             1: function(text) {
               //class added at random to try and screw up sorting
               return '<span class="'+~~((Math.random()*1000)+1)+'">'+text+'</span>';
+            },
+            5: function(value, row, $container) {
+              if(row.index == 2) {
+                $container.removeClass('macro-table-cell-clickable');
+              }
+              return value + ' :(';
+            }
+          },
+          columnOnCellClickers: {
+            5: function(value, row) {
+              alert(value + ', ' + JSON.stringify(row));
             }
           },
           columnsTitles: {

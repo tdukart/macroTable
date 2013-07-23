@@ -646,6 +646,28 @@ col.macro-table-row-selector-column  {
 }
 
 
+/* clickable table cells */
+
+.macro-table-cell-content.macro-table-cell-clickable {
+  color: blue;
+  color: -webkit-link;
+  cursor: pointer;
+}
+
+.macro-table-cell-content.macro-table-cell-clickable:active {
+  color: red;
+  color: -webkit-activelink;
+}
+
+.macro-table-cell-content.macro-table-cell-clickable:focus {
+  outline: -webkit-focus-ring-color auto 5px;
+}
+
+.macro-table-cell-content.macro-table-cell-clickable:hover {
+  text-decoration: underline;
+}
+
+
 /* scrollbar styling */
 
 .macro-table-scroll-container::-webkit-scrollbar {

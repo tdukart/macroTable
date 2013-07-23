@@ -173,7 +173,7 @@
     $.extend(tableDataTheoreticalDisplay, {}, tableData[0].data);
     tableDataTheoreticalDisplay['column0'] = tableData[0].data['column0'] + formatted;
 
-    $('#table tr.macro-table-row-0 td').each(function(i) {
+    $('#table tr.macro-table-row-0 td .macro-table-cell-content').each(function(i) {
       viewableData['column'+i] = $(this).html();
     });
 
@@ -205,7 +205,7 @@
     $.extend(tableDataTheoreticalDisplay, {}, tableData[0].data);
     tableDataTheoreticalDisplay['column0'] = tableData[0].data['column0'] + formatted;
 
-    $('#table tr.macro-table-row-0 td').each(function(i) {
+    $('#table tr.macro-table-row-0 td .macro-table-cell-content').each(function(i) {
       viewableData['column'+i] = $(this).html();
     });
 
@@ -243,7 +243,7 @@
     $.extend(tableDataTheoreticalDisplay, {}, tableData[0].subRows[0].data);
     tableDataTheoreticalDisplay['column0'] = tableData[0].subRows[0].data['column0'] + formatted;
 
-    $('#table tr.macro-table-row-1 td').each(function(i) { //subrow
+    $('#table tr.macro-table-row-1 td .macro-table-cell-content').each(function(i) { //subrow
       viewableData['column'+i] = $(this).html().replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
     });
 

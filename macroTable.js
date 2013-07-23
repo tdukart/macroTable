@@ -377,8 +377,8 @@
       expanderCellClass = '',
       dynamicRowColumns = '',
       staticRowColumns = '',
-      $dynamicRow = $(document.createElement('tr')).data('row-index', index),
-      $staticRow = $(document.createElement('tr')).data('row-index', index),
+      $dynamicRow = $(document.createElement('tr')).attr('data-row-index', index),
+      $staticRow = $(document.createElement('tr')).attr('data-row-index', index),
       rowData, indexHierachy, tableDataSubRows, i, len;
 
     //give even rows a stripe color
@@ -411,13 +411,24 @@
 
     //build dynamically left-scrollable row
     for(i = 0, len = columns.length; i < len; i++) {
-      var columnContent = row.data[columns[i].field];
+      var columnContent = row.data[columns[i].field],
+        $columnContentContainer = $(document.createElement('span')).addClass('macro-table-cell-content');
       columnContent = typeof columnContent === 'undefined' ? '' : columnContent;
 
-      if(typeof columns[i].formatter === 'function') {
-        columnContent = columns[i].formatter(columnContent);
+      //we want to pass the wrapper of the cell content to the formatter function in case a user wants to mess with it
+      if(typeof columns[i].onCellClick === 'function') {
+        $columnContentContainer.addClass('macro-table-cell-clickable');
       }
-      dynamicRowColumns += '<td'+(columns[i].resizable !== false ? ' class="macro-table-column-resizable"' : '')+'>'+columnContent+'</td>';
+      if(typeof columns[i].formatter === 'function') {
+        columnContent = columns[i].formatter(columnContent, row, $columnContentContainer);
+      }
+
+      //we need the markup from the $ object because we don't put together all the rows/cells until the end
+      $columnContentContainer.html(columnContent);
+      columnContent = $(document.createElement('div')).append($columnContentContainer).html();
+      $columnContentContainer = null;
+
+      dynamicRowColumns += '<td'+(columns[i].resizable !== false ? ' class="macro-table-column-resizable"' : '')+' data-column-index="'+i+'">'+columnContent+'</td>';
     }
 
     //build static row
@@ -1113,8 +1124,9 @@
      */
     _create: function() {
       var self = this,
+        options = this.options,
         $macroTable = this.element,
-        rowHeight = this.options.rowHeight,
+        rowHeight = options.rowHeight,
         breakTableScroll = false,
         forceTableScrollRender = false;
 
@@ -1341,6 +1353,20 @@
           );
 
         toggleRowFocus($rows);
+      })
+
+
+      //click on a clickable cell
+      .delegate('span.macro-table-cell-content.macro-table-cell-clickable', 'click', function(e) {
+        var $column = $(this).closest('td'),
+          $row = $column.closest('tr'),
+          column = options.columns[$column.data('column-index')],
+          row = options.tableData[$row.data('row-index')];
+
+        e.stopPropagation();
+        if(typeof column.onCellClick === 'function') {
+          column.onCellClick.call(this, row.data[column.field], row);
+        }
       });
 
 
@@ -1439,8 +1465,8 @@
             setTimeout(function() {
               forceTableScrollRender = false;
               self.element.trigger('rowexpand', self.expandedRowIndexes);
-            },0);
-          },0);
+            }, 0);
+          }, 0);
         }
       });
 
@@ -2543,6 +2569,9 @@
         isValid = typeof row.index !== 'undefined' && typeof row.data !== 'undefined';
         if(typeof row.subrows !== 'undefined') {
           isValid = isValid && this._validateTableData(row.subrows);
+        }
+        if(!isValid) {
+          console.warn('_validateTableData: Invalid row detected', row);
         }
       }
 
