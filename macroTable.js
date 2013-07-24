@@ -179,9 +179,10 @@
       distanceFromBottomToNewLastDomRow += $(element).height();
       if(distanceFromBottomToNewLastDomRow > tableContainerHeight) {
         distanceFromBottomToNewLastDomRow -= $(element).height();
-        newLastDomRow = $tableRows.length - i + 1;
+        newLastDomRow = $tableRows.length - i;
 
         if(distanceFromBottomToNewLastDomRow / i !== this.options.rowHeight) {
+          //this is how many default rows-worth of space needs to be added to the bottom of the scroll spacer in order to scroll the final row into view
           spacerMultiplier = Math.max(0, newLastDomRow - this.options.rowBuffer - this.displayRowWindow);
         }
         return false;
@@ -2012,15 +2013,15 @@
       .scrollTop(0)
       .scrollLeft(0);
 
+      //initialize the global count for rows with children
+      this.rowsWithChildrenCount = countRowsWithChildren.call(this);
+
       this._renderTableHeader();
 
       //resize the table, re-calculate the global variables and populate the data rows
       this._resizeTable(options.height, options.width);
 
       this._sortTable(options.sortByColumn, function() {
-        //initialize the global count for rows with children
-        this.rowsWithChildrenCount = countRowsWithChildren.call(this);
-        this._renderHeaderRowControls();
 
         if(this.renderRowDataSet.length > 0) {
           this.element.removeClass('macro-table-display-message');
@@ -2064,7 +2065,7 @@
         return options.height;
 
       } else if(!parentHeight || parentHeight < minimumHeight) {
-        minimumHeight += this.element.find('div.macro-table-scroll-shim').outerHeight() + this.scrollBarWidth - 1;
+        minimumHeight += this.element.find('div.macro-table-scroll-shim').outerHeight() + this.scrollBarWidth;
         console.warn('_getFallbackHeightToResize:: No height desernable from parent, defaulting to '+options.defaultTableHeightInRows+' rows worth');
         return minimumHeight;
 
@@ -2107,17 +2108,22 @@
         columns = options.columns,
 
         $macroTable = this.element,
-        $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
         $headerWrapper = $macroTable.find('div.macro-table-header-wrapper'),
         $header = $headerWrapper.find('div.macro-table-header'),
         $headerRow = $header.find('tr.macro-table-header-row'),
-        $leftScrollWrapperHeader = $header.find('div.macro-table-scroll-wrapper'),
-        $leftScrollWrapperBody = $macroTable.find('div.macro-table-data-container div.macro-table-scroll-wrapper'),
         $summaryRow = $header.find('tr.macro-table-summary-row'),
 
+        $dataContainer = $macroTable.find('div.macro-table-data-container'),
+        $leftScrollWrapperHeader = $header.find('div.macro-table-scroll-wrapper'),
+        $leftScrollWrapperBody = $dataContainer.find('div.macro-table-scroll-wrapper'),
+        $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
+
+        tableViewportWidth = this._getFallbackWidthToResize() - this.scrollBarWidth - this._renderHeaderRowControls(),
+        marginAdded = 0,
         totalColumnWidth = 0,
-        tableViewportWidth = this._getFallbackWidthToResize() - this.scrollBarWidth,
-        marginAdded;
+        totalOverriddenColumnWidth = 0,
+        totalOverriddenColumnWidthCount = 0,
+        defaultColumnWidth, i;
 
       $headerWrapper.hide();
 
@@ -2130,10 +2136,21 @@
         return;
       }
 
+      //calculate the width the columns should be set to in order to at least fill up all remaining width-space in the viewport
+      //if the remaining space doesn't provide enough space for each unsized column to be at least options.defaultColumnWidth wide, default to options.defaultColumnWidth
+      for(i = columns.length; i--;) {
+        if(typeof columns[i].width !== 'undefined') {
+          totalOverriddenColumnWidth += parseInt(columns[i].width, 10);
+        } else {
+          totalOverriddenColumnWidthCount++;
+        }
+      }
+      defaultColumnWidth = ($dataContainer.width() - totalOverriddenColumnWidth) / totalOverriddenColumnWidthCount; //remaining width-space / # of unsized columns
+      defaultColumnWidth = defaultColumnWidth < options.defaultColumnWidth ? options.defaultColumnWidth : defaultColumnWidth; //make sure at least options.defaultColumnWidth
+
       //build the column headers
-      $headerWrapper.show(); //needs to be visible so column width calculation can be performed
-      for(var i = columns.length - 1; i >= 0; i--) {
-        var columnWidth = typeof columns[i].width !== 'undefined' ? parseInt(columns[i].width, 10) : this.options.defaultColumnWidth;
+      for(i = columns.length; i--;) {
+        var columnWidth = typeof columns[i].width !== 'undefined' ? parseInt(columns[i].width, 10) : defaultColumnWidth;
 
         if(i < this.maxTotalDomColumns) { //TODO: right now, this is always true because we show all columns in the DOM, always
           var $summaryColumn,
@@ -2169,13 +2186,12 @@
           if(typeof summaryRow === 'object') {
             $summaryRow.prepend($summaryColumn);
           }
-
-          columnWidth = $headerColumn.outerWidth(); //this is why the header has to be visible
         }
 
         totalColumnWidth += columnWidth;
-        if(typeof marginAdded === 'undefined' && totalColumnWidth > tableViewportWidth) {
-          marginAdded = tableViewportWidth - (totalColumnWidth - columnWidth);
+        if(marginAdded === 0 && totalColumnWidth > tableViewportWidth) {
+          //amount of space clipped from the last column + width of the "current column" when last column is visible, which allows to scroll right one column further
+          marginAdded = (totalColumnWidth - tableViewportWidth) + columnWidth;
         }
       }
 
@@ -2192,7 +2208,9 @@
       $leftScrollWrapperBody.width(totalColumnWidth + marginAdded);
       $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + this.scrollBarWidth);
 
-      $header.add($macroTable.find('div.macro-table-data-container')).scrollLeft(
+      $headerWrapper.show(); //needs to be visible so column width calculation can be performed
+
+      $header.add($dataContainer).scrollLeft(
         $header.scrollLeft() + $headerRow.find('th').filter(':nth-child('+(this.currentColumn + 1)+')').position().left //scroll position of old column
       );
     },
@@ -2201,6 +2219,7 @@
      * @method _renderHeaderRowControls
      * @description puts the static column header into the appropriate state for the tableData
      * @private
+     * @returns {Number} The width of the static columns
      */
     _renderHeaderRowControls: function() {
       var options = this.options,
@@ -2263,6 +2282,8 @@
       } else {
         $macroTable.removeClass('macro-table-static-column-enabled');
       }
+
+      return $staticHeaderRow.width();
     },
 
     /**
@@ -2481,7 +2502,6 @@
 
       //this._init(); //causes currentColumn and currentRow to reset to 0
       this._renderTableHeader();
-      this._renderHeaderRowControls();
       this._sortTable(this.options.sortByColumn); //re-render table rows
 
       this.scrollToColumn(scrollPositionLeft);
@@ -2509,7 +2529,7 @@
       var $macroTable = this.element,
         options = this.options,
         rowHeight = options.rowHeight,
-        headerHeight = $macroTable.find('div.macro-table-scroll-shim').outerHeight() - 1,
+        headerHeight = $macroTable.find('div.macro-table-scroll-shim').outerHeight(),
         rowSelectorOffset = options.rowsSelectable === true ? this.rowSelectColumnWidth : 0,
         middleDomRow;
 
@@ -2519,7 +2539,7 @@
       headerHeight = headerHeight > 0 ? headerHeight : rowHeight;
 
       //determine how many rows will fit in the provided height
-      this.displayRowWindow = height < rowHeight ? options.defaultTableHeightInRows : ~~((height - rowHeight - this.scrollBarWidth) / rowHeight);
+      this.displayRowWindow = height < rowHeight ? options.defaultTableHeightInRows : ~~((height - headerHeight - this.scrollBarWidth) / rowHeight);
 
       if(options.rowBuffer < this.displayRowWindow) {
         console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',this.displayRowWindow,'. rowBuffer value being changed to',this.displayRowWindow);
@@ -2531,7 +2551,7 @@
 
       //size the data container wrapper
       $macroTable.find('div.macro-table-data-container-wrapper')
-      .height(height - headerHeight - this.scrollBarWidth - 1) //-1 to account for bottom border of header
+      .height(height - headerHeight - this.scrollBarWidth) //-1 to account for bottom border of header
       .width(width - this.scrollBarWidth - 1); //-1 to account for left border
 
       //size the data container
@@ -2540,7 +2560,7 @@
 
       //size the scroll container
       $macroTable.find('div.macro-table-scroll-container')
-      .outerHeight(height - headerHeight - 1); //may have box-sizing: border-box; set (if not webkit)
+      .outerHeight(height - headerHeight); //may have box-sizing: border-box; set (if not webkit)
 
       //size the vertical drop guide for the resizing functionality
       $macroTable.find('div.macro-table-resize-guide')

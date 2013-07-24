@@ -8,6 +8,9 @@
     <link rel="stylesheet" type="text/css" href="http://code.jquery.com/qunit/qunit-1.11.0.css">
 
     <style>
+      body {
+        margin: 20px;
+      }
       #qunit-fixture {
         position: static;
         width: auto;
@@ -15,7 +18,7 @@
       }
 
       #qunit-fixture .wrapper {
-        /*height: 500px;*/
+        /*height: 400px;*/
       }
     </style>
 
@@ -127,7 +130,6 @@
               field: typeof columnOptions.columnFields !== 'undefined' ? columnOptions.columnFields[i] || 'column'+i : 'column'+i,
               sortable: typeof columnOptions.columnsSortable !== 'undefined' ? columnOptions.columnsSortable[i] : undefined, //or undefined
               resizable: typeof columnOptions.columnResizable !== 'undefined' && typeof columnOptions.columnResizable[i] ? columnOptions.columnResizable[i] : true,
-              formatter: typeof columnOptions.columnFormatters !== 'undefined' &&  typeof columnOptions.columnFormatters[i] === 'function' ? columnOptions.columnFormatters[i] : undefined
               formatter: typeof columnOptions.columnFormatters !== 'undefined' &&  typeof columnOptions.columnFormatters[i] === 'function' ? columnOptions.columnFormatters[i] : undefined,
               onCellClick: typeof columnOptions.columnOnCellClickers !== 'undefined' && typeof columnOptions.columnOnCellClickers[i] === 'function' ?
                 columnOptions.columnOnCellClickers[i] : undefined
@@ -385,7 +387,7 @@
 
           $('#table').macroTable('option', {
             tableData: publicFunctions.generateTableData(100, columnOptions, {
-              'all': 3
+              //'all': 3
             })
           });
         });
@@ -402,28 +404,28 @@
                 2: 'jhgfjhgfjhgf'
               },
               192: {
-                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
               },
               193: {
-                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
               },
               194: {
-                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
               },
               195: {
-                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
               },
               196: {
-                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
               },
               197: {
-                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh '
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
               },
               198: {
                 1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
               },
               199: {
-                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
+                1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
               }
             })
           });

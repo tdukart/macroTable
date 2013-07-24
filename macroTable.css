@@ -129,6 +129,11 @@ button:hover .icon--delete::after {
 }
 */
 
+.macro-table-dynamic .macro-table-header-row th {
+  padding: 0 1em;
+}
+
+
 /* summary row in header */
 
 .macro-table .macro-table-static-summary-row,
