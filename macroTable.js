@@ -1608,7 +1608,7 @@
               widthDelta = $resizer.position().left - resizePositionStart,
               marginAdded = 0,
               totalColumnWidth = 0,
-              tableViewportWidth = self._getFallbackWidthToResize() - self.scrollBarWidth,
+              tableViewportWidth = options.width - self.scrollBarWidth,
               newWidth = $columnSizers.width() + widthDelta,
               $dynamicRows =  $dataContainer.find('tr'),
               $staticRows = $staticDataContainer.find('tr'),
@@ -1988,6 +1988,9 @@
         options.sortByColumn = '';
       }
 
+      options.height = options.height || this._getFallbackHeightToResize();
+      options.width = options.width || this._getFallbackWidthToResize();
+
       this.scrollTop = 0;
       this.currentRow = 0;
       this.currentDomRow = 0;
@@ -2118,7 +2121,7 @@
         $leftScrollWrapperBody = $dataContainer.find('div.macro-table-scroll-wrapper'),
         $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
 
-        tableViewportWidth = this._getFallbackWidthToResize() - this.scrollBarWidth - this._renderHeaderRowControls(),
+        tableViewportWidth = options.width - this.scrollBarWidth - this._renderHeaderRowControls(),
         marginAdded = 0,
         totalColumnWidth = 0,
         totalOverriddenColumnWidth = 0,
