@@ -1573,17 +1573,13 @@
 
       //helper function to return the width to resize a column to based on current cursor position
       function calculateReiszeColumnWidth(cursorPosition, $columnToResize) {
-        var cursorOffset = cursorPosition - $macroTable.offset().left;
+        var cursorOffset = cursorPosition - $macroTable.position().left,
+          maxLeftPosition = $macroTable.outerWidth() - self.scrollBarWidth - $resizer.outerWidth(),
+          minResizePosition = $columnToResize.position().left + self.resizeColumnMinWidth;
 
         //console.log('calculateReiszeColumnWidth:', $macroTable.outerWidth() - scrollBarWidth - $resizer.outerWidth(), cursorOffset, $columnToResize.offset().left + resizeColumnMinWidth);
 
-        return Math.max(
-          Math.min(
-            $macroTable.outerWidth() - self.scrollBarWidth - $resizer.outerWidth(), //max left position
-            cursorOffset //current cursor position
-          ),
-          $columnToResize.offset().left + self.resizeColumnMinWidth //min resize position
-        );
+        return Math.max(Math.min(maxLeftPosition, cursorOffset), minResizePosition);
       }
 
       //mousedown for the resizer, used when resizing columns
