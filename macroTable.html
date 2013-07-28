@@ -72,7 +72,7 @@
          * }
          * @returns Array of table rows
          */
-        publicFunctions.generateTableData = function(numRows, columnOptions, subRowsIndexes, columnValueOverrides) {
+        publicFunctions.generateTableData = function(numRows, columnOptions, subRowsIndexes, columnValueOverrides, doExpandRows) {
           var tableData = [],
             columnData = {},
             i, j, k, len, sublen;
@@ -91,7 +91,8 @@
 
             tableData.push({
               index: i,
-              data: columnData
+              data: columnData,
+              expanded: !!doExpandRows
             });
 
             if(typeof subRowsIndexes['all'] !== 'undefined' || typeof subRowsIndexes[i] !== 'undefined') {
@@ -120,7 +121,7 @@
           tableOptions = tableOptions || {};
 
           var $tableElement = delayDomInsertion ? $(document.createElement('div')) : $('#table'),
-            tableData = numRows instanceof Array ? numRows : publicFunctions.generateTableData(numRows, columnOptions, tableOptions.subRowsIndexes),
+            tableData = numRows instanceof Array ? numRows : publicFunctions.generateTableData(numRows, columnOptions, tableOptions.subRowsIndexes, undefined, tableOptions.doExpandRows),
             columns = [],
             i;
 
@@ -334,10 +335,10 @@
                   "attributions": "0"
               }
           }];
-          //publicFunctions.initializeTable(100, columnOptions, {
-          publicFunctions.initializeTable(test, columnOptions, {
+          publicFunctions.initializeTable(100, columnOptions, {
+          //publicFunctions.initializeTable(test, columnOptions, {
             summaryRow: true,
-            rowsSelectable: true,
+            rowsSelectable: true
           }, false);
         })
 
