@@ -161,8 +161,7 @@
    * @return {Boolean} True if the scroll spacer was given margin-bottom compensation for the scrollbar (meriting a re-scroll so the last row isn't potentially cut off)
    */
   function calculateAndApplyBottomMargin() {
-    var newLastDomRow,
-      distanceFromBottomToNewLastDomRow = 0,
+    var distanceFromBottomToNewLastDomRow = 0,
       $macroTable = this.element,
       $tableContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
       $tableContainer = $tableContainerWrapper.find('div.macro-table-data-container'),
@@ -179,24 +178,23 @@
       distanceFromBottomToNewLastDomRow += $(element).height();
       if(distanceFromBottomToNewLastDomRow > tableContainerHeight) {
         distanceFromBottomToNewLastDomRow -= $(element).height();
-        newLastDomRow = $tableRows.length - i;
 
         if(distanceFromBottomToNewLastDomRow / i !== this.options.rowHeight) {
           //this is how many default rows-worth of space needs to be added to the bottom of the scroll spacer in order to scroll the final row into view
-          spacerMultiplier = Math.max(0, newLastDomRow - this.options.rowBuffer - this.displayRowWindow);
+          spacerMultiplier = Math.max(0, this.displayRowWindow - i);
         }
         return false;
       }
     }.bind(this));
 
-    if($tableScrollSpacer.css('margin-bottom') === '0px' && tableContainerHeight - distanceFromBottomToNewLastDomRow > 0) {
+    if($tableScrollSpacer.css('padding-bottom') === '0px' && tableContainerHeight - distanceFromBottomToNewLastDomRow > 0) {
       tableScrollSpacerMarginAdded = true;
     }
 
     //add calculated margins to allow scrolling to bring last row into view
-    $tableScrollSpacer.css('padding-bottom', spacerMultiplier * this.options.rowHeight)
-    .css('margin-bottom', tableContainerHeight - distanceFromBottomToNewLastDomRow);
-    $tableScrollWrappers.css('padding-bottom', tableContainerHeight - distanceFromBottomToNewLastDomRow);
+    //TODO: remove the padding/margin from these elements on _init
+    $tableScrollSpacer.css('padding-bottom', spacerMultiplier * this.options.rowHeight);
+    $tableScrollWrappers.css('margin-bottom', tableContainerHeight - distanceFromBottomToNewLastDomRow);
     $reorderGuide.css('bottom', tableContainerHeight - distanceFromBottomToNewLastDomRow);
 
     return tableScrollSpacerMarginAdded;
@@ -225,13 +223,13 @@
       newRenderCount = 0; //number of new rows we need to remove and re-add with new values
 
     //a huge scroll, passed the normal row swap threshold (grab the thumb with the mouse and whip it all the way in one direction)
-    if(this.currentDomRow + direction > this.maxTotalDomRows || this.currentDomRow + direction <= 0 || rerender) {
+    if(this.currentDomRow + direction >= this.maxTotalDomRows || this.currentDomRow + direction <= 0 || rerender) {
 
       //final dom window should always render the maxTotalDomRows number of rows
       if(isInFinalDomWindow) {
 
         rebuildRows.call(this, visibleRowCount < this.maxTotalDomRows ? 0 : visibleRowCount - this.maxTotalDomRows, visibleRowCount);
-        this.currentDomRow = visibleRowCount < this.maxTotalDomRows ? rowNumber : this.maxTotalDomRows - (visibleRowCount - rowNumber);
+        this.currentDomRow = visibleRowCount < this.maxTotalDomRows ? rowNumber : this.maxTotalDomRows - (visibleRowCount - rowNumber); //the DOM row index if all rows are the same height, which is determined in the next line...
         reScrollNeeded = calculateAndApplyBottomMargin.call(this); //at the bottom, make sure the scroll margins are in place
 
       //not in final dom window, proceed as normal
@@ -322,7 +320,7 @@
   function scrollTableHorizontal() {
     var $tableContainer = $('div.macro-table-data-container', this.element),
       dataContainerScrollLeft = $tableContainer.scrollLeft(),
-      scrollContainerScrollLeft = $('div.macro-table-scroll-container', this.element).scrollLeft(),
+      scrollContainerScrollLeft = this.$scrollContainer.scrollLeft(),
       $domColumns = $('div.macro-table-header th', this.element),
       $currrentColumn = $domColumns.eq(this.currentColumn),
       columnIterator = -1,
@@ -1040,6 +1038,9 @@
       defaultTableHeightInRows: 10
     },
 
+    /* element shortcuts */
+    $scrollContainer: null,
+
     /** "Private" methods */
 
     /**
@@ -1191,8 +1192,10 @@
       '<div class="macro-table-data-veil"></div>')
       .addClass('macro-table');
 
-      var $scroll = $macroTable.find('div.macro-table-scroll-container'),
-        $dataContainer = $macroTable.find('div.macro-table-data-container'),
+      //setup element shortcuts
+      this.$scrollContainer = $macroTable.find('div.macro-table-scroll-container');
+
+      var $dataContainer = $macroTable.find('div.macro-table-data-container'),
         $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
         $resizer = $macroTable.find('div.macro-table-resize-guide'),
         $reorderHandle = $macroTable.find('div.macro-table-reorder-handle'),
@@ -1817,7 +1820,7 @@
                   var currenColumnWidth = $header.find('col').eq(self.currentColumn).outerWidth();
                   scrollColumnTimer = undefined;
 
-                  $scroll.scrollLeft(
+                  self.$scrollContainer.scrollLeft(
                     scrollOffset + (currenColumnWidth * (isScrollingRight ? 1 : -1))
                   );
 
@@ -1909,9 +1912,9 @@
       .bind('mousewheel', function(e, delta, deltaX, deltaY) {
         e.preventDefault();
         if(deltaY < 0) {
-          $scroll.scrollTop(self.scrollTop + rowHeight);
+          self.$scrollContainer.scrollTop(self.scrollTop + rowHeight);
         } else if(deltaY > 0) {
-          $scroll.scrollTop(self.scrollTop - rowHeight);
+          self.$scrollContainer.scrollTop(self.scrollTop - rowHeight);
         }
 
         if(deltaX !== 0) {
@@ -1921,18 +1924,18 @@
           if(deltaX < 0 && self.currentColumn > 0) {
             var lastOffset = Math.abs($domColumns.eq(self.currentColumn - 1).position().left);
             console.log('left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',self.currentColumn);
-            $scroll.scrollLeft(offset - lastOffset);
+            self.$scrollContainer.scrollLeft(offset - lastOffset);
           } else if(deltaX > 0 && self.currentColumn < $domColumns.length - 1) {
             var nextOffset = Math.abs($domColumns.eq(self.currentColumn + 1).position().left);
             console.log('right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',self.currentColumn);
-            $scroll.scrollLeft(offset + nextOffset);
+            self.$scrollContainer.scrollLeft(offset + nextOffset);
           }
         }
-        //console.log('Mousewheel .macro-table-data-container', scrollTop, rowHeight,$scroll);
+        //console.log('Mousewheel .macro-table-data-container', scrollTop, rowHeight,self.$scrollContainer);
       });
 
       //scroll function for the scroll container, using the scrollbars
-      $scroll.scroll(function(e) {
+      this.$scrollContainer.scroll(function(e) {
         var lastScrollTop = self.scrollTop,
           lastTableScrollLeft = self.scrollLeft;
 
@@ -2008,7 +2011,7 @@
         this.renderRowDataSet = options.tableData;
       }
 
-      this.element.find('div.macro-table-scroll-container, div.macro-table-data-container, div.macro-table-header')
+      this.$scrollContainer.add('div.macro-table-data-container, div.macro-table-header')
       .scrollTop(0)
       .scrollLeft(0);
 
@@ -2558,15 +2561,21 @@
       .height(height - headerHeight - this.scrollBarWidth);
 
       //size the scroll container
-      $macroTable.find('div.macro-table-scroll-container')
+      this.$scrollContainer
       .outerHeight(height - headerHeight); //may have box-sizing: border-box; set (if not webkit)
+
+      //add to the scroll spacer the amount of extra space available in the data container,
+      //meaning vertical height not large enough to fit a full row of standard height (overflowed).
+      //this will help when scrolling to the very bottom for some odd-sized cases
+      this.$scrollContainer.find('div.macro-table-scroll-spacer')
+      .css('margin-bottom', (((height - headerHeight - this.scrollBarWidth) / rowHeight) % 1) * rowHeight);
 
       //size the vertical drop guide for the resizing functionality
       $macroTable.find('div.macro-table-resize-guide')
       .height(height - this.scrollBarWidth);
 
       //set globals based on new table dimensions
-      this.replaceRowWindow = options.rowBuffer / 2;
+      this.replaceRowWindow = ~~(options.rowBuffer / 2);
       this.maxTotalDomRows = this.displayRowWindow + (options.rowBuffer * 2);
       middleDomRow = ~~(this.maxTotalDomRows / 2);
       this.triggerUpDomRow = middleDomRow - ~~(this.displayRowWindow / 2) - this.replaceRowWindow;
@@ -2701,7 +2710,7 @@
       var rowsToScroll = scrollToRow - this.currentRow;
       if(rowsToScroll !== 0) {
         this.scrollToRowIndex = scrollToRow;
-        this.element.find('div.macro-table-scroll-container').scrollTop(this.scrollTop + (rowsToScroll * options.rowHeight));
+        this.$scrollContainer.scrollTop(this.scrollTop + (rowsToScroll * options.rowHeight));
 
       } else {
         this._refreshRows();
@@ -2716,12 +2725,11 @@
       console.log('scroll to column',scrollToColumn);
 
       var $column = this.element.find('tr.macro-table-header-row th:nth-child('+(scrollToColumn + 1)+')'),
-        columnOffset = $column.length > 0 ? $column.position().left : 0,
-        $scroll = this.element.find('div.macro-table-scroll-container');
+        columnOffset = $column.length > 0 ? $column.position().left : 0;
 
       this.scrollLeft = -1; //force a scroll
 
-      $scroll.scrollLeft($scroll.scrollLeft() + columnOffset);
+      this.$scrollContainer.scrollLeft(this.$scrollContainer.scrollLeft() + columnOffset);
     },
 
     /**
