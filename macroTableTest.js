@@ -483,9 +483,9 @@
         setTimeout(function() {
           strictEqual($dataContainerWraper.find('table.macro-table-dynamic tr.macro-table-row[data-row-index=0]').offset().top, containerOffsetTop, 'Scrolled to top correctly');
           start();
-        }, 500);
-      }, 500);
-    }, 500);
+        }, 0);
+      }, 0);
+    }, 0);
   });
 
   asyncTest('Table Scrolls to Row Via API', 3, function() {
@@ -516,9 +516,9 @@
         setTimeout(function() {
           strictEqual($dataContainerWraper.find('table.macro-table-dynamic tr.macro-table-row[data-row-index=0]').offset().top, containerOffsetTop, 'Scrolled to top correctly');
           start();
-        }, 500);
-      }, 500);
-    }, 500);
+        }, 0);
+      }, 0);
+    }, 0);
   });
 
   asyncTest('Table Scrolls to Row with Expanded Subrows', 5, function() {
@@ -569,11 +569,11 @@
             setTimeout(function() {
               strictEqual($dataContainerWraper.find('table.macro-table-dynamic tr.macro-table-row[data-row-index='+scroll2+']').offset().top, containerOffsetTop, 'Second scroll subrow scrolled to correctly');
               start();
-            }, 500);
-          }, 500);
-        }, 500);
-      }, 500);
-    }, 500);
+            }, 0);
+          }, 0);
+        }, 0);
+      }, 0);
+    }, 0);
   });
 
   asyncTest('Table without Summary Row Scrolls to Last Row', 5, function() {
@@ -652,9 +652,9 @@
           ok($lastRow.offset().top <  + $dataContainerWraper.height(), 'Top of last row visible in table viewport');
           ok($lastRow.offset().top + $lastRow.height() < containerOffsetTop + $dataContainerWraper.height(), 'Bottom of last row visible in table viewport');
           start();
-        }, 500);
-      }, 500);
-    }, 500);
+        }, 0);
+      }, 0);
+    }, 0);
   });
 
   asyncTest('Table with Summary Row Scrolls to Last Row', 5, function() {
@@ -735,9 +735,9 @@
           ok($lastRow.offset().top <  + $dataContainerWraper.height(), 'Top of last row visible in table viewport');
           ok($lastRow.offset().top + $lastRow.height() < containerOffsetTop + $dataContainerWraper.height(), 'Bottom of last row visible in table viewport');
           start();
-        }, 500);
-      }, 500);
-    }, 500);
+        }, 0);
+      }, 0);
+    }, 0);
   });
 
   asyncTest('Table without Summary Row Scrolls to Last Row Via API', 3, function() {
@@ -796,7 +796,7 @@
       ok($lastRow.offset().top < $dataContainerWraper.offset().top + $dataContainerWraper.height(), 'Top of last row visible in table viewport');
       ok($lastRow.offset().top + $lastRow.height() < $dataContainerWraper.offset().top + $dataContainerWraper.height(), 'Bottom of last row visible in table viewport');
       start();
-    }, 500);
+    }, 200); //long wait because of 2x scroll events for margin/padding re-scroll calculation
   });
 
   asyncTest('Table with Summary Row Scrolls to Last Row Via API', 3, function() {
@@ -858,7 +858,7 @@
       ok($lastRow.offset().top < $dataContainerWraper.offset().top + $dataContainerWraper.height(), 'Top of last row visible in table viewport');
       ok($lastRow.offset().top + $lastRow.height() < $dataContainerWraper.offset().top + $dataContainerWraper.height(), 'Bottom of last row visible in table viewport');
       start();
-    }, 500);
+    }, 200); //long wait because of 2x scroll events for margin/padding re-scroll calculation
   });
 
   module('Element Dimension Consistency');
