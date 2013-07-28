@@ -2663,7 +2663,18 @@
      * Public interface for calls to _resizeTable and _sortTable
      */
     resizeTable: function(height, width) {
-      this._resizeTable(height, width);
+      //if called from _setOption, these options are re-set, again. oh well.
+      var options = this.options;
+      options.height = 0;
+      options.width = 0;
+      this.element.width(options.width)
+      .height(options.height);
+
+      options.height = height || this._getFallbackHeightToResize();
+      options.width = width || this._getFallbackWidthToResize();
+
+      this._resizeTable(options.height, options.width);
+      this._renderTableHeader();
 
       //maxTotalDomRows and the trigger rows have changed, so the table rows need to be re-rendered so that scrolling doesn't break
       this._sortTable(this.options.sortByColumn);
