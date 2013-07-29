@@ -1041,6 +1041,10 @@
     /* element shortcuts */
     $scrollContainer: null,
 
+    $headerWrapper: null,
+
+    $header: null,
+
     /** "Private" methods */
 
     /**
@@ -1194,6 +1198,8 @@
 
       //setup element shortcuts
       this.$scrollContainer = $macroTable.find('div.macro-table-scroll-container');
+      this.$headerWrapper = $macroTable.find('div.macro-table-header-wrapper');
+      this.$header = this.$headerWrapper.find('div.macro-table-header');
 
       var $dataContainer = $macroTable.find('div.macro-table-data-container'),
         $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
@@ -1201,8 +1207,7 @@
         $reorderHandle = $macroTable.find('div.macro-table-reorder-handle'),
         $removeColumn = $macroTable.find('button.macro-table-remove-column'),
         $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
-        $headerWrapper = $macroTable.find('div.macro-table-header'),
-        $header = $headerWrapper.find('table'),
+        $headerTable = this.$header.find('table'),
         $dynamicTableBody = $macroTable.find('tbody.macro-table-column-content'),
         $staticHeaderRow = $macroTable.find('div.macro-table-static-header tr.macro-table-static-header-row'),
         $staticTableBody = $macroTable.find('tbody.macro-table-static-column-content'),
@@ -1257,7 +1262,7 @@
       /* Wire column header events */
 
       var columnMouseoverPid;
-      $header.delegate('tr.macro-table-header-row th', 'mouseover', function(e) {
+      $headerTable.delegate('tr.macro-table-header-row th', 'mouseover', function(e) {
         var $columnHeader = $(this);
 
         /* Handle reorder columns functionality */
@@ -1265,24 +1270,24 @@
 
           /* position reorder handle */
 
-          $header.find('th.macro-table-header-active-cell').removeClass('macro-table-header-active-cell');
+          $headerTable.find('th.macro-table-header-active-cell').removeClass('macro-table-header-active-cell');
 
           if($columnHeader.hasClass('macro-table-column-reorderable')) {
 
             clearTimeout(columnMouseoverPid);
 
-            $headerWrapper.addClass('macro-table-header-active');
+            self.$header.addClass('macro-table-header-active');
             $columnHeader.addClass('macro-table-header-active-cell');
             $reorderHandle.css({
               top: (($columnHeader.height() - $reorderHandle.height()) / 2) + 'px',
-              left: $headerWrapper.scrollLeft() + $columnHeader.position().left + 2 + 'px'
+              left: self.$header.scrollLeft() + $columnHeader.position().left + 2 + 'px'
             });
             $removeColumn.css({
               top: (($columnHeader.height() - $removeColumn.height()) / 2) + 'px',
-              left: $headerWrapper.scrollLeft() + $columnHeader.position().left + $columnHeader.outerWidth() - $removeColumn.width() + (-2) + 'px'
+              left: self.$header.scrollLeft() + $columnHeader.position().left + $columnHeader.outerWidth() - $removeColumn.width() + (-2) + 'px'
             });
           } else {
-            $headerWrapper.removeClass('macro-table-header-active');
+            self.$header.removeClass('macro-table-header-active');
           }
 
         }
@@ -1293,18 +1298,18 @@
         if($(e.relatedTarget).closest('div.macro-table-column-controls').length === 0) {
         //if(!$(e.relatedTarget).hasClass('macro-table-reorder-handle')) { //don't deselect column if hovering over the reorder handle
           columnMouseoverPid = setTimeout(function() {
-            $headerWrapper.removeClass('macro-table-header-active');
+            self.$header.removeClass('macro-table-header-active');
             $(e.target).removeClass('macro-table-header-active-cell');
           }, 500);
         }
       });
-      //$header.delegate('th.macro-table-column-sortable', 'click', function(e) {
+      //$headerTable.delegate('th.macro-table-column-sortable', 'click', function(e) {
 
 
       /* Wire column sort events */
 
       //row sorting listener
-      $header.delegate('th.macro-table-column-sortable', 'click', function(e) {
+      $headerTable.delegate('th.macro-table-column-sortable', 'click', function(e) {
         if(!$macroTable.hasClass('macro-table-column-moving')) {
           self._sortTable($(this).index());
         }
@@ -1680,7 +1685,7 @@
       $removeColumn.bind('click', function(e) {
         e.preventDefault();
 
-        var columnToRemoveIndex = $header.find('th.macro-table-header-active-cell').filter(':first').index();
+        var columnToRemoveIndex = $headerTable.find('th.macro-table-header-active-cell').filter(':first').index();
 
         self._removeColumn(columnToRemoveIndex);
       });
@@ -1695,7 +1700,7 @@
 
         if(e.which == 1) { //left click only
 
-          var $selectedColumn = $header.find('th.macro-table-header-active-cell'),
+          var $selectedColumn = $headerTable.find('th.macro-table-header-active-cell'),
             thumbPosition = ($selectedColumn.offset().left - $macroTable.offset().left) - //relative start position to macroTable container
                             Math.ceil($resizer.outerWidth() / 2); //end position of the cell with resize guide compensation
 
@@ -1789,12 +1794,12 @@
               cursorDataContainerOffset = lastPageX - $dataContainer.offset().left,
               dataContainerOffset = $dataContainer.position().left,
               reorderGuidePosition = $reorderGuide.position().left,
-              maxReorderGuidePosition = $header.outerWidth() - $header.find('th:last').outerWidth(),
+              maxReorderGuidePosition = $headerTable.outerWidth() - $headerTable.find('th:last').outerWidth(),
               selectedColumnIndex = $macroTable.find('col.macro-table-selected-column').first().index(),
               newIndex,
               $newColumn;
 
-            $visibleColumns = $header.find('th'); //TODO: filter more intelligently (only look at columns visible in window)
+            $visibleColumns = $headerTable.find('th'); //TODO: filter more intelligently (only look at columns visible in window)
             $visibleColumns.each(function(i, column) {
               var $column = $(column);
               if(cursorDataContainerOffset < $column.position().left + $column.outerWidth() || i == self.options.columns.length - 1) {
@@ -1817,7 +1822,7 @@
             if((isScrollingLeft || isScrollingRight) && $macroTable.hasClass('macro-table-column-moving')) {
               if(typeof scrollColumnTimer === 'undefined') {
                 scrollColumnTimer = setTimeout(function() {
-                  var currenColumnWidth = $header.find('col').eq(self.currentColumn).outerWidth();
+                  var currenColumnWidth = $headerTable.find('col').eq(self.currentColumn).outerWidth();
                   scrollColumnTimer = undefined;
 
                   self.$scrollContainer.scrollLeft(
@@ -1889,7 +1894,7 @@
             columnToReorderIndex = $selectedColumn.removeClass('macro-table-selected-column')
             .filter(':first').index();
 
-            newIndex = $header.find('col.macro-table-target-column')
+            newIndex = $headerTable.find('col.macro-table-target-column')
             .removeClass('macro-table-target-column').index();
 
             if(columnToReorderIndex != newIndex && newIndex >= 0) {
@@ -1900,7 +1905,7 @@
           }
         }
 
-        $headerWrapper.removeClass('macro-table-header-active');
+        self.$header.removeClass('macro-table-header-active');
       });
 
 
@@ -1918,7 +1923,7 @@
         }
 
         if(deltaX !== 0) {
-          var $domColumns = $header.find('th'),
+          var $domColumns = $headerTable.find('th'),
             offset = $domColumns.length !== 0 ? Math.abs($domColumns.eq(0).position().left) : 0;
 
           if(deltaX < 0 && self.currentColumn > 0) {
@@ -2087,7 +2092,7 @@
         this.element.addClass('has-styled-scrollbars');
       }
 
-      this.element.find('div.macro-table-header-wrapper').css('margin-right', this.scrollBarWidth).end()
+      this.$headerWrapper.css('margin-right', this.scrollBarWidth).end()
       .find('div.macro-table-scroll-shim').css({
         width: this.scrollBarWidth,
         right: -this.scrollBarWidth
@@ -2110,13 +2115,11 @@
         columns = options.columns,
 
         $macroTable = this.element,
-        $headerWrapper = $macroTable.find('div.macro-table-header-wrapper'),
-        $header = $headerWrapper.find('div.macro-table-header'),
-        $headerRow = $header.find('tr.macro-table-header-row'),
-        $summaryRow = $header.find('tr.macro-table-summary-row'),
+        $headerRow = this.$header.find('tr.macro-table-header-row'),
+        $summaryRow = this.$header.find('tr.macro-table-summary-row'),
 
         $dataContainer = $macroTable.find('div.macro-table-data-container'),
-        $leftScrollWrapperHeader = $header.find('div.macro-table-scroll-wrapper'),
+        $leftScrollWrapperHeader = this.$header.find('div.macro-table-scroll-wrapper'),
         $leftScrollWrapperBody = $dataContainer.find('div.macro-table-scroll-wrapper'),
         $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
 
@@ -2125,9 +2128,10 @@
         totalColumnWidth = 0,
         totalOverriddenColumnWidth = 0,
         totalOverriddenColumnWidthCount = 0,
+        dynamicHeaderWidth = this.$header.width(), //gets ruined by hiding/emptying, so save now
         defaultColumnWidth, i;
 
-      $headerWrapper.hide();
+      this.$headerWrapper.hide();
 
       $headerRow.empty();
       $summaryRow.empty();
@@ -2147,7 +2151,7 @@
           totalOverriddenColumnWidthCount++;
         }
       }
-      defaultColumnWidth = ($dataContainer.width() - totalOverriddenColumnWidth) / totalOverriddenColumnWidthCount; //remaining width-space / # of unsized columns
+      defaultColumnWidth = (dynamicHeaderWidth - totalOverriddenColumnWidth) / totalOverriddenColumnWidthCount; //remaining width-space / # of unsized columns
       defaultColumnWidth = defaultColumnWidth < options.defaultColumnWidth ? options.defaultColumnWidth : defaultColumnWidth; //make sure at least options.defaultColumnWidth
 
       //build the column headers
@@ -2210,10 +2214,10 @@
       $leftScrollWrapperBody.width(totalColumnWidth + marginAdded);
       $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + this.scrollBarWidth);
 
-      $headerWrapper.show(); //needs to be visible so column width calculation can be performed
+      this.$headerWrapper.show(); //needs to be visible so column width calculation can be performed
 
-      $header.add($dataContainer).scrollLeft(
-        $header.scrollLeft() + $headerRow.find('th').filter(':nth-child('+(this.currentColumn + 1)+')').position().left //scroll position of old column
+      this.$header.add($dataContainer).scrollLeft(
+        this.$header.scrollLeft() + $headerRow.find('th').filter(':nth-child('+(this.currentColumn + 1)+')').position().left //scroll position of old column
       );
     },
 
