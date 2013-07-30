@@ -321,7 +321,7 @@
     var $tableContainer = $('div.macro-table-data-container', this.element),
       dataContainerScrollLeft = $tableContainer.scrollLeft(),
       scrollContainerScrollLeft = this.$scrollContainer.scrollLeft(),
-      $domColumns = $('div.macro-table-header th', this.element),
+      $domColumns = this.$header.find('th'),
       $currrentColumn = $domColumns.eq(this.currentColumn),
       columnIterator = -1,
       endColumn;
@@ -353,7 +353,7 @@
 
         this.currentColumn = columnIterator;
         $tableContainer.scrollLeft(newColumnScrollLeft);
-        this.element.find('div.macro-table-header').scrollLeft(newColumnScrollLeft);
+        this.$header.scrollLeft(newColumnScrollLeft);
         break;
 
       }
@@ -1045,6 +1045,8 @@
 
     $header: null,
 
+    $resizer: null,
+
     /** "Private" methods */
 
     /**
@@ -1200,10 +1202,10 @@
       this.$scrollContainer = $macroTable.find('div.macro-table-scroll-container');
       this.$headerWrapper = $macroTable.find('div.macro-table-header-wrapper');
       this.$header = this.$headerWrapper.find('div.macro-table-header');
+      this.$resizer = $macroTable.find('div.macro-table-resize-guide');
 
       var $dataContainer = $macroTable.find('div.macro-table-data-container'),
         $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
-        $resizer = $macroTable.find('div.macro-table-resize-guide'),
         $reorderHandle = $macroTable.find('div.macro-table-reorder-handle'),
         $removeColumn = $macroTable.find('button.macro-table-remove-column'),
         $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
@@ -1211,27 +1213,27 @@
         $dynamicTableBody = $macroTable.find('tbody.macro-table-column-content'),
         $staticHeaderRow = $macroTable.find('div.macro-table-static-header tr.macro-table-static-header-row'),
         $staticTableBody = $macroTable.find('tbody.macro-table-static-column-content'),
-        $columnToResize;
+        $columnToResize,
 
       //shortcut function to remove styling for when hovering over the resizer handle
-      function deselectResizeHandle() {
+      deselectResizeHandle = function() {
         if(typeof $columnToResize !== 'undefined') {
           $columnToResize.removeClass('macro-table-column-resize');
           $columnToResize = undefined;
         }
-        $resizer.removeClass('macro-table-highlight');
-      }
+        this.$resizer.removeClass('macro-table-highlight');
+      }.bind(this),
 
       //shortcut function for handling data structure changes when expanding or collapsing a row
-      function handleRowExpandToggle(index, isExpanded) {
+      handleRowExpandToggle = function(index, isExpanded) {
         var $selectAllHeaderCheckbox = $staticHeaderRow.find('input.macro-table-select-toggle');
 
-        self.expandedTableData[index].expanded = !!isExpanded;
+        this.expandedTableData[index].expanded = !!isExpanded;
 
         if(isExpanded) {
-          self.expandedRowCount++;
+          this.expandedRowCount++;
           //apply + concat the subRows to remove to the argument array provides one-line solution to an otherwise loop-related solution
-          Array.prototype.splice.apply(self.expandedTableData, [index + 1, 0].concat(self.expandedTableData[index].subRows));
+          Array.prototype.splice.apply(this.expandedTableData, [index + 1, 0].concat(this.expandedTableData[index].subRows));
 
           //newly expanded rows are never selected, so if the select all header checkbox is checked, put it into indeterminate state
           if($selectAllHeaderCheckbox.attr('checked')) {
@@ -1240,24 +1242,24 @@
           }
 
         } else {
-          self.expandedRowCount--;
-          var removedRows = self.expandedTableData.splice(index + 1, self.expandedTableData[index].subRows.length);
+          this.expandedRowCount--;
+          var removedRows = this.expandedTableData.splice(index + 1, this.expandedTableData[index].subRows.length);
 
           //clean up selected count from removed rows
           for(var i = 0, len = removedRows.length; i < len; i++) {
             if(removedRows[i].selected) {
               removedRows[i].selected = false;
-              self.selectedRowCount--;
+              this.selectedRowCount--;
             }
           }
 
           //by hiding the sub rows, all remaining rows are selected, so make select toggle checkbox reflect that
-          if(self.selectedRowCount == self.expandedTableData.length) {
+          if(this.selectedRowCount == this.expandedTableData.length) {
             $selectAllHeaderCheckbox.attr('checked', true); //click the box again and it will deselect all rows
             $selectAllHeaderCheckbox[0].indeterminate = false;
           }
         }
-      }
+      }.bind(this);
 
       /* Wire column header events */
 
@@ -1582,23 +1584,23 @@
       //helper function to return the width to resize a column to based on current cursor position
       function calculateReiszeColumnWidth(cursorPosition, $columnToResize) {
         var cursorOffset = cursorPosition - $macroTable.position().left,
-          maxLeftPosition = $macroTable.outerWidth() - self.scrollBarWidth - $resizer.outerWidth(),
+          maxLeftPosition = $macroTable.outerWidth() - self.scrollBarWidth - self.$resizer.outerWidth(),
           minResizePosition = $columnToResize.position().left + self.resizeColumnMinWidth;
 
-        //console.log('calculateReiszeColumnWidth:', $macroTable.outerWidth() - scrollBarWidth - $resizer.outerWidth(), cursorOffset, $columnToResize.offset().left + resizeColumnMinWidth);
+        //console.log('calculateReiszeColumnWidth:', $macroTable.outerWidth() - scrollBarWidth - self.$resizer.outerWidth(), cursorOffset, $columnToResize.offset().left + resizeColumnMinWidth);
 
         return Math.max(Math.min(maxLeftPosition, cursorOffset), minResizePosition);
       }
 
       //mousedown for the resizer, used when resizing columns
       var resizePositionStart;
-      $resizer.bind('mousedown', function(e) {
+      this.$resizer.bind('mousedown', function(e) {
         if(typeof resizePositionStart === 'undefined') { //prevent multiple mousedowns (if you mousedown, move cursor off of table, then move back and click)
-          resizePositionStart = $resizer.position().left;
+          resizePositionStart = self.$resizer.position().left;
 
           //the resizer has been grabbed, attach listeners to the container to allow it to move around
 
-          $resizer.addClass('macro-table-active');
+          self.$resizer.addClass('macro-table-active');
           self.element.addClass('macro-table-resizing')
           .bind('mouseup', function resizeMouseup(e) {
             //the handle has been dragged around and has now been let go
@@ -1609,14 +1611,8 @@
               $columns = $columnContainers.filter(':first').find('col'),
               columnNumber = $columnToResize.index(),
               $columnSizers = $columnContainers.find('col:nth-child('+(columnNumber + 1)+')'),
-              widthDelta = $resizer.position().left - resizePositionStart,
-              marginAdded = 0,
-              totalColumnWidth = 0,
-              tableViewportWidth = options.width - self.scrollBarWidth,
-              newWidth = $columnSizers.width() + widthDelta,
-              $dynamicRows =  $dataContainer.find('tr'),
-              $staticRows = $staticDataContainer.find('tr'),
-              i;
+              widthDelta = self.$resizer.position().left - resizePositionStart,
+              newWidth = $columnSizers.width() + widthDelta;
 
             //clean up the mousemove and mouseup events on the container
             self.element.unbind('mouseup', resizeMouseup) //don't want to unbind the reorder mouseup event
@@ -1627,51 +1623,12 @@
             self.options.columns[columnNumber].width = newWidth; //set so subsequent table rerenders keeps the width
 
             //TODO reconcile all the static row heights to match the possibly new heights of dynamic rows after this resize
+            self._renderTableHeader();
+
             self._refreshRows();
-            /*for(i = $dynamicRows.length; i >= 1; i--) {
-
-              staticHeight = $staticRows.filter(':nth-child('+i+')').css('height','auto').height();
-              dynamicHeight = $dynamicRows.filter(':nth-child('+i+')').css('height','auto').height();
-
-              if(staticHeight > dynamicHeight) {
-
-                $dynamicRows.filter(':nth-child('+i+')').height(staticHeight);
-
-              } else if(staticHeight < dynamicHeight) {
-
-                $staticRows.filter(':nth-child('+i+')').height(dynamicHeight);
-              }
-            }*/
-
-            //calculate the needed margin to add to the right for whole column scrolling
-            for(i = $columns.length - 1; i >= 0; i--) {
-
-              var columnWidth = $columns.eq(i).outerWidth();
-              totalColumnWidth += columnWidth;
-
-              if(totalColumnWidth > tableViewportWidth) {
-
-                marginAdded = tableViewportWidth - (totalColumnWidth - columnWidth);
-                break;
-              }
-            }
-
-            //now resize the wrapper and scroller to allow for any changes to the column offset
-            //for the last columns when scrolling all the way right
-            var newTotalColumnWidth = $macroTable.find('div.macro-table-header table').outerWidth();
-
-            $dataContainer.find('div.macro-table-scroll-wrapper')
-            .width(newTotalColumnWidth + marginAdded);
-
-            $macroTable.find('div.macro-table-header div.macro-table-scroll-wrapper')
-            .width(newTotalColumnWidth + marginAdded + self.scrollBarWidth);
-
-            $macroTable.find('div.macro-table-scroll-spacer')
-            .width(newTotalColumnWidth + marginAdded);
-
 
             //cleanup the resizer element
-            $resizer.removeClass('macro-table-highlight macro-table-active');
+            self.$resizer.removeClass('macro-table-highlight macro-table-active');
 
             resizePositionStart = undefined;
 
@@ -1702,7 +1659,7 @@
 
           var $selectedColumn = $headerTable.find('th.macro-table-header-active-cell'),
             thumbPosition = ($selectedColumn.offset().left - $macroTable.offset().left) - //relative start position to macroTable container
-                            Math.ceil($resizer.outerWidth() / 2); //end position of the cell with resize guide compensation
+                            Math.ceil(self.$resizer.outerWidth() / 2); //end position of the cell with resize guide compensation
 
           //trigger reordering mode
           $macroTable.addClass('macro-table-column-moving');
@@ -1712,12 +1669,12 @@
           $reorderGuide.width($selectedColumn.outerWidth())
           .css('left', $dataContainer.scrollLeft() + $selectedColumn.position().left);
 
-          $resizer.css('left', thumbPosition + 'px');
+          self.$resizer.css('left', thumbPosition + 'px');
 
           $macroTable.find('colgroup.macro-table-column-sizer col').filter(':nth-child('+($selectedColumn.index() + 1)+')')
           .addClass('macro-table-selected-column');
 
-          console.log('offset column',$selectedColumn.offset().left,'position column',$selectedColumn.position().left,'resizer',$dataContainer.scrollLeft() + $selectedColumn.position().left - ($resizer.outerWidth() / 2));
+          console.log('offset column',$selectedColumn.offset().left,'position column',$selectedColumn.position().left,'resizer',$dataContainer.scrollLeft() + $selectedColumn.position().left - (self.$resizer.outerWidth() / 2));
         }
       });
 
@@ -1726,18 +1683,22 @@
       var lastPageX, //allow reorder guide to follow cursor without changing it's relative position from where it started
         scrollColumnTimer;
       $macroTable.bind('mousemove', function(e) {
-        var $element = $(e.target).closest('th, td'),
-          resizerWidth = $resizer.outerWidth(),
+        var $target = $(e.target),
+          $element = $target.closest('th, td'),
+          resizerWidth = self.$resizer.outerWidth(),
           cursorOffset = e.pageX - $macroTable.offset().left,
           cursorCellOffset;
-
-        if($element.length === 0) {
-          return;
-        }
 
         /* process enabling/disabling the resize handle when hovering */
 
         if(!$macroTable.hasClass('macro-table-resizing') && !$macroTable.hasClass('macro-table-column-moving')) {
+
+          if($element.length === 0) {
+            if(!$target.hasClass('macro-table-resize-guide')) {
+              deselectResizeHandle();
+            }
+            return;
+          }
 
           //if near the left edge of a cell, we want to resize the previous cell
           cursorCellOffset = e.pageX - $element.offset().left;
@@ -1758,7 +1719,7 @@
                 }
                 $columnToResize = $element;
                 $columnToResize.addClass('macro-table-column-resize');
-                $resizer.addClass('macro-table-highlight')
+                self.$resizer.addClass('macro-table-highlight')
                 .css('left', thumbPosition);
 
               } else {
@@ -1768,18 +1729,20 @@
               }
             }
 
-          } else if(!$element.hasClass('macro-table-resize-guide')) {
+          }
+          //TODO: pretty sure this is not needed, remove after testing
+          /* else if(!$target.hasClass('macro-table-resize-guide')) {
 
             deselectResizeHandle();
 
-          }
+          }*/
         //the handle is grabbed and being dragged around
         } else if($macroTable.hasClass('macro-table-resizing')) {
           e.stopPropagation();
 
           //reposition the resizer, do it out of the thread for performance improvements
           setTimeout(function() {
-            $resizer.css('left', calculateReiszeColumnWidth(e.pageX, $columnToResize) + 'px');
+            self.$resizer.css('left', calculateReiszeColumnWidth(e.pageX, $columnToResize) + 'px');
           }, 0);
 
 
@@ -1872,7 +1835,7 @@
             $reorderGuide.css('left', newReorderGuidePosition + 'px');
 
             //position the resizer guide to the boundary of the column to act as an indicator for where the column would be dropped
-            $resizer.css('left', (
+            self.$resizer.css('left', (
               newColumnPosition + 1 + //account for potential static row offset
               (newIndex > selectedColumnIndex ? newColumnWidth : 0)
             ) + 'px');
@@ -2016,7 +1979,7 @@
         this.renderRowDataSet = options.tableData;
       }
 
-      this.$scrollContainer.add('div.macro-table-data-container, div.macro-table-header')
+      this.$scrollContainer.add(this.$header).add($('div.macro-table-data-container', this.element))
       .scrollTop(0)
       .scrollLeft(0);
 
@@ -2436,7 +2399,7 @@
      */
     _sortTable: function(columnToSort, callback) {
       var options = this.options,
-        $columnHeader = $('div.macro-table-header tr.macro-table-header-row th', this.element),
+        $columnHeader = this.$header.find('tr.macro-table-header-row th'),
         columnData, sortWorker, columnSorter, renderRowDataSet;
 
       //columnToSort is an array index
@@ -2575,8 +2538,7 @@
       .css('margin-bottom', (((height - headerHeight - this.scrollBarWidth) / rowHeight) % 1) * rowHeight);
 
       //size the vertical drop guide for the resizing functionality
-      $macroTable.find('div.macro-table-resize-guide')
-      .height(height - this.scrollBarWidth);
+      this.$resizer.height(height - this.scrollBarWidth);
 
       //set globals based on new table dimensions
       this.replaceRowWindow = ~~(options.rowBuffer / 2);
