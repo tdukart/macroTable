@@ -2079,6 +2079,7 @@
       var options = this.options,
         summaryRow = options.summaryRow,
         columns = options.columns,
+        sortedColumn = options.sortByColumn,
 
         $macroTable = this.element,
         $headerRow = this.$header.find('tr.macro-table-header-row'),
@@ -2122,23 +2123,24 @@
 
       //build the column headers
       for(i = columns.length; i--;) {
-        var columnWidth = typeof columns[i].width !== 'undefined' ? parseInt(columns[i].width, 10) : defaultColumnWidth;
+        var thisColumn = columns[i],
+          columnWidth = typeof thisColumn.width !== 'undefined' ? parseInt(thisColumn.width, 10) : defaultColumnWidth;
 
         if(i < this.maxTotalDomColumns) { //TODO: right now, this is always true because we show all columns in the DOM, always
           var $summaryColumn,
             $colSizer = $(document.createElement('col')).width(columnWidth),
             $headerColumn = $(document.createElement('th'))
-          .html('<div class="macro-table-column-header-text">' + columns[i].title + '</div>')
-          .addClass(columns[i].className);
+          .html('<div class="macro-table-column-header-text">' + thisColumn.title + '</div>')
+          .addClass(thisColumn.className);
 
           if(typeof summaryRow === 'object') {
             $summaryColumn = $(document.createElement('th')).addClass('macro-table-summary-row-cell');
-            if(typeof summaryRow[columns[i].field] !== 'undefined') {
-              $summaryColumn.html(summaryRow[columns[i].field]);
+            if(typeof summaryRow[thisColumn.field] !== 'undefined') {
+              $summaryColumn.html(summaryRow[thisColumn.field]);
             }
           }
 
-          if(columns[i].resizable !== false) {
+          if(thisColumn.resizable !== false) {
             $headerColumn.addClass('macro-table-column-resizable');
             if(typeof summaryRow === 'object') {
               $summaryColumn.addClass('macro-table-column-resizable');
@@ -2149,8 +2151,12 @@
             $headerColumn.addClass('macro-table-column-reorderable');
           }
 
-          if(columns[i].sortable !== false) {
+          if(thisColumn.sortable !== false) {
             $headerColumn.addClass('macro-table-column-sortable');
+            if(thisColumn.field === sortedColumn) {
+              $colSizer.addClass('macro-table-highlight');
+              $headerColumn.addClass(thisColumn.direction > 0 ? 'macro-table-sort-ascending' : 'macro-table-sort-descending');
+            }
           }
 
           $headerRow.prepend($headerColumn);
@@ -2425,7 +2431,7 @@
           .filter(':nth-child('+(columnToSort + 1)+')')
           .addClass('macro-table-sort-loading');
 
-          workerSortRow.bind(this)(columnData, $columnHeader, callback);
+          workerSortRow.bind(this)(columnData, $columnHeader, $columnSizers, callback);
           return;
 
         } else {
