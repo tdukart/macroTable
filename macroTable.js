@@ -522,8 +522,9 @@
    * spawn the filter web worker.
    * @param columnData {Object} the definition of the column by which the table data is to be sorted
    * @param $columnHeader {jQuery} column header for the sorted column
+   * @param $columnSizers {jQuery} column sizers for the column being sorted, a col for the header and a col for the data body
    */
-  function workerSortRow(columnData, $columnHeader, callback) {
+  function workerSortRow(columnData, $columnHeader, $columnSizers, callback) {
     var self = this,
       options = this.options,
       $veil = $('div.macro-table-data-veil', this.element),
@@ -557,6 +558,8 @@
 
         $veil.hide();
       }
+
+      $columnSizers.addClass('macro-table-highlight');
 
       $columnHeader.removeClass('macro-table-sort-loading')
       .addClass(columnData.direction > 0 ? 'macro-table-sort-ascending' : 'macro-table-sort-descending');
@@ -2125,7 +2128,7 @@
           var $summaryColumn,
             $colSizer = $(document.createElement('col')).width(columnWidth),
             $headerColumn = $(document.createElement('th'))
-          .html(columns[i].title)
+          .html('<div class="macro-table-column-header-text">' + columns[i].title + '</div>')
           .addClass(columns[i].className);
 
           if(typeof summaryRow === 'object') {
@@ -2399,6 +2402,7 @@
      */
     _sortTable: function(columnToSort, callback) {
       var options = this.options,
+        $columnSizers = this.element.find('colgroup.macro-table-column-sizer col'),
         $columnHeader = this.$header.find('tr.macro-table-header-row th'),
         columnData, sortWorker, columnSorter, renderRowDataSet;
 
@@ -2414,8 +2418,11 @@
           //rather than a re-rendering. therefore we know we should change sort order direction
           columnData.direction = typeof columnData.direction === 'undefined' ? 1 : columnData.direction * -1;
 
-          $columnHeader = $columnHeader.filter(':nth-child('+(columnToSort + 1)+')')
-          .removeClass('macro-table-sort-ascending macro-table-sort-descending')
+          $columnSizers = $columnSizers.removeClass('macro-table-highlight')
+          .filter(':nth-child('+(columnToSort + 1)+')');
+
+          $columnHeader = $columnHeader.removeClass('macro-table-sort-ascending macro-table-sort-descending')
+          .filter(':nth-child('+(columnToSort + 1)+')')
           .addClass('macro-table-sort-loading');
 
           workerSortRow.bind(this)(columnData, $columnHeader, callback);

@@ -148,6 +148,11 @@ button:hover .icon--delete::after {
 }
 
 
+/* highlighted / sorted column. we want the row styles to override this for the various cases */
+.macro-table .macro-table-highlight {
+  background: rgba(0, 0, 0, .05); /* gray */
+}
+
 /* Table row styles (striped, selected, focused, highlighted) */
 
 /* striped row */
