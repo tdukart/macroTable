@@ -75,6 +75,205 @@
   /** Truly Private functions */
 
   /**
+   * Wrapper to create an inline-web worker out of a function in this thread
+   * @param  {Function} onMessageFunction Function to be used as the web worker's onmessage function
+   * @return {String}                     The object URL string to the new inline-web worker
+   */
+  function createBlobUrl(onMessageFunction) {
+    var blob = new Blob(['onmessage = ' + onMessageFunction.toString()], {type : 'text/javascript'});
+    return window.URL.createObjectURL(blob);
+  }
+
+  /**
+   * Code for the web worker to be used for filtering rows.
+   * To be serialized and created into an inline-worker via Blob/createObjectURL
+   * @param {Event} e Mesage event
+   */
+  function SortWebWorker(e) {
+    var direction, tableData, sortByField, columnSorter;
+
+    /**
+     * Wrapper for a generic sorting function giving it scope into which column field to use
+     * Default means of sorting column values.
+     * @param sortByField {String} column field name to sort table rows by
+     */
+    function defaultSort(sortByField) {
+      return function(a, b) {
+        var aValue = a.data[sortByField],
+          bValue = b.data[sortByField];
+        return aValue == bValue ? 0 : (aValue > bValue ? 1 : -1);
+      };
+    }
+
+    /**
+     * Perform recusive sort on table data
+     * Using recursion because, theoretically, any row can have a sub row, even sub rows
+     * @param tableData {Array} table's row data. Sort changes value in caller's scope (pass by reference)
+     * @param columnSorter {Function} Array.sort() parameter functino for handling the array sort
+     * @param direction {Number} 1 for ascending order, -1 for descending order
+     */
+    function sortTableData(tableData, columnSorter, direction) {
+
+      tableData.sort(columnSorter);
+
+      if(direction < 0) {
+        tableData.reverse();
+      }
+
+      //recursively walk the subRows tree to account for any subRows of subRows, etc.
+      for(var i = tableData.length - 1; i >= 0; i--) {
+        if(typeof tableData[i].subRows !== 'undefined') {
+          sortTableData(tableData[i].subRows, columnSorter);
+        }
+      }
+    }
+
+    /**
+     * Perform recusive Array.reverse() on table data
+     * Using recursion because, theoretically, any row can have a sub row, even sub rows
+     * @param tableData {Array} table's row data. Sort changes value in caller's scope (pass by reference)
+     */
+    function reverseTableData(tableData) {
+
+      tableData.reverse();
+
+      //recursively walk the subRows tree to account for any subRows of subRows, etc.
+      for(var i = tableData.length - 1; i >= 0; i--) {
+        if(typeof tableData[i].subRows !== 'undefined') {
+          reverseTableData(tableData[i].subRows);
+        }
+      }
+    }
+
+    if(typeof e.data !== 'undefined' && e.data.hasOwnProperty('tableData') && e.data.tableData instanceof Array) {
+
+      tableData = e.data.tableData; //table's row data
+
+      switch(e.data.action) {
+        case 'sort':
+          if(e.data.hasOwnProperty('sortByField')) {
+
+            sortByField = e.data.sortByField; //column field name to sort the data by
+
+            direction = e.data.direction == -1 ? -1 : 1; //direction can only be 1 (ascending) and -1 (descending)
+
+            eval('columnSorter = ' + e.data.columnSorter); //de-serialize the user-defined column sorting function
+
+            //user has defined custom column sorting function
+            if(typeof columnSorter === 'function') {
+
+              sortTableData(tableData, columnSorter); //sortByField not needed, as it's assumed columnSorter knows what to do
+
+            //no user-defined column sorter, use default string order
+            } else {
+
+              sortTableData(tableData, defaultSort(sortByField));
+
+            }
+          }
+          break;
+
+        case 'order':
+        default:
+          reverseTableData(tableData);
+          break;
+      }
+
+    } else {
+      throw 'tableData datastructure is not an Array';
+    }
+
+    //return process tableData
+    postMessage(tableData);
+
+  }
+
+  /**
+   * Code for the web worker to be used for filtering rows.
+   * To be serialized and created into an inline-worker via Blob/createObjectURL
+   * @param {Event} e Mesage event
+   */
+  function FilterWebWorker(e) {
+    var filteredRows = [],
+      lastSearchMatchHierarchy = [],
+
+      arraySomeFilter = function(value) {
+        return value.toLowerCase().indexOf(filter) !== -1;
+      },
+      i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow, tableData, searchIndex, filter;
+
+    if(typeof e.data !== 'undefined' && e.data.hasOwnProperty('searchIndex') && e.data.searchIndex instanceof Array &&
+        e.data.hasOwnProperty('tableData') && e.data.tableData instanceof Array &&
+        e.data.hasOwnProperty('filter') && typeof e.data.filter === 'string') {
+
+      filter = e.data.filter.toLowerCase(); //string to match against row data
+      searchIndex = e.data.searchIndex; //indexed table data ready for searching
+      tableData = e.data.tableData; //table's pure row object data
+
+
+      //perform the filtering
+      for(i = searchIndex.length - 1; i >= 0; i--) {
+        searchRow = searchIndex[i];
+
+        //found a main/root row
+        if(searchRow.index.toString().indexOf(',') === -1) {
+          //do not insert the main row if it has already been backfilled by a matching sub row descendant
+          if(searchRow.values.some(arraySomeFilter) && (filteredRows.length === 0 || filteredRows[0].index.toString() !== searchRow.index.toString())) { //row matches filter
+
+            filteredRows.unshift(JSON.parse(JSON.stringify(searchRow.data)));
+            filteredRows[0].subRows = [];
+            lastSearchMatchHierarchy = [filteredRows[0]];
+          }
+
+        //found a subrow
+        } else {
+          if(searchIndex[i].values.some(arraySomeFilter)) { //row matches filter
+
+            //needs to be added to its parent's subRow array.
+            //Its parent may not have matched, so it needs to be backfilled in that case
+            indexHierachy = searchRow.index.toString().split(',');
+            indexCheck = '';
+            for(j = 0, len = indexHierachy.length; j < len; j++) {
+              indexCheck += (j !== 0 ? ',' : '') + indexHierachy[j];
+              if(typeof lastSearchMatchHierarchy[j] === 'undefined' || lastSearchMatchHierarchy[j].index != indexCheck) {
+
+                //get the real table row object
+                //TODO: maybe make this a convenience function -- give comma-delimited index, return the row object
+                realTableRow = tableData[indexHierachy[0]];
+                for(k = 1; k <= j; k++) {
+                  if(typeof realTableRow.subRows !== 'undeinfed') {
+                    realTableRow = realTableRow.subRows[indexHierachy[k]];
+                  } else {
+                    throw 'The index used does not align with the tableData structure'+indexCheck;
+                  }
+                }
+
+                //backfill table row objects and/or add the subrow to its parent
+                if(j === 0) {
+                  filteredRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
+                  filteredRows[0].subRows = [];
+                  lastSearchMatchHierarchy[j] = filteredRows[0];
+                } else {
+                  filteredRows[0].subRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
+                  filteredRows[0].subRows[0].subRows = [];
+                  lastSearchMatchHierarchy[j] = filteredRows[0].subRows[0];
+                }
+              } //if
+            } //for
+          } //if
+        } //else
+      } //for
+
+    } else {
+      throw 'Filter worker unexpected datastructure';
+    }
+
+    //return processed row data
+    postMessage(filteredRows);
+  };
+
+
+  /**
    * convenience function to clear out the data content and rerender the appropriate rows based on the new scroll position
    * @param startRowIndex {Number} the index into the tableData where the rows should start rendering from (should ALWAYS be smaller than endRowIndex)
    * @param endRowIndex {Number} the index into the tableData where the last row is to be rendered number (should ALWAYS be larger than swtartRowIndex)
@@ -532,7 +731,7 @@
 
     $veil.show();
 
-    sortWorker = new Worker('macroTableSort.js');
+    sortWorker = new Worker(this.sortWebWorkerUrl);
 
     sortWorker.onerror = (function(e) {
       sortWorker.terminate();
@@ -718,7 +917,7 @@
 
     $veil.show(); //probably already shown from workerSortRow
 
-    filterWorker = new Worker('macroTableFilter.js'),
+    filterWorker = new Worker(this.filterWebWorkerUrl),
 
     filterWorker.onerror = (function(e) {
       filterWorker.terminate();
@@ -1041,7 +1240,9 @@
       defaultTableHeightInRows: 10
     },
 
+
     /* element shortcuts */
+
     $scrollContainer: null,
 
     $headerWrapper: null,
@@ -1049,6 +1250,14 @@
     $header: null,
 
     $resizer: null,
+
+
+    /* Web Worker URLs */
+
+    sortWebWorkerUrl: null,
+
+    filterWebWorkerUrl: null,
+
 
     /** "Private" methods */
 
@@ -1140,6 +1349,12 @@
         rowHeight = options.rowHeight,
         breakTableScroll = false,
         forceTableScrollRender = false;
+
+      this.sortWebWorkerUrl = createBlobUrl(SortWebWorker);
+      this.filterWebWorkerUrl = createBlobUrl(FilterWebWorker);
+
+      console.info('Sort Web Worker URL', this.sortWebWorkerUrl);
+      console.info('Filter Web Worker URL', this.filterWebWorkerUrl);
 
       this.scrollBarWidth = navigator.userAgent.indexOf(' AppleWebKit/') !== -1 ? this.styledScrollbarWidth : this.unStyledScrollbarWidth;
 
@@ -2757,6 +2972,9 @@
     destroy: function() {
       this.element.empty()
       .removeClass('macro-table');
+
+      window.URL.revokeObjectURL(this.sortWebWorkerUrl);
+      window.URL.revokeObjectURL(this.filterWebWorkerUrl);
 
       // In jQuery UI 1.8, you must invoke the destroy method from the base widget
       $.Widget.prototype.destroy.call( this );
