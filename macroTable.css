@@ -227,6 +227,54 @@ button:hover .icon--delete::after {
   cursor: pointer;
 }
 
+.macro-table-column-sortable .macro-table-column-header-text {
+  position: relative;
+  padding-right: .75em; /* width of the sortable arrow icons */
+  margin-right: .25em; /* space between right edge of triangles and X icon/edge of column */
+}
+
+.macro-table-column-sortable .macro-table-column-header-text::before,
+.macro-table-column-sortable .macro-table-column-header-text::after {
+  content: '';
+  width: 0;
+  height: 0;
+  position: absolute;
+  border-style: solid;
+}
+
+.macro-table-column-sortable .macro-table-column-header-text::before {
+  right: 0;
+  top: 50%;
+  margin-top: -.3em;
+  border-color: transparent transparent #bbb transparent;
+  border-width: 0 .25em .25em;
+}
+
+.macro-table-column-sortable .macro-table-column-header-text::after {
+  right: 0;
+  bottom: 50%;
+  margin-bottom: -.3em;
+  border-color: #bbb transparent transparent transparent;
+  border-width: .25em .25em 0;
+}
+
+.macro-table-column-sortable.macro-table-sort-descending .macro-table-column-header-text::before,
+.macro-table-column-sortable.macro-table-sort-ascending .macro-table-column-header-text::after {
+  display: none;
+}
+
+.macro-table-column-sortable.macro-table-sort-ascending .macro-table-column-header-text::before {
+  margin-top: -.2em;
+  border-width: 0 .3em .4em;
+}
+
+.macro-table-column-sortable.macro-table-sort-descending .macro-table-column-header-text::after {
+  margin-bottom: -.2em;
+  border-width: .4em .3em 0;
+}
+
+
+
 .macro-table.macro-table-column-moving .macro-table-column-sortable {
   cursor: -webkit-grabbing;
   cursor: -moz-grabbing;
