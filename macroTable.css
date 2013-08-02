@@ -303,7 +303,7 @@ button:hover .icon--delete::after {
   cursor: e-resize;
 }
 
-.macro-table-resize-guide {
+.macro-table .macro-table-resize-guide {
   position: absolute;
   top: 0;
   z-index: 3;
