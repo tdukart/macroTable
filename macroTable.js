@@ -1898,8 +1898,12 @@
         if(e.which == 1) { //left click only
 
           var $selectedColumn = $headerTable.find('th.macro-table-header-active-cell'),
-            thumbPosition = ($selectedColumn.offset().left - $macroTable.offset().left) - //relative start position to macroTable container
+            tableOffset = $macroTable.offset().left,
+            minimumOffset = self.$dataContainer.offset().left - tableOffset,
+            thumbPosition = $selectedColumn.offset().left - tableOffset - //relative start position to macroTable container
                             Math.ceil(self.$resizer.outerWidth() / 2); //end position of the cell with resize guide compensation
+
+          thumbPosition = thumbPosition < minimumOffset ? minimumOffset : thumbPosition;
 
           //trigger reordering mode
           $macroTable.addClass('macro-table-column-moving');
