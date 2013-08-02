@@ -196,19 +196,24 @@
   function FilterWebWorker(e) {
     var filteredRows = [],
       lastSearchMatchHierarchy = [],
+      doHighlightMatches = false,
 
       arraySomeFilter = function(value) {
         return value.toLowerCase().indexOf(filter) !== -1;
       },
-      i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow, tableData, searchIndex, filter;
+      i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow, tableData, searchIndex, filter, escapedFilter, rowString;
 
     if(typeof e.data !== 'undefined' && e.data.hasOwnProperty('searchIndex') && e.data.searchIndex instanceof Array &&
         e.data.hasOwnProperty('tableData') && e.data.tableData instanceof Array &&
         e.data.hasOwnProperty('filter') && typeof e.data.filter === 'string') {
 
-      filter = e.data.filter.toLowerCase(); //string to match against row data
+      filter = escapedFilter = e.data.filter.toLowerCase(); //string to match against row data
+      if(doHighlightMatches) {
+        escapedFilter = filter.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+      }
       searchIndex = e.data.searchIndex; //indexed table data ready for searching
       tableData = e.data.tableData; //table's pure row object data
+      doHighlightMatches = e.data.highlightMatches;
 
 
       //perform the filtering
@@ -220,7 +225,15 @@
           //do not insert the main row if it has already been backfilled by a matching sub row descendant
           if(searchRow.values.some(arraySomeFilter) && (filteredRows.length === 0 || filteredRows[0].index.toString() !== searchRow.index.toString())) { //row matches filter
 
-            filteredRows.unshift(JSON.parse(JSON.stringify(searchRow.data)));
+            rowString = JSON.parse(JSON.stringify(searchRow.data));
+
+            if(doHighlightMatches) {
+              Object.keys(rowString.data).forEach(function(key) {
+                rowString.data[key] = rowString.data[key].toString().replace(new RegExp('(' + escapedFilter + ')', 'gi'), '<span class="macro-table-filter-match">$1</span>');
+              });
+            }
+
+            filteredRows.unshift(rowString);
             filteredRows[0].subRows = [];
             lastSearchMatchHierarchy = [filteredRows[0]];
           }
@@ -963,7 +976,8 @@
     filterWorker.postMessage({
       filter: options.filterTerm,
       searchIndex: this.searchIndex,
-      tableData: tableData
+      tableData: tableData,
+      highlightMatches: options.highlightMatches
     });
   }
 
@@ -1049,6 +1063,13 @@
        * @type {String}
        */
       filterTerm: '',
+
+      /**
+       * If set to true, any matches found against a filter will be wrapped with an element with class ".macro-table-filter-match"
+       * @type {Boolean}
+       */
+      highlightMatches: false,
+
       rowsSelectable: false,
 
       /**
@@ -1345,7 +1366,10 @@
        */
       this.scrollToRowIndex = null;
 
-
+      /**
+       * Web Worker Blob object URLs
+       * @type {String}
+       */
       this.sortWebWorkerUrl = createBlobUrl(SortWebWorker);
       this.filterWebWorkerUrl = createBlobUrl(FilterWebWorker);
 
@@ -2964,6 +2988,7 @@
       this.element.empty()
       .removeClass('macro-table');
 
+      //must release object URLs when we're done with them
       window.URL.revokeObjectURL(this.sortWebWorkerUrl);
       window.URL.revokeObjectURL(this.filterWebWorkerUrl);
 

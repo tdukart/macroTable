@@ -148,6 +148,14 @@ button:hover .icon--delete::after {
 }
 
 
+/* highlighted filter matches */
+.macro-table-filter-match {
+  background-color: rgba(255, 255, 0, .3);
+  color: #000;
+  border: 1px solid rgba(255, 165, 0, .3);
+  font-weight: bold;
+}
+
 /* highlighted / sorted column. we want the row styles to override this for the various cases */
 .macro-table .macro-table-highlight {
   background: rgba(0, 0, 0, .05); /* gray */
