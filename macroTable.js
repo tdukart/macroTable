@@ -763,7 +763,7 @@
     sortWorker.onmessage = (function(e) {
       this.sortedRows[options.sortByColumn][''] = e.data;
 
-      this.renderRowDataSet = postSortFilter.bind(this)(e.data, action, callback); //potentially changes self.renderRowDataSet if there is a filter active!
+      this.renderRowDataSet = postSortFilter.call(this, e.data, action, callback); //potentially changes self.renderRowDataSet if there is a filter active!
 
       if(typeof self.renderRowDataSet !== 'undefined') {
         this._renderTableRows(this.renderRowDataSet);
@@ -829,7 +829,7 @@
 
     if(renderRowDataSet.length !== 0 && this.searchIndex.length === 0) {
       //called whenever the first rendering of a new dataset occurs
-      (buildSearchIndex.bind(this))(renderRowDataSet);
+      buildSearchIndex.call(this, renderRowDataSet);
     }
 
     if(options.filterTerm !== '') {
@@ -875,7 +875,7 @@
       });
 
       if(typeof tableData[i].subRows !== 'undefined') {
-        (buildSearchIndex.bind(this))(tableData[i].subRows);
+        buildSearchIndex.call(this, tableData[i].subRows);
       }
     }
   }
@@ -895,7 +895,7 @@
     if(action === 'add') {
       options = this.options;
       this.searchIndex = [];
-      (buildSearchIndex.bind(this))(this.sortedRows[options.sortByColumn][options.filterTerm]);
+      buildSearchIndex.call(this, this.sortedRows[options.sortByColumn][options.filterTerm]);
 
     } else {
 
@@ -969,189 +969,6 @@
 
 
   $.widget('n.macroTable', {
-
-    /**
-     * The prefix to use for events.
-     * @property widgetEventPrefix
-     * @type String
-     */
-    widgetEventPrefix: 'macroTable',
-
-    /**
-     * the static width of the checkbox column for selecting rows
-     * @type {Number}
-     */
-    rowSelectColumnWidth: 16,
-
-    /**
-     * the static width of the expand/collapse sub rows column
-     * @type {Number}
-     */
-    expanderColumnWidth: 16,
-
-    /**
-     * Width of scrollbars if the browser supports styling
-     * @type {Number}
-     */
-    styledScrollbarWidth: 12,
-
-    /**
-     * Width of scrollbars if the brwoser does not support styling
-     * @type {Number}
-     */
-    unStyledScrollbarWidth: 16,
-
-    /**
-     * The actual scrollbar widths
-     * @type {Number}
-     */
-    scrollBarWidth: null,
-
-    /**
-     * Min width a column can be resized
-     * @type {Number}
-     */
-    resizeColumnMinWidth: 30,
-
-    /**
-     * the max number of rows that will show in the provided table height
-     * @type {Number}
-     */
-    displayRowWindow: 0,
-
-    /**
-     * when a DOM row swap is triggered, this many rows will be removed and replaced at the other end of the table
-     * @type {Number}
-     */
-    replaceRowWindow: 0,
-
-    /**
-     * Limit of number of columns to display in the DOM
-     * TODO: not implemented, currently allowing any number of columns to show
-     * @type {Number}
-     */
-    maxTotalDomColumns: Infinity,
-
-    /**
-     * 0-indexed, describes the left-most, visible data column (direct correlation with array index). default to first column
-     * @type {Number}
-     */
-    currentColumn: 0,
-
-    /**
-     * 0-indexed, describes the left-most, visible DOM column. default to first column
-     * TODO: this currently is not used, see definition for maxTotalDomColumns
-     * @type {Number}
-     */
-    currentDomColumn: 0,
-
-    //processedColumns: [], //once columns processed from options.columns, the elements and real widths go in here
-
-    /**
-     * real DOM row count would only be less than this if the amount of data is less than this number (don't need the extra DOM rows to display total data)
-     * @type {Number}
-     */
-    maxTotalDomRows: 0,
-
-    /**
-     * Scroll position top of the table. default to top of table
-     * @type {Number}
-     */
-    scrollTop: 0,
-
-    /**
-     * Scroll position left of the table. default to left edge of table
-     * @type {Number}
-     */
-    scrollLeft: 0,
-
-    /**
-     * 0-indexed, describes the top-most, visible data row (direct correlation with array index). default to first row
-     * @type {Number}
-     */
-    currentRow: 0,
-
-    /**
-     * 0-indexed, describes the top-most, visible DOM row. default to first row
-     * @type {Number}
-     */
-    currentDomRow: 0,
-
-    /**
-     * when scrolling up, when on this DOM row, a row swap will trigger
-     * @type {Number}
-     */
-    triggerUpDomRow: 0,
-
-    /**
-     * when scrolling down, when on this DOM row, a row swap will trigger
-     * @type {Number}
-     */
-    triggerDownDomRow: 0,
-
-    /**
-     * counter to keep track of selected rows, used to optimize selecting behavior comparing currently selected to length of total rows
-     * @type {Number}
-     */
-    selectedRowCount: 0,
-
-    /**
-     * counter to keep track of expanded rows, used to optimize selecting behavior comparing currently selected to length of total rows
-     * @type {Number}
-     */
-    expandedRowCount: 0,
-
-    /**
-     * counter for the total number of rows that can be expanded
-     * @type {Number}
-     */
-    rowsWithChildrenCount: 0,
-
-    /**
-     * Array matching the length of renderRowDataSet. Each index contains an array of values,
-     * each index directly corresponding to the visibile columns in their current order.
-     *
-     * This array is used to quickly perform text searches in rows
-     * @type {Array}
-     */
-    searchIndex: [],
-
-    /**
-     * object of sorted combinations of the table data, key 'default' contains the data ordered as it was initialized
-     * @type {Object}
-     */
-    sortedRows: null,
-
-    /**
-     * data structure directly translating to the rows that are displayed in the table (flat, rather than hierarchical)
-     * @type {Array}
-     */
-    expandedTableData: [],
-
-    /**
-     * keep track of the rows that are expanded for the onRowExpand callback
-     * @type {Array}
-     */
-    expandedRowIndexes: [],
-
-    /**
-     * Current dataset the table will use to render its rows
-     * @type {Array}
-     */
-    renderRowDataSet: [],
-
-    /**
-     * Field set when scrollToRow() is called
-     *
-     * Keeps track of the intended scrollTo row in case the padding/margin
-     * hasn't yet been added to the table to handle larger rows in the final
-     * scroll window or to buffer so that the final row can be scrolled into view
-     *
-     * When this margin/padding is added, scrollTableVertical will detect that it
-     * needs to re-scroll to this value in order to take into account the new heights
-     * @type {Number}
-     */
-    scrollToRowIndex: null,
 
     /** Subscribable events */
 
@@ -1254,32 +1071,6 @@
     },
 
 
-    /* element shortcuts */
-
-    $scrollContainer: null,
-
-    $headerWrapper: null,
-
-    $header: null,
-
-    $staticHeader: null,
-
-    $staticHeaderRow: null,
-
-    $staticSummaryRow: null,
-
-    $resizer: null,
-
-    $dataContainer: null,
-
-
-    /* Web Worker URLs */
-
-    sortWebWorkerUrl: null,
-
-    filterWebWorkerUrl: null,
-
-
     /** "Private" methods */
 
     /**
@@ -1370,6 +1161,190 @@
         rowHeight = options.rowHeight,
         breakTableScroll = false,
         forceTableScrollRender = false;
+
+      /**
+       * The prefix to use for events.
+       * @property widgetEventPrefix
+       * @type String
+       */
+      this.widgetEventPrefix = 'macroTable';
+
+      /**
+       * the static width of the checkbox column for selecting rows
+       * @type {Number}
+       */
+      this.rowSelectColumnWidth = 16;
+
+      /**
+       * the static width of the expand/collapse sub rows column
+       * @type {Number}
+       */
+      this.expanderColumnWidth = 16;
+
+      /**
+       * Width of scrollbars if the browser supports styling
+       * @type {Number}
+       */
+      this.styledScrollbarWidth = 12;
+
+      /**
+       * Width of scrollbars if the brwoser does not support styling
+       * @type {Number}
+       */
+      this.unStyledScrollbarWidth = 16;
+
+      /**
+       * The actual scrollbar widths
+       * @type {Number}
+       */
+      this.scrollBarWidth = null;
+
+      /**
+       * Min width a column can be resized
+       * @type {Number}
+       */
+      this.resizeColumnMinWidth = 30;
+
+      /**
+       * the max number of rows that will show in the provided table height
+       * @type {Number}
+       */
+      this.displayRowWindow = 0;
+
+      /**
+       * when a DOM row swap is triggered, this many rows will be removed and replaced at the other end of the table
+       * @type {Number}
+       */
+      this.replaceRowWindow = 0;
+
+      /**
+       * Limit of number of columns to display in the DOM
+       * TODO: not implemented, currently allowing any number of columns to show
+       * @type {Number}
+       */
+      this.maxTotalDomColumns = Infinity;
+
+      /**
+       * 0-indexed, describes the left-most, visible data column (direct correlation with array index). default to first column
+       * @type {Number}
+       */
+      this.currentColumn = 0;
+
+      /**
+       * 0-indexed, describes the left-most, visible DOM column. default to first column
+       * TODO: this currently is not used, see definition for maxTotalDomColumns
+       * @type {Number}
+       */
+      this.currentDomColumn = 0;
+
+      //processedColumns: [], //once columns processed from options.columns, the elements and real widths go in here
+
+      /**
+       * real DOM row count would only be less than this if the amount of data is less than this number (don't need the extra DOM rows to display total data)
+       * @type {Number}
+       */
+      this.maxTotalDomRows = 0;
+
+      /**
+       * Scroll position top of the table. default to top of table
+       * @type {Number}
+       */
+      this.scrollTop = 0;
+
+      /**
+       * Scroll position left of the table. default to left edge of table
+       * @type {Number}
+       */
+      this.scrollLeft = 0;
+
+      /**
+       * 0-indexed, describes the top-most, visible data row (direct correlation with array index). default to first row
+       * @type {Number}
+       */
+      this.currentRow = 0;
+
+      /**
+       * 0-indexed, describes the top-most, visible DOM row. default to first row
+       * @type {Number}
+       */
+      this.currentDomRow = 0;
+
+      /**
+       * when scrolling up, when on this DOM row, a row swap will trigger
+       * @type {Number}
+       */
+      this.triggerUpDomRow = 0;
+
+      /**
+       * when scrolling down, when on this DOM row, a row swap will trigger
+       * @type {Number}
+       */
+      this.triggerDownDomRow = 0;
+
+      /**
+       * counter to keep track of selected rows, used to optimize selecting behavior comparing currently selected to length of total rows
+       * @type {Number}
+       */
+      this.selectedRowCount = 0;
+
+      /**
+       * counter to keep track of expanded rows, used to optimize selecting behavior comparing currently selected to length of total rows
+       * @type {Number}
+       */
+      this.expandedRowCount = 0;
+
+      /**
+       * counter for the total number of rows that can be expanded
+       * @type {Number}
+       */
+      this.rowsWithChildrenCount = 0;
+
+      /**
+       * Array matching the length of renderRowDataSet. Each index contains an array of values,
+       * each index directly corresponding to the visibile columns in their current order.
+       *
+       * This array is used to quickly perform text searches in rows
+       * @type {Array}
+       */
+      this.searchIndex = [];
+
+      /**
+       * object of sorted combinations of the table data, key 'default' contains the data ordered as it was initialized
+       * @type {Object}
+       */
+      this.sortedRows = null;
+
+      /**
+       * data structure directly translating to the rows that are displayed in the table (flat, rather than hierarchical)
+       * @type {Array}
+       */
+      this.expandedTableData = [];
+
+      /**
+       * keep track of the rows that are expanded for the onRowExpand callback
+       * @type {Array}
+       */
+      this.expandedRowIndexes = [];
+
+      /**
+       * Current dataset the table will use to render its rows
+       * @type {Array}
+       */
+      this.renderRowDataSet = [];
+
+      /**
+       * Field set when scrollToRow() is called
+       *
+       * Keeps track of the intended scrollTo row in case the padding/margin
+       * hasn't yet been added to the table to handle larger rows in the final
+       * scroll window or to buffer so that the final row can be scrolled into view
+       *
+       * When this margin/padding is added, scrollTableVertical will detect that it
+       * needs to re-scroll to this value in order to take into account the new heights
+       * @type {Number}
+       */
+      this.scrollToRowIndex = null;
+
 
       this.sortWebWorkerUrl = createBlobUrl(SortWebWorker);
       this.filterWebWorkerUrl = createBlobUrl(FilterWebWorker);
@@ -2587,7 +2562,7 @@
 
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
       this.element.trigger('columnreorder', columns);
-      rebuildSearchIndexColumns.bind(this)('move', columnToReorderIndex, newIndex);
+      rebuildSearchIndexColumns.call(this, 'move', columnToReorderIndex, newIndex);
     },
 
     /**
@@ -2605,7 +2580,7 @@
 
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
       this.element.trigger('columnremove', columns);
-      rebuildSearchIndexColumns.bind(this)('delete', columnToRemoveIndex);
+      rebuildSearchIndexColumns.call('delete', columnToRemoveIndex);
     },
 
     /**
@@ -2627,7 +2602,7 @@
 
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
       this.element.trigger('columnadd', columns);
-      rebuildSearchIndexColumns.bind(this)('add');
+      rebuildSearchIndexColumns.call(this, 'add');
     },
 
     /**
@@ -2692,7 +2667,7 @@
         renderRowDataSet = this.sortedRows[columnToSort][''];
       }
 
-      renderRowDataSet = postSortFilter.bind(this)(renderRowDataSet, null, callback); //possibly trigger webworker
+      renderRowDataSet = postSortFilter.call(this, renderRowDataSet, null, callback); //possibly trigger webworker
 
       //the filter web worker wasn't needed, continue with cached version of renderRowDataSet
       if(typeof renderRowDataSet !== 'undefined') {
