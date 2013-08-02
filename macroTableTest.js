@@ -583,10 +583,12 @@
         numColumns: 6
       },
       scrollToRow = 170, //won't render padding/margin to bottom yet
+      containerWidth = 300,
+      tableData, $dataContainerWraper, $scrollContainer, rowHeight, containerOffsetTop;
 
-    tableData = publicFunctions.initializeTable(totalRows, columnOptions),
+    $('#qunit-fixture .wrapper').width(containerWidth + 'px');
 
-    $dataContainerWraper, $scrollContainer, rowHeight, containerOffsetTop;
+    tableData = publicFunctions.initializeTable(totalRows, columnOptions);
 
     $('#table').macroTable('option', {
       tableData: publicFunctions.generateTableData(totalRows, columnOptions, {
@@ -664,12 +666,14 @@
         numColumns: 6
       },
       scrollToRow = 173, //won't render padding/margin to bottom yet
+      containerWidth = 300,
+      tableData, $dataContainerWraper, $scrollContainer, rowHeight, containerOffsetTop;
+
+    $('#qunit-fixture .wrapper').width(containerWidth + 'px');
 
     tableData = publicFunctions.initializeTable(totalRows, columnOptions, {
       summaryRow: true
-    }),
-
-    $dataContainerWraper, $scrollContainer, rowHeight, containerOffsetTop;
+    });
 
     $('#table').macroTable('option', {
       tableData: publicFunctions.generateTableData(totalRows, columnOptions, {
@@ -747,10 +751,12 @@
       columnOptions = {
         numColumns: 6
       },
+      containerWidth = 300,
+      tableData, $dataContainerWraper;
 
-    tableData = publicFunctions.initializeTable(totalRows, columnOptions),
+    $('#qunit-fixture .wrapper').width(containerWidth + 'px');
 
-    $dataContainerWraper;
+    tableData = publicFunctions.initializeTable(totalRows, columnOptions);
 
     $('#table').macroTable('option', {
       tableData: publicFunctions.generateTableData(totalRows, columnOptions, {
@@ -807,12 +813,14 @@
       columnOptions = {
         numColumns: 6
       },
+      containerWidth = 300,
+      tableData, $dataContainerWraper;
+
+    $('#qunit-fixture .wrapper').width(containerWidth + 'px');
 
     tableData = publicFunctions.initializeTable(totalRows, columnOptions, {
       summaryRow: true
-    }),
-
-    $dataContainerWraper;
+    });
 
     $('#table').macroTable('option', {
       tableData: publicFunctions.generateTableData(totalRows, columnOptions, {
