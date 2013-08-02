@@ -282,10 +282,9 @@
    */
   function rebuildRows(startRowIndex, endRowIndex, direction) {
     var $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
-      $tableContainer = $tableContentWrapper.find('div.macro-table-data-container'),
       $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
 
-      $tableBody = $tableContainer.find('tbody.macro-table-column-content'),
+      $tableBody = this.$dataContainer.find('tbody.macro-table-column-content'),
       $staticTableBody = $staticTableContainer.find('tbody.macro-table-static-column-content'),
 
       $rows,
@@ -348,13 +347,12 @@
     var distanceFromBottomToNewLastDomRow = 0,
       $macroTable = this.element,
       $tableContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
-      $tableContainer = $tableContainerWrapper.find('div.macro-table-data-container'),
-      $tableRows = $tableContainer.find('tbody.macro-table-column-content tr'),
+      $tableRows = this.$dataContainer.find('tbody.macro-table-column-content tr'),
       $tableScrollSpacer = $macroTable.find('div.macro-table-scroll-spacer'),
       $tableScrollWrappers = $tableContainerWrapper.find('div.macro-table-scroll-wrapper'),
       $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
       spacerMultiplier = 0,
-      tableContainerHeight = $tableContainer.height(),
+      tableContainerHeight = this.$dataContainer.height(),
       tableScrollSpacerMarginAdded = false;
 
     //loop through rows backwards to find the new, truly last row that will allow the last row to show
@@ -399,10 +397,9 @@
       isInFinalDomWindow = this.currentRow > finalDomRowWindow,
 
       $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
-      $tableContainer = $tableContentWrapper.find('div.macro-table-data-container'),
 
       $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
-      $tableBody = $tableContainer.find('tbody.macro-table-column-content'),
+      $tableBody = this.$dataContainer.find('tbody.macro-table-column-content'),
       $tableRows = $tableBody.find('tr'),
       newRenderCount = 0; //number of new rows we need to remove and re-add with new values
 
@@ -487,7 +484,7 @@
 
     var scrollTop = $tableRows.length > 0 ? $tableRows.eq(this.currentDomRow).offset().top - $tableBody.offset().top : 0;
     //console.log('current dom row (top visible row)',currentDomRow,'currentRow',currentRow,'row index',expandedTableData[currentRow],'from top',scrollTop);
-    $tableContainer.scrollTop(scrollTop);
+    this.$dataContainer.scrollTop(scrollTop);
     $staticTableContainer.scrollTop(scrollTop);
 
     if(reScrollNeeded && this.scrollToRowIndex !== null) {
@@ -502,8 +499,7 @@
    * determines the direction of scolling based on scroll container and data container scrollLeft differences
    */
   function scrollTableHorizontal() {
-    var $tableContainer = $('div.macro-table-data-container', this.element),
-      dataContainerScrollLeft = $tableContainer.scrollLeft(),
+    var dataContainerScrollLeft = this.$dataContainer.scrollLeft(),
       scrollContainerScrollLeft = this.$scrollContainer.scrollLeft(),
       $domColumns = this.$header.find('th'),
       $currrentColumn = $domColumns.eq(this.currentColumn),
@@ -536,7 +532,7 @@
           scrollContainerScrollLeft < newColumnScrollLeft + $newColumn.outerWidth()) {
 
         this.currentColumn = columnIterator;
-        $tableContainer.scrollLeft(newColumnScrollLeft);
+        this.$dataContainer.scrollLeft(newColumnScrollLeft);
         this.$header.scrollLeft(newColumnScrollLeft);
         break;
 
@@ -1274,6 +1270,8 @@
 
     $resizer: null,
 
+    $dataContainer: null,
+
 
     /* Web Worker URLs */
 
@@ -1447,9 +1445,9 @@
       this.$staticHeaderRow = this.$staticHeader.find('tr.macro-table-static-header-row');
       this.$staticSummaryRow = this.$staticHeader.find('tr.macro-table-static-summary-row');
       this.$resizer = $macroTable.find('div.macro-table-resize-guide');
+      this.$dataContainer = $macroTable.find('div.macro-table-data-container');
 
-      var $dataContainer = $macroTable.find('div.macro-table-data-container'),
-        $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
+      var $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
         $reorderHandle = $macroTable.find('div.macro-table-reorder-handle'),
         $removeColumn = $macroTable.find('button.macro-table-remove-column'),
         $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
@@ -1575,7 +1573,7 @@
         }
 
         $staticDataContainer.find('tr.macro-table-row-focused').removeClass('macro-table-row-focused');
-        $dataContainer.find('tr.macro-table-row-focused').removeClass('macro-table-row-focused');
+        self.$dataContainer.find('tr.macro-table-row-focused').removeClass('macro-table-row-focused');
 
         if(!isRowUnFocusing) {
           $rows.addClass('macro-table-row-focused');
@@ -1592,7 +1590,7 @@
 
           var $staticRow = $(this),
             $rows = $staticRow.add(
-              $dataContainer.find('tr').eq($staticRow.index())
+              self.$dataContainer.find('tr').eq($staticRow.index())
             );
 
           toggleRowFocus($rows);
@@ -1600,7 +1598,7 @@
       });
 
       //rows in the dynamic container
-      $dataContainer.delegate('tr', 'click', function(e) {
+      self.$dataContainer.delegate('tr', 'click', function(e) {
         var $dynamicRow = $(this),
           $rows = $dynamicRow.add(
             $staticDataContainer.find('tr').eq($dynamicRow.index())
@@ -1909,7 +1907,7 @@
           columnGrabOffset = e.pageX - $selectedColumn.offset().left;
 
           $reorderGuide.width($selectedColumn.outerWidth())
-          .css('left', $dataContainer.scrollLeft() + $selectedColumn.position().left);
+          .css('left', self.$dataContainer.scrollLeft() + $selectedColumn.position().left);
 
           self.$resizer.css('left', thumbPosition + 'px');
 
@@ -1995,9 +1993,9 @@
 
           //reposition the reorder guide, do it out of the thread for performance improvements
           setTimeout(function setReorderGuidePosition() {
-            var scrollOffset = $dataContainer.scrollLeft(),
-              cursorDataContainerOffset = lastPageX - $dataContainer.offset().left,
-              dataContainerOffset = $dataContainer.position().left,
+            var scrollOffset = self.$dataContainer.scrollLeft(),
+              cursorDataContainerOffset = lastPageX - self.$dataContainer.offset().left,
+              dataContainerOffset = self.$dataContainer.position().left,
               reorderGuidePosition = $reorderGuide.position().left,
               maxReorderGuidePosition = $headerTable.outerWidth() - $headerTable.find('th:last').outerWidth(),
               selectedColumnIndex = $macroTable.find('col.macro-table-selected-column').first().index(),
@@ -2021,7 +2019,7 @@
             //handle scrolling the columns if dragging the guide to the edges of the container
             var newColumnWidth = $newColumn.outerWidth(),
               newColumnPosition = $newColumn.position().left + dataContainerOffset,
-              isScrollingRight = newColumnPosition + newColumnWidth > $dataContainer.outerWidth(),
+              isScrollingRight = newColumnPosition + newColumnWidth > self.$dataContainer.outerWidth(),
               isScrollingLeft = newColumnPosition - dataContainerOffset === 0 && scrollOffset !== 0;
 
             if((isScrollingLeft || isScrollingRight) && $macroTable.hasClass('macro-table-column-moving')) {
@@ -2117,7 +2115,7 @@
       /* Wire table scrolling events */
 
       //mousewheel for table scrolling, wrapper for scrolling the scroll container, attached to .macro-table-data-container-wrapper
-      //$dataContainer.parent()
+      //this.$dataContainer.parent()
       $macroTable.add($macroTable.find('div.macro-table-data-veil'))
       .bind('mousewheel', function(e, delta, deltaX, deltaY) {
         e.preventDefault();
@@ -2221,7 +2219,7 @@
         this.renderRowDataSet = options.tableData;
       }
 
-      this.$scrollContainer.add(this.$header).add($('div.macro-table-data-container', this.element))
+      this.$scrollContainer.add(this.$header).add(this.$dataContainer)
       .scrollTop(0)
       .scrollLeft(0);
 
@@ -2324,9 +2322,8 @@
         $headerRow = this.$header.find('tr.macro-table-header-row'),
         $summaryRow = this.$header.find('tr.macro-table-summary-row'),
 
-        $dataContainer = $macroTable.find('div.macro-table-data-container'),
         $leftScrollWrapperHeader = this.$header.find('div.macro-table-scroll-wrapper'),
-        $leftScrollWrapperBody = $dataContainer.find('div.macro-table-scroll-wrapper'),
+        $leftScrollWrapperBody = this.$dataContainer.find('div.macro-table-scroll-wrapper'),
         $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
 
         tableViewportWidth = options.width - this.scrollBarWidth - this._renderHeaderRowControls(),
@@ -2436,7 +2433,7 @@
         $macroTable.removeClass('macro-table-display-summary-row');
       }
 
-      this.$header.add($dataContainer).scrollLeft(
+      this.$header.add(this.$dataContainer).scrollLeft(
         this.$header.scrollLeft() + $headerRow.find('th').filter(':nth-child('+(this.currentColumn + 1)+')').position().left //scroll position of old column
       );
     },
@@ -2523,7 +2520,6 @@
         maxRenderCount = this.maxTotalDomRows,
         $macroTable = this.element,
         $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
-        $dataContainer = $dataContainerWrapper.find('div.macro-table-data-container'),
         $staticDataContainer = $dataContainerWrapper.find('div.macro-table-static-data-container'),
         $tableBody = $dataContainerWrapper.find('tbody.macro-table-column-content'),
         $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content'),
@@ -2565,9 +2561,9 @@
 
       //return table to the old scoll position
       $currentRowElement = $tableBody.find('tr').filter(':nth-child('+(this.currentDomRow + 1)+')');
-      scrollPosition = $dataContainer.scrollTop() + ($currentRowElement.length === 0 ? 0 : $currentRowElement.position().top);
+      scrollPosition = this.$dataContainer.scrollTop() + ($currentRowElement.length === 0 ? 0 : $currentRowElement.position().top);
 
-      $dataContainer.add($staticDataContainer)
+      this.$dataContainer.add($staticDataContainer)
       .scrollTop(scrollPosition); //scroll position of old DOM row
     },
 
@@ -2768,7 +2764,7 @@
       .width(width - this.scrollBarWidth - 1); //-1 to account for left border
 
       //size the data container
-      $macroTable.find('div.macro-table-data-container, div.macro-table-static-data-container')
+      this.$dataContainer.add($macroTable.find('div.macro-table-static-data-container'))
       .height(height - headerHeight - this.scrollBarWidth);
 
       //size the scroll container
