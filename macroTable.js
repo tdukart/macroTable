@@ -514,45 +514,58 @@
   function scrollTableHorizontal() {
     var dataContainerScrollLeft = this.$dataContainer.scrollLeft(),
       scrollContainerScrollLeft = this.$scrollContainer.scrollLeft(),
-      $domColumns = this.$header.find('th'),
+      $domColumns = this.$dynamicHeader.find('th'),
       $currrentColumn = $domColumns.eq(this.currentColumn),
       columnIterator = -1,
+      scrollByColumn = this.options.scrollByColumn,
       endColumn;
 
     //scroll right
     if(scrollContainerScrollLeft > dataContainerScrollLeft &&
         scrollContainerScrollLeft >= dataContainerScrollLeft + $currrentColumn.outerWidth()) {
-      columnIterator = this.currentColumn + 1;
       endColumn = $domColumns.length;
+      columnIterator = this.currentColumn + 1;
 
     //scroll left
     } else if(scrollContainerScrollLeft < dataContainerScrollLeft &&
         scrollContainerScrollLeft <= dataContainerScrollLeft + $currrentColumn.outerWidth()) {
-      columnIterator = this.currentColumn;
       endColumn = -1;
+      columnIterator = this.currentColumn;
+      if(scrollByColumn) {
+        columnIterator--;
+      }
+    } else if(!scrollByColumn) {
+      columnIterator = 0;
     } else {
       //console.log('no scroll left needed');
       return; //no scroll necessary
     }
 
-    //loop through columns, searching for the offset range
-    while(columnIterator != endColumn) {
+    //check user setting for horizontal scrolling style
+    if(scrollByColumn) {
+      //loop through columns, searching for the offset range
+      while(columnIterator != endColumn) {
 
-      var $newColumn = $domColumns.eq(columnIterator),
-        newColumnScrollLeft = $newColumn.position().left + dataContainerScrollLeft;
+        var $newColumn = $domColumns.eq(columnIterator),
+          newColumnScrollLeft = $newColumn.position().left + dataContainerScrollLeft;
 
-      if(scrollContainerScrollLeft >= newColumnScrollLeft &&
-          scrollContainerScrollLeft < newColumnScrollLeft + $newColumn.outerWidth()) {
+        if(scrollContainerScrollLeft >= newColumnScrollLeft &&
+            scrollContainerScrollLeft < newColumnScrollLeft + $newColumn.outerWidth()) {
 
-        this.currentColumn = columnIterator;
-        this.$dataContainer.scrollLeft(newColumnScrollLeft);
-        this.$header.scrollLeft(newColumnScrollLeft);
-        break;
+          this.currentColumn = columnIterator;
+          this.$dataContainer.scrollLeft(newColumnScrollLeft);
+          this.$dynamicHeader.scrollLeft(newColumnScrollLeft);
+          break;
+        }
 
+        columnIterator += (scrollContainerScrollLeft > dataContainerScrollLeft ? 1 : -1);
       }
 
-      columnIterator += (scrollContainerScrollLeft > dataContainerScrollLeft ? 1 : -1);
-
+    //scroll by pixel
+    } else {
+      this.currentColumn = columnIterator;
+      this.$dataContainer.scrollLeft(this.scrollLeft);
+      this.$dynamicHeader.scrollLeft(this.scrollLeft);
     }
   }
 
@@ -1045,6 +1058,12 @@
       columns: [],
       defaultColumnWidth: 100,
       /**
+       * Controls horizontal scrolling style. By default will scroll by whole columns.
+       * False will scroll by pixel, which will change exactly as the scroll bar moves.
+       * @type {Boolean}
+       */
+      scrollByColumn: true,
+      /**
        * Allow the columns to be re-ordered via drag and drop
        */
       reorderable: true,
@@ -1063,7 +1082,6 @@
        * @type {String}
        */
       filterTerm: '',
-
       /**
        * If set to true, any matches found against a filter will be wrapped with an element with class ".macro-table-filter-match"
        * @type {Boolean}
@@ -1439,7 +1457,9 @@
       //setup element shortcuts
       this.$scrollContainer = $macroTable.find('div.macro-table-scroll-container');
       this.$headerWrapper = $macroTable.find('div.macro-table-header-wrapper');
-      this.$header = this.$headerWrapper.find('div.macro-table-header');
+      this.$dynamicHeader = this.$headerWrapper.find('div.macro-table-header');
+      this.$dynamicHeaderRow = this.$dynamicHeader.find('tr.macro-table-header-row');
+      this.$dynamicSummaryRow = this.$dynamicHeader.find('tr.macro-table-summary-row');
       this.$staticHeader = $macroTable.find('div.macro-table-static-header');
       this.$staticHeaderRow = this.$staticHeader.find('tr.macro-table-static-header-row');
       this.$staticSummaryRow = this.$staticHeader.find('tr.macro-table-static-summary-row');
@@ -1450,7 +1470,7 @@
         $reorderHandle = $macroTable.find('div.macro-table-reorder-handle'),
         $removeColumn = $macroTable.find('button.macro-table-remove-column'),
         $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
-        $headerTable = this.$header.find('table'),
+        $headerTable = this.$dynamicHeader.find('table'),
         $dynamicTableBody = $macroTable.find('tbody.macro-table-column-content'),
         $staticTableBody = $macroTable.find('tbody.macro-table-static-column-content'),
         $columnToResize,
@@ -1518,18 +1538,18 @@
 
             clearTimeout(columnMouseoverPid);
 
-            self.$header.addClass('macro-table-header-active');
+            self.$dynamicHeader.addClass('macro-table-header-active');
             $columnHeader.addClass('macro-table-header-active-cell');
             $reorderHandle.css({
               top: (($columnHeader.height() - $reorderHandle.height()) / 2) + 'px',
-              left: self.$header.scrollLeft() + $columnHeader.position().left + 2 + 'px'
+              left: self.$dynamicHeader.scrollLeft() + $columnHeader.position().left + 2 + 'px'
             });
             $removeColumn.css({
               top: (($columnHeader.height() - $removeColumn.height()) / 2) + 'px',
-              left: self.$header.scrollLeft() + $columnHeader.position().left + $columnHeader.outerWidth() - $removeColumn.width() + (-2) + 'px'
+              left: self.$dynamicHeader.scrollLeft() + $columnHeader.position().left + $columnHeader.outerWidth() - $removeColumn.width() + (-2) + 'px'
             });
           } else {
-            self.$header.removeClass('macro-table-header-active');
+            self.$dynamicHeader.removeClass('macro-table-header-active');
           }
 
         }
@@ -1540,7 +1560,7 @@
         if($(e.relatedTarget).closest('div.macro-table-column-controls').length === 0) {
         //if(!$(e.relatedTarget).hasClass('macro-table-reorder-handle')) { //don't deselect column if hovering over the reorder handle
           columnMouseoverPid = setTimeout(function() {
-            self.$header.removeClass('macro-table-header-active');
+            self.$dynamicHeader.removeClass('macro-table-header-active');
             $(e.target).removeClass('macro-table-header-active-cell');
           }, 500);
         }
@@ -1972,13 +1992,10 @@
               }
             }
 
-          }
-          //TODO: pretty sure this is not needed, remove after testing
-          /* else if(!$target.hasClass('macro-table-resize-guide')) {
-
+          //in case the cursor is over a cell that isn't resizable
+          } else if(!$target.hasClass('macro-table-resize-guide')) {
             deselectResizeHandle();
-
-          }*/
+          }
         //the handle is grabbed and being dragged around
         } else if($macroTable.hasClass('macro-table-resizing')) {
           e.stopPropagation();
@@ -2111,7 +2128,7 @@
           }
         }
 
-        self.$header.removeClass('macro-table-header-active');
+        self.$dynamicHeader.removeClass('macro-table-header-active');
       });
 
 
@@ -2122,6 +2139,11 @@
       $macroTable.add($macroTable.find('div.macro-table-data-veil'))
       .bind('mousewheel', function(e, delta, deltaX, deltaY) {
         e.preventDefault();
+
+        var horizontalPixelScroll = 5;
+
+        deselectResizeHandle();
+
         if(deltaY < 0) {
           self.$scrollContainer.scrollTop(self.scrollTop + rowHeight);
         } else if(deltaY > 0) {
@@ -2129,17 +2151,17 @@
         }
 
         if(deltaX !== 0) {
-          var $domColumns = $headerTable.find('th'),
+          var $domColumns = self.$dynamicHeaderRow.find('th'),
             offset = $domColumns.length !== 0 ? Math.abs($domColumns.eq(0).position().left) : 0;
 
-          if(deltaX < 0 && self.currentColumn > 0) {
+          if(deltaX < 0 && self.currentColumn + (options.scrollByColumn ? 0 : 1) > 0) {
             var lastOffset = Math.abs($domColumns.eq(self.currentColumn - 1).position().left);
-            console.log('left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',self.currentColumn);
-            self.$scrollContainer.scrollLeft(offset - lastOffset);
-          } else if(deltaX > 0 && self.currentColumn < $domColumns.length - 1) {
+            //console.log('left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',self.currentColumn);
+            self.$scrollContainer.scrollLeft(offset - (options.scrollByColumn ? lastOffset : horizontalPixelScroll));
+          } else if(deltaX > 0 && self.currentColumn < $domColumns.length - (options.scrollByColumn ? 1 : 0)) {
             var nextOffset = Math.abs($domColumns.eq(self.currentColumn + 1).position().left);
-            console.log('right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',self.currentColumn);
-            self.$scrollContainer.scrollLeft(offset + nextOffset);
+            //console.log('right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',self.currentColumn);
+            self.$scrollContainer.scrollLeft(offset + (options.scrollByColumn ? nextOffset : horizontalPixelScroll));
           }
         }
         //console.log('Mousewheel .macro-table-data-container', scrollTop, rowHeight,self.$scrollContainer);
@@ -2322,10 +2344,7 @@
         sortedColumn = options.sortByColumn,
 
         $macroTable = this.element,
-        $headerRow = this.$header.find('tr.macro-table-header-row'),
-        $summaryRow = this.$header.find('tr.macro-table-summary-row'),
-
-        $leftScrollWrapperHeader = this.$header.find('div.macro-table-scroll-wrapper'),
+        $leftScrollWrapperHeader = this.$dynamicHeader.find('div.macro-table-scroll-wrapper'),
         $leftScrollWrapperBody = this.$dataContainer.find('div.macro-table-scroll-wrapper'),
         $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
 
@@ -2334,13 +2353,13 @@
         totalColumnWidth = 0,
         totalOverriddenColumnWidth = 0,
         totalOverriddenColumnWidthCount = 0,
-        dynamicHeaderWidth = this.$header.width(), //gets ruined by hiding/emptying, so save now
+        dynamicHeaderWidth = this.$dynamicHeader.width(), //gets ruined by hiding/emptying, so save now
         defaultColumnWidth, i;
 
       this.$headerWrapper.hide();
 
-      $headerRow.empty();
-      $summaryRow.empty();
+      this.$dynamicHeaderRow.empty();
+      this.$dynamicSummaryRow.empty();
       $columnSizers.empty();
 
       //nothing to do if there are no columns to show
@@ -2398,10 +2417,10 @@
             }
           }
 
-          $headerRow.prepend($headerColumn);
+          this.$dynamicHeaderRow.prepend($headerColumn);
           $columnSizers.prepend($colSizer);
           if(typeof summaryRow === 'object') {
-            $summaryRow.prepend($summaryColumn);
+            this.$dynamicSummaryRow.prepend($summaryColumn);
           }
         }
 
@@ -2422,22 +2441,22 @@
       this.$headerWrapper.show(); //needs to be visible so column width calculation can be performed
 
       appendAndVerticallySizeRow({
-        dynamicRow: $headerRow,
+        dynamicRow: this.$dynamicHeaderRow,
         staticRow: this.$staticHeaderRow
       });
 
       if(typeof summaryRow === 'object') {
         $macroTable.addClass('macro-table-display-summary-row');
         appendAndVerticallySizeRow({
-          dynamicRow: $summaryRow,
+          dynamicRow: this.$dynamicSummaryRow,
           staticRow: this.$staticSummaryRow
         });
       } else {
         $macroTable.removeClass('macro-table-display-summary-row');
       }
 
-      this.$header.add(this.$dataContainer).scrollLeft(
-        this.$header.scrollLeft() + $headerRow.find('th').filter(':nth-child('+(this.currentColumn + 1)+')').position().left //scroll position of old column
+      this.$dynamicHeader.add(this.$dataContainer).scrollLeft(
+        this.$dynamicHeader.scrollLeft() + this.$dynamicHeaderRow.find('th').filter(':nth-child('+(this.currentColumn + 1)+')').position().left //scroll position of old column
       );
     },
 
@@ -2639,7 +2658,7 @@
     _sortTable: function(columnToSort, callback) {
       var options = this.options,
         $columnSizers = this.element.find('colgroup.macro-table-column-sizer col'),
-        $columnHeader = this.$header.find('tr.macro-table-header-row th'),
+        $columnHeader = this.$dynamicHeaderRow.find('th'),
         columnData, sortWorker, columnSorter, renderRowDataSet;
 
       //columnToSort is an array index
@@ -2933,7 +2952,7 @@
     scrollToColumn: function(scrollToColumn) {
       console.log('scroll to column',scrollToColumn);
 
-      var $column = this.element.find('tr.macro-table-header-row th:nth-child('+(scrollToColumn + 1)+')'),
+      var $column = this.$dynamicHeaderRow.find('th:nth-child('+(scrollToColumn + 1)+')'),
         columnOffset = $column.length > 0 ? $column.position().left : 0;
 
       this.scrollLeft = -1; //force a scroll
