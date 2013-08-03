@@ -208,12 +208,12 @@
         e.data.hasOwnProperty('filter') && typeof e.data.filter === 'string') {
 
       filter = escapedFilter = e.data.filter.toLowerCase(); //string to match against row data
+      doHighlightMatches = e.data.highlightMatches;
       if(doHighlightMatches) {
         escapedFilter = filter.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
       }
       searchIndex = e.data.searchIndex; //indexed table data ready for searching
       tableData = e.data.tableData; //table's pure row object data
-      doHighlightMatches = e.data.highlightMatches;
 
 
       //perform the filtering
