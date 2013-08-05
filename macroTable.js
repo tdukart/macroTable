@@ -534,38 +534,28 @@
       if(scrollByColumn) {
         columnIterator--;
       }
-    } else if(!scrollByColumn) {
-      columnIterator = 0;
-    } else {
-      //console.log('no scroll left needed');
-      return; //no scroll necessary
+    } else if(scrollByColumn) {
+      return;
     }
 
-    //check user setting for horizontal scrolling style
-    if(scrollByColumn) {
-      //loop through columns, searching for the offset range
-      while(columnIterator != endColumn) {
+    //loop through columns, searching for the offset range
+    while(columnIterator != endColumn) {
 
-        var $newColumn = $domColumns.eq(columnIterator),
-          newColumnScrollLeft = $newColumn.position().left + dataContainerScrollLeft;
+      var $newColumn = $domColumns.eq(columnIterator),
+        newColumnScrollLeft = $newColumn.position().left + dataContainerScrollLeft;
 
-        if(scrollContainerScrollLeft >= newColumnScrollLeft &&
-            scrollContainerScrollLeft < newColumnScrollLeft + $newColumn.outerWidth()) {
+      if(scrollContainerScrollLeft >= newColumnScrollLeft &&
+          scrollContainerScrollLeft < newColumnScrollLeft + $newColumn.outerWidth()) {
 
-          this.currentColumn = columnIterator;
-          this.$dataContainer.scrollLeft(newColumnScrollLeft);
-          this.$dynamicHeader.scrollLeft(newColumnScrollLeft);
-          break;
-        }
+        this.currentColumn = columnIterator;
 
-        columnIterator += (scrollContainerScrollLeft > dataContainerScrollLeft ? 1 : -1);
+        //check user setting for horizontal scrolling style
+        this.$dataContainer.scrollLeft(scrollByColumn ? newColumnScrollLeft : this.scrollLeft);
+        this.$dynamicHeader.scrollLeft(scrollByColumn ? newColumnScrollLeft : this.scrollLeft);
+        break;
       }
 
-    //scroll by pixel
-    } else {
-      this.currentColumn = columnIterator;
-      this.$dataContainer.scrollLeft(this.scrollLeft);
-      this.$dynamicHeader.scrollLeft(this.scrollLeft);
+      columnIterator += (scrollContainerScrollLeft > dataContainerScrollLeft ? 1 : -1);
     }
   }
 
@@ -2578,8 +2568,10 @@
       }
 
       //size the scroll spacer to the theoretical max height of all the data
-      $macroTable.find('div.macro-table-scroll-spacer')
-      .height(rowHeight * this.expandedTableData.length);
+      if(this.expandedTableData.length) {
+        $macroTable.find('div.macro-table-scroll-spacer')
+        .height(rowHeight * this.expandedTableData.length);
+      }
 
       //return table to the old scoll position
       $currentRowElement = $tableBody.find('tr').filter(':nth-child('+(this.currentDomRow + 1)+')');

@@ -420,6 +420,11 @@ button:hover .icon--delete::after {
   position: relative;
 }
 
+.macro-table-data-container .macro-table-scroll-wrapper,
+.macro-table-scroll-spacer {
+  min-height: 1px; /* allow scrolling columns horizontally when there are no rows */
+}
+
 .macro-table-header-wrapper {
   position: relative;
   z-index: 3;
