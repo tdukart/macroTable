@@ -2348,7 +2348,7 @@
         $leftScrollWrapperBody = this.$dataContainer.find('div.macro-table-scroll-wrapper'),
         $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
 
-        tableViewportWidth = options.width - this.scrollBarWidth - this._renderHeaderRowControls(),
+        tableViewportWidth = ~~(options.width - this.scrollBarWidth - this._renderHeaderRowControls()),
         marginAdded = 0,
         totalColumnWidth = 0,
         totalOverriddenColumnWidth = 0,
@@ -2382,7 +2382,7 @@
       //build the column headers
       for(i = columns.length; i--;) {
         var thisColumn = columns[i],
-          columnWidth = typeof thisColumn.width !== 'undefined' ? parseInt(thisColumn.width, 10) : defaultColumnWidth;
+          columnWidth = typeof thisColumn.width !== 'undefined' ? parseInt(thisColumn.width, 10) : ~~defaultColumnWidth;
 
         if(i < this.maxTotalDomColumns) { //TODO: right now, this is always true because we show all columns in the DOM, always
           var $summaryColumn,
