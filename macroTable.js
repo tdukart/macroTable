@@ -1503,8 +1503,8 @@
           Array.prototype.splice.apply(this.expandedTableData, [index + 1, 0].concat(this.expandedTableData[index].subRows));
 
           //newly expanded rows are never selected, so if the select all header checkbox is checked, put it into indeterminate state
-          if($selectAllHeaderCheckbox.attr('checked')) {
-            $selectAllHeaderCheckbox.attr('checked', false); //click the box again and it will select the newly expanded rows
+          if($selectAllHeaderCheckbox.prop('checked')) {
+            $selectAllHeaderCheckbox.prop('checked', false); //click the box again and it will select the newly expanded rows
             $selectAllHeaderCheckbox[0].indeterminate = true;
           }
 
@@ -1522,7 +1522,7 @@
 
           //by hiding the sub rows, all remaining rows are selected, so make select toggle checkbox reflect that
           if(this.selectedRowCount == this.expandedTableData.length) {
-            $selectAllHeaderCheckbox.attr('checked', true); //click the box again and it will deselect all rows
+            $selectAllHeaderCheckbox.prop('checked', true); //click the box again and it will deselect all rows
             $selectAllHeaderCheckbox[0].indeterminate = false;
           }
         }
@@ -1665,7 +1665,7 @@
           if(this.indeterminate === true || $checkbox.is(':checked')) {
 
             isToggled = true;
-            $checkboxes.attr('checked', true);
+            $checkboxes.prop('checked', true);
             $tableRows.addClass('macro-table-highlight macro-table-selected-row');
             self.selectedRowCount = self.expandedTableData.length;
 
@@ -1673,7 +1673,7 @@
           } else {
 
             isToggled = false;
-            $checkboxes.attr('checked', false);
+            $checkboxes.prop('checked', false);
             $tableRows.removeClass('macro-table-highlight macro-table-selected-row');
             self.selectedRowCount = 0;
           }
@@ -1691,13 +1691,13 @@
           if(this.indeterminate === true || $checkbox.is(':checked')) {
 
             isToggled = true;
-            $checkboxes.attr('checked', true);
+            $checkboxes.prop('checked', true);
 
           //header checkbox deselected
           } else {
 
             isToggled = false;
-            $checkboxes.attr('checked', false);
+            $checkboxes.prop('checked', false);
           }
 
           thisCurrentRow = self.expandedTableData[self.currentRow];
@@ -1778,12 +1778,12 @@
           //set header checkbox state
           if(self.selectedRowCount === 0) { //no rows selected
 
-            $selectAllHeaderCheckbox.attr('checked', false);
+            $selectAllHeaderCheckbox.prop('checked', false);
             $selectAllHeaderCheckbox[0].indeterminate = false;
 
           } else if(self.selectedRowCount == self.expandedTableData.length) { //all rows selected
 
-            $selectAllHeaderCheckbox.attr('checked', true);
+            $selectAllHeaderCheckbox.prop('checked', true);
             $selectAllHeaderCheckbox[0].indeterminate = false;
 
           } else { //at least one row selected, but not all
@@ -1825,12 +1825,12 @@
           //set header checkbox state
           if(self.expandedRowCount === 0) { //no rows expanded
 
-            $expandAllHeaderCheckbox.attr('checked', false);
+            $expandAllHeaderCheckbox.prop('checked', false);
             //$expandAllHeaderCheckbox[0].indeterminate = false;
 
           } else if(self.expandedRowCount == self.rowsWithChildrenCount) { //all expandable rows expanded
 
-            $expandAllHeaderCheckbox.attr('checked', true);
+            $expandAllHeaderCheckbox.prop('checked', true);
             //$expandAllHeaderCheckbox[0].indeterminate = false;
 
           } //else { //at least one row expanded, but not all
