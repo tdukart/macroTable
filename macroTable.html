@@ -150,20 +150,20 @@
             removable: true
           })
 
-          .on('macrotablerowselect', function(e, rows) {
-            alert('select ' + rows.selectedRows.length);
+          .on('macrotablerowselect', function(e, data) {
+            alert('select ' + data.selectedRows.length);
           })
-          .on('macrotablerowdeselect', function(e, rows) {
-            alert('deselect ' + rows.selectedRows.length);
+          .on('macrotablerowdeselect', function(e, data) {
+            alert('deselect ' + data.selectedRows.length);
           })
-          .on('columnreorder', function(columns) {
-            alert('reorder '+columns.length);
+          .on('macrotablecolumnreorder', function(e, data) {
+            alert('reorder '+data.columns.length);
           })
-          .on('columnresize', function(columnIndex, width) {
-            alert(columnIndex+', '+width);
+          .on('macrotablecolumnresize', function(e, data) {
+            alert(data.columnIndex+', '+data.width);
           })
-          .on('rowexpand', function(expandedRows) {
-            console.log('Expanded rows:',expandedRows);
+          .on('macrotablerowexpand', function(e, data) {
+            console.log('Expanded rows:',data.expandedRows);
           });
 
           if(delayDomInsertion) {

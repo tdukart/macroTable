@@ -1618,7 +1618,10 @@
           self.expandedTableData[dataRowIndex].focused = true;
         }
 
-        self.element.trigger('rowfocus', dataRowIndex, self.expandedTableData[dataRowIndex]);
+        self._trigger('rowfocus', null, {
+          rowIndex: dataRowIndex,
+          rowData: self.expandedTableData[dataRowIndex]
+        });
       }
 
       //rows in the static container
@@ -1758,7 +1761,9 @@
             //reset the force re-render flag
             setTimeout(function() {
               forceTableScrollRender = false;
-              self.element.trigger('rowexpand', self.expandedRowIndexes);
+              self._trigger('rowexpand', null, {
+                expandedRows: self.expandedRowIndexes
+              });
             }, 0);
           }, 0);
         }
@@ -1863,7 +1868,9 @@
           $macroTable.find('div.macro-table-scroll-spacer')
           .height(rowHeight * self.expandedTableData.length);
 
-          self.element.trigger('rowexpand', self.expandedRowIndexes.sort());
+          self._trigger('rowexpand', null, {
+            expandedRows: self.expandedRowIndexes.sort()
+          });
         }
       });
 
@@ -1920,7 +1927,10 @@
 
             resizePositionStart = undefined;
 
-            self.element.trigger('columnresize', columnNumber, newWidth);
+            self._trigger('columnresize', null, {
+              columnIndex: columnNumber,
+              width: newWidth
+            });
           }); //mouseup
         } //if(typeof resizePositionStart === 'undefined')
       });
@@ -1966,7 +1976,7 @@
           $macroTable.find('colgroup.macro-table-column-sizer col').filter(':nth-child('+($selectedColumn.index() + 1)+')')
           .addClass('macro-table-selected-column');
 
-          console.log('offset column',$selectedColumn.offset().left,'position column',$selectedColumn.position().left,'resizer',$dataContainer.scrollLeft() + $selectedColumn.position().left - (self.$resizer.outerWidth() / 2));
+          console.log('offset column',$selectedColumn.offset().left,'position column',$selectedColumn.position().left,'resizer',self.$dataContainer.scrollLeft() + $selectedColumn.position().left - (self.$resizer.outerWidth() / 2));
         }
       });
 
@@ -2650,7 +2660,9 @@
       this._setOption('columns', columns);
 
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
-      this.element.trigger('columnreorder', columns);
+      this._trigger('columnreorder', null, {
+        columns: columns
+      });
       rebuildSearchIndexColumns.call(this, 'move', columnToReorderIndex, newIndex);
     },
 
@@ -2668,7 +2680,9 @@
       this._setOption('columns', columns);
 
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
-      this.element.trigger('columnremove', columns);
+      this._trigger('columnremove', null, {
+        columns: columns
+      });
       rebuildSearchIndexColumns.call(this, 'delete', columnToRemoveIndex);
     },
 
@@ -2690,7 +2704,9 @@
       columns.splice(newIndex, 0, columnToAdd);
 
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
-      this.element.trigger('columnadd', columns);
+      this._trigger('columnadd', null, {
+        columns: columns
+      });
       rebuildSearchIndexColumns.call(this, 'add');
     },
 
