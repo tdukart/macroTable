@@ -1030,6 +1030,18 @@
      */
     //rowfocus
 
+    /**
+     * callback run when a row is selected
+     * @type {Function}
+     */
+    //rowselect
+
+    /**
+     * callback run when a row is deselected
+     * @type {Function}
+     */
+    //rowdeselect
+
     options: {
       height: undefined, //default height of table, if not defined will fit to parent
       width: undefined, //defailt width of table, if not defined will fit to parent
@@ -1683,6 +1695,10 @@
             self.expandedTableData[i].selected = isToggled;
           }
 
+          self._trigger(isToggled ? 'rowselect' : 'rowdeselect', null, {
+            selectedRows: self.getSelectedRows()
+          });
+
         //expand/collapse all rows
         } else if($checkbox.hasClass('macro-table-expand-toggle')) {
           $checkboxes = $staticTableBody.find('input.macro-table-row-expander');
@@ -1768,11 +1784,17 @@
             $dataRow.addClass('macro-table-highlight macro-table-selected-row');
             self.expandedTableData[dataRowIndex].selected = true;
             self.selectedRowCount++;
+            self._trigger('rowselect', null, {
+              selectedRows: self.getSelectedRows()
+            });
           } else {
             $checkboxRow.removeClass('macro-table-highlight macro-table-selected-row');
             $dataRow.removeClass('macro-table-highlight macro-table-selected-row');
             self.expandedTableData[dataRowIndex].selected = false;
             self.selectedRowCount--;
+            self._trigger('rowdeselect', null, {
+              selectedRows: self.getSelectedRows()
+            });
           }
 
           //set header checkbox state

@@ -150,6 +150,12 @@
             removable: true
           })
 
+          .on('macrotablerowselect', function(e, rows) {
+            alert('select ' + rows.selectedRows.length);
+          })
+          .on('macrotablerowdeselect', function(e, rows) {
+            alert('deselect ' + rows.selectedRows.length);
+          })
           .on('columnreorder', function(columns) {
             alert('reorder '+columns.length);
           })
