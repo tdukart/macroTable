@@ -2616,7 +2616,7 @@
 
       //may be called before the row/column position is scrolled back into original state due to setTimeout thread breaking
       this.element.trigger('columnremove', columns);
-      rebuildSearchIndexColumns.call('delete', columnToRemoveIndex);
+      rebuildSearchIndexColumns.call(this, 'delete', columnToRemoveIndex);
     },
 
     /**
