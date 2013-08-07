@@ -628,7 +628,7 @@
 
     //build static row
     if(isRowsSelectable) {
-      staticRowColumns += '<td><input type="checkbox" class="macro-table-checkbox macro-table-row-selector" data-row-index="'+index+'" '+(row.selected === true ? 'checked="checked"' : '')+'/></td>';
+      staticRowColumns += '<td class="macro-table-row-control-cell"><input type="checkbox" class="macro-table-checkbox macro-table-row-selector" data-row-index="'+index+'" '+(row.selected === true ? 'checked="checked"' : '')+'/></td>';
     }
 
     //build row expand column
@@ -653,7 +653,7 @@
     }
 
     var timestamp = +new Date();
-    staticRowColumns += '<td class="macro-table-row-expander-cell' + (expanderCellClass !== '' ? ' '+expanderCellClass : '') + '">' +
+    staticRowColumns += '<td class="macro-table-row-control-cell macro-table-row-expander-cell' + (expanderCellClass !== '' ? ' '+expanderCellClass : '') + '">' +
       '<div class="macro-table-expand-toggle-container">' +
         (rowHasChildren ?
             '<input type="checkbox" id="macro-table-row-expander-'+timestamp+'" class="macro-table-checkbox macro-table-row-expander" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
@@ -2470,7 +2470,8 @@
       if(options.rowsSelectable === true && this.renderRowDataSet.length > 0) {
         var $checboxColumnSizer = $(document.createElement('col')).addClass('macro-table-row-selector-column')
           .width(this.rowSelectColumnWidth),
-          $checkboxColumn = $(document.createElement('th')).html('<input type="checkbox" class="macro-table-checkbox macro-table-select-toggle" />');
+          $checkboxColumn = $(document.createElement('th')).addClass('macro-table-row-control-cell')
+          .html('<input type="checkbox" class="macro-table-checkbox macro-table-select-toggle" />');
 
         $staticColumnSizers.append($checboxColumnSizer);
         this.$staticHeaderRow.append($checkboxColumn);
@@ -2490,7 +2491,7 @@
         var timestamp = +new Date(),
           $expanderColumnSizer = $(document.createElement('col')).addClass('macro-table-row-expander-column')
           .width(this.expanderColumnWidth),
-          $expanderColumn = $(document.createElement('th')).addClass('macro-table-row-expander-cell')
+          $expanderColumn = $(document.createElement('th')).addClass('macro-table-row-control-cell macro-table-row-expander-cell')
           .html(
             '<div class="macro-table-expand-toggle-container">'+
               '<input type="checkbox" id="macro-table-expand-toggle-'+timestamp+'" class="macro-table-checkbox macro-table-expand-toggle" />'+

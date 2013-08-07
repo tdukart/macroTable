@@ -229,6 +229,10 @@ button:hover .icon--delete::after {
   border-left: 1px #ccc solid;
 }
 
+.macro-table .macro-table-row-control-cell {
+  text-align: center;
+}
+
 .macro-table .macro-table-column-sizer th {
   height: 0;
 }
@@ -674,6 +678,10 @@ button:hover .icon--delete::after {
   left: 50%;
   right: 0;
   border-top: 1px dotted rgba(0, 0, 0, 1);
+}
+
+.macro-table-row-selector-column {
+  text-align: center;
 }
 
 /* Webkit doesn't yet support "visibility: collapse;" on <col> */
