@@ -1055,12 +1055,23 @@
       scrollByColumn: true,
       /**
        * Allow the columns to be re-ordered via drag and drop
+       * @type {Boolean}
        */
       reorderable: true,
       /**
+       * Allow columns to be removed via the 'X'
+       * @type {Boolean}
+       */
+      removable: false,
+      /**
        * Single row data structure for displaying in the summary row section
+       * @type {Boolean}
        */
       summaryRow: false,
+      /**
+       * The rows of the table, using index, data, and subRow fields
+       * @type {Array}
+       */
       tableData: [],
       /**
        * Field name of the column by which to sort the tableData.
@@ -1077,7 +1088,10 @@
        * @type {Boolean}
        */
       highlightMatches: false,
-
+      /**
+       * Show checkboxes next to rows to all fetching from the table rows that are current selected
+       * @type {Boolean}
+       */
       rowsSelectable: false,
 
       /**
@@ -1108,10 +1122,8 @@
      * @private
      */
     _setOption: function(key, value) {
-      // In jQuery UI 1.8, you have to manually invoke the _setOption method from the base widget
-      $.Widget.prototype._setOption.apply( this, arguments );
-      // In jQuery UI 1.9 and above, you use the _super method instead
-      //this._super( "_setOption", key, value );
+      //$.Widget.prototype._setOption.apply( this, arguments );
+      this._super(key, value);
 
       var options = this.options,
         columnIndex;
@@ -1150,6 +1162,10 @@
           break;
 
         case 'reorderable':
+          break;
+
+        case 'removable':
+          this._setRemovableColumnState();
           break;
 
         case 'tableData':
@@ -1455,10 +1471,11 @@
       this.$staticSummaryRow = this.$staticHeader.find('tr.macro-table-static-summary-row');
       this.$resizer = $macroTable.find('div.macro-table-resize-guide');
       this.$dataContainer = $macroTable.find('div.macro-table-data-container');
+      this.$columnControls = $macroTable.find('div.macro-table-column-controls');
+      this.$removeColumnButton = this.$columnControls.find('button.macro-table-remove-column');
 
       var $staticDataContainer = $macroTable.find('div.macro-table-static-data-container'),
         $reorderHandle = $macroTable.find('div.macro-table-reorder-handle'),
-        $removeColumn = $macroTable.find('button.macro-table-remove-column'),
         $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
         $headerTable = this.$dynamicHeader.find('table'),
         $dynamicTableBody = $macroTable.find('tbody.macro-table-column-content'),
@@ -1534,9 +1551,9 @@
               top: (($columnHeader.height() - $reorderHandle.height()) / 2) + 'px',
               left: self.$dynamicHeader.scrollLeft() + $columnHeader.position().left + 2 + 'px'
             });
-            $removeColumn.css({
-              top: (($columnHeader.height() - $removeColumn.height()) / 2) + 'px',
-              left: self.$dynamicHeader.scrollLeft() + $columnHeader.position().left + $columnHeader.outerWidth() - $removeColumn.width() + (-2) + 'px'
+            self.$removeColumnButton.css({
+              top: (($columnHeader.height() - self.$removeColumnButton.height()) / 2) + 'px',
+              left: self.$dynamicHeader.scrollLeft() + $columnHeader.position().left + $columnHeader.outerWidth() - self.$removeColumnButton.width() + (-2) + 'px'
             });
           } else {
             self.$dynamicHeader.removeClass('macro-table-header-active');
@@ -1888,7 +1905,7 @@
 
       /* Remove column event */
 
-      $removeColumn.bind('click', function(e) {
+      this.$removeColumnButton.bind('click', function(e) {
         e.preventDefault();
 
         var columnToRemoveIndex = $headerTable.find('th.macro-table-header-active-cell').filter(':first').index();
@@ -2260,7 +2277,21 @@
         }
       });
 
+      this._setRemovableColumnState();
+
       console.log('replaceRowWindow',this.replaceRowWindow,'maxTotalDomRows',this.maxTotalDomRows,'maxTotalDomColumns',this.maxTotalDomColumns,'middleDomRow',~~(this.maxTotalDomRows / 2),'triggerUpDomRow',this.triggerUpDomRow,'triggerDownDomRow',this.triggerDownDomRow);
+    },
+
+    /**
+     * Based on the current setting of the removable column option,
+     * set the state of the remove column button in the column controls
+     */
+    _setRemovableColumnState: function() {
+      if(this.options.removable) {
+        this.$columnControls.addClass('macro-table-remove-column-enabled');
+      } else {
+        this.$columnControls.removeClass('macro-table-remove-column-enabled');
+      }
     },
 
     /**

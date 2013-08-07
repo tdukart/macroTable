@@ -353,7 +353,7 @@ button:hover .icon--delete::after {
   cursor: -moz-grab;
 }
 
-.macro-table-header-active .macro-table-remove-column,
+.macro-table-header-active .macro-table-remove-column-enabled .macro-table-remove-column,
 .macro-table-header-active .macro-table-reorder-handle {
   display: block;
 }

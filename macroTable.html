@@ -146,7 +146,8 @@
             columns: columns,
             emptyInitializedMessage: tableOptions.emptyInitializedMessage,
             highlightMatches: true,
-            scrollByColumn: true
+            scrollByColumn: false,
+            removable: true
           })
 
           .on('columnreorder', function(columns) {
