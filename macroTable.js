@@ -709,19 +709,25 @@
    * @return the index of the column if it is sortable, -1 otherwise
    */
   function validateSortByColumn(columnField) {
-    var columns = this.options.columns;
+    var columns = this.options.columns,
+      i;
 
     if(columnField === '') {
       return -1;
     }
+    if(this.options.tableData.length === 0) {
+      console.warn('sortByColumn being ignored because there is no tableData');
+      return -1;
+    }
 
-    for(var i = columns.length - 1; i >= 0; i--) {
+    for(i = columns.length; i--;) {
 
-      if(columns[i].field == columnField && columns[i].sortable) {
+      if(columns[i].field == columnField && columns[i].sortable !== false) {
         return i;
       }
     }
 
+    //console.warn('sortByColumn being ignored because a matching column field was not found');
     return -1;
   }
 
@@ -755,6 +761,7 @@
   function workerSortRow(columnData, $columnHeader, $columnSizers, callback) {
     var self = this,
       options = this.options,
+      sortedColumn = validateSortByColumn.call(this, options.sortByColumn) >= 0 ? options.sortByColumn : '',
       $veil = $('div.macro-table-data-veil', this.element),
       columnSorter, sortWorker, action;
 
@@ -777,7 +784,7 @@
     }).bind(this);
 
     sortWorker.onmessage = (function(e) {
-      this.sortedRows[options.sortByColumn][''] = e.data;
+      this.sortedRows[sortedColumn][''] = e.data;
 
       this.renderRowDataSet = postSortFilter.call(this, e.data, action, callback); //potentially changes self.renderRowDataSet if there is a filter active!
 
@@ -790,20 +797,20 @@
       $columnSizers.addClass('macro-table-highlight');
 
       $columnHeader.removeClass('macro-table-sort-loading')
-      .addClass(columnData.direction > 0 ? 'macro-table-sort-ascending' : 'macro-table-sort-descending');
+      .addClass(columnData.direction < 0 ? 'macro-table-sort-descending' : 'macro-table-sort-ascending');
 
       sortWorker.terminate();
       //console.log('sorted data',e.data);
     }).bind(this);
 
-    if(typeof this.sortedRows[options.sortByColumn] === 'undefined') {
-      this.sortedRows[options.sortByColumn] = {};
+    if(typeof this.sortedRows[sortedColumn] === 'undefined') {
+      this.sortedRows[sortedColumn] = {};
     }
 
     //the current data structure for the table data sorted by this column.
     //if it is undefined, it means the table has not yet been sorted by this column. if defined, it should
     //simply be reversed (no need to full sort again, we're just changing direction of the sort)
-    this.renderRowDataSet = this.sortedRows[options.sortByColumn][''];
+    this.renderRowDataSet = this.sortedRows[sortedColumn][''];
 
     //initialize the ordered tableData to use
     if(typeof this.renderRowDataSet === 'undefined') {
@@ -819,7 +826,7 @@
       sortWorker.postMessage({
         action: action,
         tableData: options.tableData,
-        sortByField: options.sortByColumn,
+        sortByField: sortedColumn,
         columnSorter: columnSorter
       });
 
@@ -1184,7 +1191,7 @@
           this.renderRowDataSet = [];
           this.searchIndex = []; //reset search index
           this.sortedRows = null; //let _init reinitialize this
-          options.sortByColumn = '';
+          //options.sortByColumn = '';
           //TODO call function here that will reset the column arrows indicating the sort order
         case 'filterTerm':
         case 'summaryRow':
@@ -2254,11 +2261,6 @@
       var options = this.options,
         isTableDataValid = this._validateTableData(options.tableData);
 
-      //validate sortByColumn
-      if(validateSortByColumn.call(this, options.sortByColumn) < 0) {
-        options.sortByColumn = '';
-      }
-
       options.height = options.height || this._getFallbackHeightToResize();
       options.width = options.width || this._getFallbackWidthToResize();
 
@@ -2394,7 +2396,7 @@
       var options = this.options,
         summaryRow = options.summaryRow,
         columns = options.columns,
-        sortedColumn = options.sortByColumn,
+        sortedColumn = validateSortByColumn.call(this, options.sortByColumn) >= 0 ? options.sortByColumn : '',
 
         $macroTable = this.element,
         $leftScrollWrapperHeader = this.$dynamicHeader.find('div.macro-table-scroll-wrapper'),
@@ -2466,7 +2468,7 @@
             $headerColumn.addClass('macro-table-column-sortable');
             if(thisColumn.field === sortedColumn) {
               $colSizer.addClass('macro-table-highlight');
-              $headerColumn.addClass(thisColumn.direction > 0 ? 'macro-table-sort-ascending' : 'macro-table-sort-descending');
+              $headerColumn.addClass(thisColumn.direction < 0 ? 'macro-table-sort-descending' : 'macro-table-sort-ascending');
             }
           }
 
@@ -2713,15 +2715,15 @@
     /**
      * @method _sortTable
      * @description sort the table by a particular column
-     * @param columnToSort {Number|String} the column to sort by's index or field name
-     * @param {Function} callback Callback function that executes upon completion of the sort/filter
+     * @param {Number|String} columnToSort The column to sort by's index or field name
+     * @param {Function}      callback     Callback function that executes upon completion of the sort/filter
      * @private
      */
     _sortTable: function(columnToSort, callback) {
       var options = this.options,
         $columnSizers = this.element.find('colgroup.macro-table-column-sizer col'),
         $columnHeader = this.$dynamicHeaderRow.find('th'),
-        columnData, sortWorker, columnSorter, renderRowDataSet;
+        columnData, renderRowDataSet;
 
       //columnToSort is an array index
       if(parseInt(columnToSort, 10).length === columnToSort.length) {
@@ -2755,6 +2757,8 @@
       } else {
 
         options.sortByColumn = columnToSort;
+
+        columnToSort = validateSortByColumn.call(this, columnToSort) >= 0 && typeof this.sortedRows[columnToSort] !== 'undefined' ? columnToSort : '';
 
         //TODO: what's the point of this for loop?
         /*for(var columnIndex = options.columns.length - 1; columnIndex >= 0; columnIndex--) { //TODO: make this a helper function?
