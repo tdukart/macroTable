@@ -2776,9 +2776,12 @@
      * @param {Function} callback          Callback function that executes upon completion of the sort/filter
      */
     _callSortWorkerWrapper: function(columnIndexToSort, callback) {
-      var columnData = this.options.columns[columnIndexToSort],
+      var options = this.options,
+        columnData = options.columns[columnIndexToSort],
         $columnSizers = this.element.find('colgroup.macro-table-column-sizer col'),
         $columnHeader = this.$dynamicHeaderRow.find('th');
+
+      options.sortByColumn = columnData.field;
 
       if(typeof callback === 'function') {
         columnData.direction = columnData.direction || 1; //initializing, so always start with ascending order
