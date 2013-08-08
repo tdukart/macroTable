@@ -213,10 +213,30 @@ button:hover .icon--delete::after {
 
 .macro-table td,
 .macro-table th {
-  padding: 0 3px;
+  padding: 0 0 0 1em;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-align: left;
   border-bottom: 1px #ccc solid;
+}
+
+.macro-table .macro-table-summary-row .macro-table-justify-center,
+.macro-table td.macro-table-justify-center {
+  padding: 0;
+}
+.macro-table th.macro-table-justify-center,
+.macro-table td.macro-table-justify-center {
+  text-align: center;
+}
+
+.macro-table .macro-table-summary-row .macro-table-justify-right,
+.macro-table td.macro-table-justify-right {
+  padding: 0 1em 0 0;
+}
+
+.macro-table th.macro-table-justify-right,
+.macro-table td.macro-table-justify-right {
+  text-align: right;
 }
 
 .macro-table .macro-table-static td,
@@ -515,14 +535,9 @@ button:hover .icon--delete::after {
   border-width: 0;
 }
 
-.macro-table .macro-table-justify-center,
 .macro-table-static-column-content,
 .macro-table-static-header-row {
   text-align: center;
-}
-
-.macro-table .macro-table-justify-right {
-  text-align: right;
 }
 
 .macro-table-checkbox {

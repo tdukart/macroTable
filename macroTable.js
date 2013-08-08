@@ -2466,10 +2466,17 @@
           .html('<div class="macro-table-column-header-text">' + thisColumn.title + '</div>')
           .addClass(thisColumn.className);
 
+          if(thisColumn.align === 'center' || thisColumn.align === 'right') {
+            $headerColumn.addClass('macro-table-justify-'+thisColumn.align);
+          }
+
           if(typeof summaryRow === 'object') {
             $summaryColumn = $(document.createElement('th')).addClass('macro-table-summary-row-cell');
             if(typeof summaryRow[thisColumn.field] !== 'undefined') {
               $summaryColumn.html(summaryRow[thisColumn.field]);
+            }
+            if(thisColumn.align === 'center' || thisColumn.align === 'right') {
+              $summaryColumn.addClass('macro-table-justify-'+thisColumn.align);
             }
           }
 
