@@ -761,7 +761,7 @@
   function workerSortRow(columnData, $columnHeader, $columnSizers, callback) {
     var self = this,
       options = this.options,
-      sortedColumn = validateSortByColumn.call(this, options.sortByColumn) >= 0 ? options.sortByColumn : '',
+      sortedColumn = options.sortByColumn,
       $veil = $('div.macro-table-data-veil', this.element),
       columnSorter, sortWorker, action;
 
@@ -786,9 +786,10 @@
     sortWorker.onmessage = (function(e) {
       this.sortedRows[sortedColumn][''] = e.data;
 
+      this.renderRowDataSet = this.sortedRows[sortedColumn]['']; //callback may contain references to this.renderRowDataSet, so it needs to be set to pre-filter state
       this.renderRowDataSet = postSortFilter.call(this, e.data, action, callback); //potentially changes self.renderRowDataSet if there is a filter active!
 
-      if(typeof self.renderRowDataSet !== 'undefined') {
+      if(typeof this.renderRowDataSet !== 'undefined') {
         this._renderTableRows(this.renderRowDataSet);
 
         $veil.hide();
@@ -2396,7 +2397,6 @@
       var options = this.options,
         summaryRow = options.summaryRow,
         columns = options.columns,
-        sortedColumn = validateSortByColumn.call(this, options.sortByColumn) >= 0 ? options.sortByColumn : '',
 
         $macroTable = this.element,
         $leftScrollWrapperHeader = this.$dynamicHeader.find('div.macro-table-scroll-wrapper'),
@@ -2466,10 +2466,6 @@
 
           if(thisColumn.sortable !== false) {
             $headerColumn.addClass('macro-table-column-sortable');
-            if(thisColumn.field === sortedColumn) {
-              $colSizer.addClass('macro-table-highlight');
-              $headerColumn.addClass(thisColumn.direction < 0 ? 'macro-table-sort-descending' : 'macro-table-sort-ascending');
-            }
           }
 
           this.$dynamicHeaderRow.prepend($headerColumn);
@@ -2721,35 +2717,16 @@
      */
     _sortTable: function(columnToSort, callback) {
       var options = this.options,
-        $columnSizers = this.element.find('colgroup.macro-table-column-sizer col'),
-        $columnHeader = this.$dynamicHeaderRow.find('th'),
-        columnData, renderRowDataSet;
+        renderRowDataSet, columnIndex;
 
       //columnToSort is an array index
       if(parseInt(columnToSort, 10).length === columnToSort.length) {
 
         if(columnToSort >= 0) {
-
-          columnData = options.columns[columnToSort];
-          options.sortByColumn = columnData.field;
-
-          //when this function is called with columnToSort as a Number value, we know this is a user action
-          //rather than a re-rendering. therefore we know we should change sort order direction
-          columnData.direction = typeof columnData.direction === 'undefined' ? 1 : columnData.direction * -1;
-
-          $columnSizers = $columnSizers.removeClass('macro-table-highlight')
-          .filter(':nth-child('+(columnToSort + 1)+')');
-
-          $columnHeader = $columnHeader.removeClass('macro-table-sort-ascending macro-table-sort-descending')
-          .filter(':nth-child('+(columnToSort + 1)+')')
-          .addClass('macro-table-sort-loading');
-
-          workerSortRow.bind(this)(columnData, $columnHeader, $columnSizers, callback);
+          this._callSortWorkerWrapper(columnToSort, callback);
           return;
 
         } else {
-
-          options.sortByColumn = '';
           renderRowDataSet = this.sortedRows[''][''];
         }
 
@@ -2758,22 +2735,22 @@
 
         options.sortByColumn = columnToSort;
 
-        columnToSort = validateSortByColumn.call(this, columnToSort) >= 0 && typeof this.sortedRows[columnToSort] !== 'undefined' ? columnToSort : '';
+        if(typeof this.sortedRows[columnToSort] !== 'undefined') {
+          //already exists, don't need to sort
+          renderRowDataSet = this.sortedRows[columnToSort][''];
 
-        //TODO: what's the point of this for loop?
-        /*for(var columnIndex = options.columns.length - 1; columnIndex >= 0; columnIndex--) { //TODO: make this a helper function?
-          if(options.columns[columnIndex].field == columnToSort) {
+        } else {
+          for(columnIndex = options.columns.length; columnIndex--;) {
+            if(options.columns[columnIndex].field == columnToSort) {
 
-            columnData = options.columns[columnIndex];
-
-            //when this function is called with columnToSort as a String value, we know this is an internal
-            //re-rendering without intention of changing the sort order direction
-
-            break;
+              this._callSortWorkerWrapper(columnIndex, callback);
+              return;
+            }
           }
-        }*/
 
-        renderRowDataSet = this.sortedRows[columnToSort][''];
+          //error case, no column found matching the sorter string
+          renderRowDataSet = this.sortedRows[''][''];
+        }
       }
 
       renderRowDataSet = postSortFilter.call(this, renderRowDataSet, null, callback); //possibly trigger webworker
@@ -2786,6 +2763,32 @@
           callback.bind(this)();
         }
       }
+    },
+
+    /**
+     * Convenience wrapper to call the sort worker
+     * @param {Number}   columnIndexToSort The column index number for which to sort
+     * @param {Function} callback          Callback function that executes upon completion of the sort/filter
+     */
+    _callSortWorkerWrapper: function(columnIndexToSort, callback) {
+      var columnData = this.options.columns[columnIndexToSort],
+        $columnSizers = this.element.find('colgroup.macro-table-column-sizer col'),
+        $columnHeader = this.$dynamicHeaderRow.find('th');
+
+      if(typeof callback === 'function') {
+        columnData.direction = 1; //initializing, so always start with ascending order
+      } else {
+        columnData.direction = typeof columnData.direction === 'undefined' ? 1 : columnData.direction * -1;
+      }
+
+      $columnSizers = $columnSizers.removeClass('macro-table-highlight')
+      .filter(':nth-child('+(columnIndexToSort + 1)+')');
+
+      $columnHeader = $columnHeader.removeClass('macro-table-sort-ascending macro-table-sort-descending')
+      .filter(':nth-child('+(columnIndexToSort + 1)+')')
+      .addClass('macro-table-sort-loading');
+
+      workerSortRow.bind(this)(columnData, $columnHeader, $columnSizers, callback);
     },
 
     /**
