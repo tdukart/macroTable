@@ -2397,6 +2397,7 @@
       var options = this.options,
         summaryRow = options.summaryRow,
         columns = options.columns,
+        sortedColumn = validateSortByColumn.call(this, options.sortByColumn) >= 0 ? options.sortByColumn : '',
 
         $macroTable = this.element,
         $leftScrollWrapperHeader = this.$dynamicHeader.find('div.macro-table-scroll-wrapper'),
@@ -2466,6 +2467,10 @@
 
           if(thisColumn.sortable !== false) {
             $headerColumn.addClass('macro-table-column-sortable');
+            if(thisColumn.field === sortedColumn) {
+              $colSizer.addClass('macro-table-highlight');
+              $headerColumn.addClass(thisColumn.direction < 0 ? 'macro-table-sort-descending' : 'macro-table-sort-ascending');
+            }
           }
 
           this.$dynamicHeaderRow.prepend($headerColumn);
