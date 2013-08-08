@@ -2776,7 +2776,7 @@
         $columnHeader = this.$dynamicHeaderRow.find('th');
 
       if(typeof callback === 'function') {
-        columnData.direction = 1; //initializing, so always start with ascending order
+        columnData.direction = columnData.direction || 1; //initializing, so always start with ascending order
       } else {
         columnData.direction = typeof columnData.direction === 'undefined' ? 1 : columnData.direction * -1;
       }

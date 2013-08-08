@@ -148,7 +148,7 @@
             highlightMatches: true,
             scrollByColumn: false,
             removable: true,
-            sortByColumn: 'column1'
+            //sortByColumn: 'column1'
           })
 
           .on('macrotablerowselect', function(e, data) {
@@ -400,7 +400,8 @@
             tableData: publicFunctions.generateTableData(100, columnOptions, {
               //'all': 3
             //}, null, true)
-            })
+            }),
+            sortByColumn: 'column1'
           });
         });
 
@@ -439,7 +440,8 @@
               199: {
                 1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
               }
-            })
+            }),
+            sortByColumn: 'column1'
           });
         });
 
