@@ -2511,6 +2511,11 @@
           //amount of space clipped from the last column + width of the "current column" when last column is visible, which allows to scroll right one column further
           marginAdded = (totalColumnWidth - tableViewportWidth) + columnWidth;
         }
+
+        //if the viewport is too wide to allow scrolling to the currentColumn, reduce the currentColumn until we can scroll to it, until we hit 0
+        if(!!i && i === this.currentColumn && totalColumnWidth < tableViewportWidth) {
+          this.currentColumn--;
+        }
       }
 
       //size the scroll spacer to the theoretical max width of all the data + spacing margin
