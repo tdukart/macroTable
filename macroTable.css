@@ -515,10 +515,14 @@ button:hover .icon--delete::after {
   border-width: 0;
 }
 
-
+.macro-table .macro-table-justify-center,
 .macro-table-static-column-content,
 .macro-table-static-header-row {
   text-align: center;
+}
+
+.macro-table .macro-table-justify-right {
+  text-align: right;
 }
 
 .macro-table-checkbox {

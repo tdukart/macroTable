@@ -127,6 +127,7 @@
 
           for(i = 0; i < columnOptions.numColumns; i++) {
             columns.push({
+              align: typeof columnOptions.align !== 'undefined' ? columnOptions.align[i] : undefined,
               title: typeof columnOptions.columnTitles !== 'undefined' ? columnOptions.columnTitles[i] || 'Col '+i :  'Col '+i,
               field: typeof columnOptions.columnFields !== 'undefined' ? columnOptions.columnFields[i] || 'column'+i : 'column'+i,
               sortable: typeof columnOptions.columnsSortable !== 'undefined' ? columnOptions.columnsSortable[i] : undefined, //or undefined
@@ -178,6 +179,10 @@
           numColumns: 10,
           columnResizable: {
             1: false
+          },
+          align: {
+            3: 'center',
+            4: 'right',
           },
           columnsSortable: {
             0: false,

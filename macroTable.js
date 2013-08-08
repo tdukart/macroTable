@@ -607,7 +607,8 @@
     //build dynamically left-scrollable row
     for(i = 0, len = columns.length; i < len; i++) {
       var columnContent = row.data[columns[i].field],
-        $columnContentContainer = $(document.createElement('span')).addClass('macro-table-cell-content');
+        $columnContentContainer = $(document.createElement('span')).addClass('macro-table-cell-content'),
+        cellClass = [];
       columnContent = typeof columnContent === 'undefined' ? '' : columnContent;
 
       //we want to pass the wrapper of the cell content to the formatter function in case a user wants to mess with it
@@ -623,7 +624,23 @@
       columnContent = $(document.createElement('div')).append($columnContentContainer).html();
       $columnContentContainer = null;
 
-      dynamicRowColumns += '<td'+(columns[i].resizable !== false ? ' class="macro-table-column-resizable"' : '')+' data-column-index="'+i+'">'+columnContent+'</td>';
+      if(columns[i].resizable !== false) {
+        cellClass.push('macro-table-column-resizable');
+      }
+
+      //if the cell is justified right or center, add the appropriate class
+      switch(columns[i].align) {
+        case 'right':
+        case 'center':
+          cellClass.push('macro-table-justify-'+columns[i].align);
+          break;
+
+        case 'left':
+        default:
+          break;
+      }
+
+      dynamicRowColumns += '<td'+(cellClass.length ? ' class="'+cellClass.join(' ')+'"' : '')+' data-column-index="'+i+'">'+columnContent+'</td>';
     }
 
     //build static row
@@ -1057,6 +1074,8 @@
       /**
        * Array of objects whose order directly correlates to the display order of columns
        * Column object has the following fields:
+       * @field width {Number} the width in pixels the column should render at
+       * @field align {String} the text justification for the column cells. Options are 'left' (default), 'center' and 'right'
        * @field title {String} the name to display for the column
        * @field field {String} the field name in the data object that will correlate with this column
        * @field formatter {Function} (optional) formats the provided data to be displayed in a row's column
