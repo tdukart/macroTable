@@ -18,7 +18,7 @@
   height: 10px;
   margin-top: -5px;
   margin-left: -1px;
-  background: #dddddd;
+  background: #ddd;
   /* css3 */
   -webkit-transform: rotate3d(0, 0, 1, 45deg);
   -moz-transform: rotate3d(0, 0, 1, 45deg);
@@ -41,7 +41,7 @@
   left: 0;
   height: 20px;
   width: 2px;
-  background-color: #dddddd;
+  background-color: #ddd;
   margin-left: 2px;
 }
 
@@ -56,7 +56,7 @@
 /* firefox breaks "button .child:hover" */
 button:hover .icon--delete::before,
 button:hover .icon--delete::after {
-  background: #bbbbbb;
+  background: #bbb;
 }
 
 
@@ -131,15 +131,21 @@ button:hover .icon--delete::after {
 
 .macro-table-dynamic .macro-table-header-row th {
   padding: 0 1em;
+  font-weight: bold;
 }
 
-
 /* summary row in header */
+
+.macro-table .macro-table-header-row,
+.macro-table .macro-table-static-header-row,
+.macro-table .macro-table-static-summary-row,
+.macro-table .macro-table-summary-row {
+  background-color: rgba(0, 0, 0, .1);
+}
 
 .macro-table .macro-table-static-summary-row,
 .macro-table .macro-table-summary-row {
   display: none;
-  background-color: rgba(0, 0, 0, .1);
 }
 
 .macro-table.macro-table-display-summary-row .macro-table-static-summary-row,
