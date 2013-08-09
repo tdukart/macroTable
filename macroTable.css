@@ -184,6 +184,11 @@ button:hover .icon--delete::after {
   background: rgba(0, 0, 0, .2); /* gray */
 }
 
+.macro-table.macro-table-static-column-enabled tr.macro-table-selected-row.macro-table-highlight td {
+  border-left-color: #ddd; /* needs more contrast when selected */
+}
+
+
 /* focused, selected row */
 .macro-table.macro-table-static-column-enabled tr.macro-table-selected-row.macro-table-highlight.macro-table-row-focused {
   background: rgba(82, 146, 247, .3); /* blue */
@@ -192,6 +197,10 @@ button:hover .icon--delete::after {
 /* selected, striped row */
 .macro-table.macro-table-static-column-enabled tr.macro-table-row-stripe.macro-table-selected-row.macro-table-highlight {
   background: rgba(0, 0, 0, .3); /* gray */
+}
+
+.macro-table.macro-table-static-column-enabled tr.macro-table-row-stripe.macro-table-selected-row.macro-table-highlight td {
+  border-left-color: #ccc; /* use default border color, contrast is fine */
 }
 
 /* focused, selected, striped row */
