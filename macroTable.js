@@ -2868,13 +2868,17 @@
       var $macroTable = this.element,
         options = this.options,
         rowHeight = options.rowHeight,
-        headerHeight = $macroTable.find('div.macro-table-scroll-shim').outerHeight(),
         rowSelectorOffset = options.rowsSelectable === true ? this.rowSelectColumnWidth : 0,
-        middleDomRow;
+        headerHeight, middleDomRow;
 
       //initialized undefined dimensions with parent dimensions
       height = height || this._getFallbackHeightToResize();
       width = width || this._getFallbackWidthToResize();
+
+      //set table itself to correct height to prevent any accidental block sizing funniness
+      $macroTable.height(height).width(width); //do this first because Firefox incorrectly calculates header shim height
+
+      headerHeight = $macroTable.find('div.macro-table-scroll-shim').outerHeight();
       headerHeight = headerHeight > 0 ? headerHeight : rowHeight;
 
       //determine how many rows will fit in the provided height
@@ -2884,9 +2888,6 @@
         console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',this.displayRowWindow,'. rowBuffer value being changed to',this.displayRowWindow);
         options.rowBuffer = this.displayRowWindow;
       }
-
-      //set table itself to correct height to prevent any accidental block sizing funniness
-      $macroTable.height(height).width(width);
 
       //size the data container wrapper
       $macroTable.find('div.macro-table-data-container-wrapper')

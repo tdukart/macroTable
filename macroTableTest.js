@@ -12,7 +12,7 @@
     });
 
     strictEqual($('#table').outerWidth(), $('#qunit-fixture .wrapper').width(), 'Table width fits the width of the container');
-    strictEqual($('#table .macro-table-data-container-wrapper').outerHeight(), $('#table').macroTable('option', 'defaultTableHeightInRows') * $('#table').macroTable('option', 'rowHeight'), 'Table height fits the height of the container');
+    strictEqual($('#table .macro-table-data-container-wrapper').height(), $('#table').macroTable('option', 'defaultTableHeightInRows') * $('#table').macroTable('option', 'rowHeight'), 'Table height fits the height of the container');
   });
 
   test('Table Fits to Dimensioned Container', 2, function() {

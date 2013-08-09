@@ -8,6 +8,10 @@
     <link rel="stylesheet" type="text/css" href="http://code.jquery.com/qunit/qunit-1.11.0.css">
 
     <style>
+      html {
+        overflow: scroll; /* don't break the unit tests if the qunit markup grows enough to make the page scroll */
+      }
+
       body {
         margin: 20px;
       }
