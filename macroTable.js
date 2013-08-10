@@ -199,7 +199,7 @@
       doHighlightMatches = false,
 
       arraySomeFilter = function(value) {
-        return value.toLowerCase().indexOf(filter) !== -1;
+        return value.toString().toLowerCase().indexOf(filter) !== -1;
       },
       i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow, tableData, searchIndex, filter, escapedFilter, rowString;
 
