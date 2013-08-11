@@ -201,11 +201,13 @@
       arraySomeFilter = function(value) {
         return value.toString().toLowerCase().indexOf(filter) !== -1;
       },
-      i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow, tableData, searchIndex, filter, escapedFilter, rowString;
+      i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow, tableData, searchIndex, filter, filterKey, escapedFilter, rowString, columnOrder;
 
     if(typeof e.data !== 'undefined' && e.data.hasOwnProperty('searchIndex') && e.data.searchIndex instanceof Array &&
         e.data.hasOwnProperty('tableData') && e.data.tableData instanceof Array &&
-        e.data.hasOwnProperty('filter') && typeof e.data.filter === 'string') {
+        e.data.hasOwnProperty('columnOrder') && e.data.columnOrder instanceof Array &&
+        e.data.hasOwnProperty('filter') && typeof e.data.filter === 'string' &&
+        e.data.hasOwnProperty('filterKey') && typeof e.data.filterKey === 'string') {
 
       filter = escapedFilter = e.data.filter.toLowerCase(); //string to match against row data
       doHighlightMatches = e.data.highlightMatches;
@@ -214,7 +216,8 @@
       }
       searchIndex = e.data.searchIndex; //indexed table data ready for searching
       tableData = e.data.tableData; //table's pure row object data
-
+      filterKey = e.data.filterKey; //key to the array of data we should match from
+      columnOrder = e.data.columnOrder;
 
       //perform the filtering
       for(i = searchIndex.length - 1; i >= 0; i--) {
@@ -223,13 +226,28 @@
         //found a main/root row
         if(searchRow.index.toString().indexOf(',') === -1) {
           //do not insert the main row if it has already been backfilled by a matching sub row descendant
-          if(searchRow.values.some(arraySomeFilter) && (filteredRows.length === 0 || filteredRows[0].index.toString() !== searchRow.index.toString())) { //row matches filter
+          if(searchRow[filterKey].some(arraySomeFilter) && (filteredRows.length === 0 || filteredRows[0].index.toString() !== searchRow.index.toString())) { //row matches filter
 
             rowString = JSON.parse(JSON.stringify(searchRow.data));
 
             if(doHighlightMatches) {
-              Object.keys(rowString.data).forEach(function(key) {
-                rowString.data[key] = rowString.data[key].toString().replace(new RegExp('(' + escapedFilter + ')', 'gi'), '<span class="macro-table-filter-match">$1</span>');
+              Object.keys(rowString.data).forEach(function(field) {
+                var searchMatch = new RegExp('(' + escapedFilter + ')', 'gi'),
+                  rowData;
+
+                if(filterKey !== 'values') {
+                  //the goal is to notify the row builder that this formatted cell matched the search filter or not
+                  //if it did match, we want to render the cell with the text as built in this worker
+                  //if it didn't match, we want to allow the formatter function to take care of it, so HTML isn't stripped out
+                  rowData = searchRow[filterKey][columnOrder.indexOf(field)];
+                  if(rowData.match(searchMatch) === null) {
+                    rowData = rowString.data[field];
+                  }
+                } else {
+                  rowData = rowString.data[field];
+                }
+
+                rowString.data[field] = rowData.toString().replace(searchMatch, '<span class="macro-table-filter-match">$1</span>');
               });
             }
 
@@ -240,7 +258,7 @@
 
         //found a subrow
         } else {
-          if(searchIndex[i].values.some(arraySomeFilter)) { //row matches filter
+          if(searchIndex[i][filterKey].some(arraySomeFilter)) { //row matches filter
 
             //needs to be added to its parent's subRow array.
             //Its parent may not have matched, so it needs to be backfilled in that case
@@ -283,7 +301,7 @@
 
     //return processed row data
     postMessage(filteredRows);
-  };
+  }
 
 
   /**
@@ -560,6 +578,45 @@
   }
 
   /**
+   * Convenience function for rendering the readable data for a column cell
+   * @param  {Object}   column         Table column definition
+   * @param  {Object}   row            Table row object
+   * @param  {Boolean}  includeMarkup  Include with the returned result the wrapper and internal markup
+   * @return {String}                  The column text that will appear in the rendered cell
+   */
+  function getColumnContent(column, row, includeMarkup) {
+    var $columnContentContainer = $(document.createElement('span')).addClass('macro-table-cell-content'),
+      columnContent = row.data[column.field];
+    columnContent = typeof columnContent === 'undefined' ? '' : columnContent;
+
+    if(includeMarkup) {
+      //we want to pass the wrapper of the cell content to the formatter function in case a user wants to mess with it
+      if(typeof column.onCellClick === 'function') {
+        $columnContentContainer.addClass('macro-table-cell-clickable');
+      }
+    }
+
+    if(typeof column.formatter === 'function' &&
+        //always format if not searching by formatted result or if you are and this column value isn't a match
+        (!this.options.searchFormatted || columnContent.indexOf('macro-table-filter-match') === -1)) {
+      //need to have $columnContentContainer defined here because the formatter may blow up if it doesn't get it
+      columnContent = column.formatter(columnContent, row, $columnContentContainer);
+    }
+
+    $columnContentContainer.html(columnContent);
+
+    if(includeMarkup) {
+      columnContent = $(document.createElement('div')).append($columnContentContainer).html();
+    } else {
+      //remove any html markup to help with future searching on formatted text
+      columnContent = $columnContentContainer.text();
+    }
+
+    $columnContentContainer = null;
+    return columnContent;
+  }
+
+  /**
    * Build a table row containing a column for each field
    * Assumes the row object is not malformed (has "data" and "index" fields, etc.)
    * @param {Object} row A row of data to be rendered by field
@@ -606,23 +663,8 @@
 
     //build dynamically left-scrollable row
     for(i = 0, len = columns.length; i < len; i++) {
-      var columnContent = row.data[columns[i].field],
-        $columnContentContainer = $(document.createElement('span')).addClass('macro-table-cell-content'),
-        cellClass = [];
-      columnContent = typeof columnContent === 'undefined' ? '' : columnContent;
-
-      //we want to pass the wrapper of the cell content to the formatter function in case a user wants to mess with it
-      if(typeof columns[i].onCellClick === 'function') {
-        $columnContentContainer.addClass('macro-table-cell-clickable');
-      }
-      if(typeof columns[i].formatter === 'function') {
-        columnContent = columns[i].formatter(columnContent, row, $columnContentContainer);
-      }
-
-      //we need the markup from the $ object because we don't put together all the rows/cells until the end
-      $columnContentContainer.html(columnContent);
-      columnContent = $(document.createElement('div')).append($columnContentContainer).html();
-      $columnContentContainer = null;
+      var cellClass = [],
+        columnContent = getColumnContent.call(this, columns[i], row, true);
 
       if(columns[i].resizable !== false) {
         cellClass.push('macro-table-column-resizable');
@@ -862,7 +904,8 @@
   /**
    * Filter the renderRowDataSet data after it has been sorted
    * This function will also trigger the building of the searchIndex
-   * @param {Array} renderRowDataSet Original data set to be filtered and indexed
+   * @param {Array}   renderRowDataSet      Original data set to be filtered and indexed
+   * @param {String}  sortAction            Determine whether the data set needs to be ordered
    * @return {Array} The filtered renderRowDataSet array, should be set to this.renderRowDataSet
    */
   function postSortFilter(renderRowDataSet, sortAction, callback) {
@@ -873,13 +916,13 @@
       buildSearchIndex.call(this, renderRowDataSet);
     }
 
-    if(options.filterTerm !== '') {
-      renderRowDataSet = this.sortedRows[options.sortByColumn][options.filterTerm];
+    if(options.searchTerm !== '') {
+      renderRowDataSet = this.sortedRows[options.sortByColumn][options.searchTerm];
       if(typeof renderRowDataSet === 'undefined') {
         workerFilterTableData.bind(this)(callback);
         return;
       } else if(sortAction === 'order') {
-        renderRowDataSet = this.sortedRows[options.sortByColumn][options.filterTerm] = this.sortedRows[options.sortByColumn][options.filterTerm].reverse();
+        renderRowDataSet = this.sortedRows[options.sortByColumn][options.searchTerm] = this.sortedRows[options.sortByColumn][options.searchTerm].reverse();
       }
     }
 
@@ -898,21 +941,24 @@
    */
   function buildSearchIndex(tableData) {
     var columns = this.options.columns,
-      rowData, i, j, rowsLength, columnsLength;
+      rowData, formattedRowData, i, j, rowsLength, columnsLength;
 
     for(i = 0, rowsLength = tableData.length; i < rowsLength; i++) {
       rowData = [];
+      formattedRowData = [];
 
       for(j = 0, columnsLength = columns.length; j < columnsLength; j++) {
         if(typeof tableData[i].data !== 'undefined') {
           rowData.push(tableData[i].data[columns[j].field]);
+          formattedRowData.push(getColumnContent.call(this, columns[j], tableData[i], false));
         }
       }
 
       this.searchIndex.push({
         index: tableData[i].index,
         data: tableData[i],
-        values: rowData
+        values: rowData,
+        formatted: formattedRowData
       });
 
       if(typeof tableData[i].subRows !== 'undefined') {
@@ -936,7 +982,7 @@
     if(action === 'add') {
       options = this.options;
       this.searchIndex = [];
-      buildSearchIndex.call(this, this.sortedRows[options.sortByColumn][options.filterTerm]);
+      buildSearchIndex.call(this, this.sortedRows[options.sortByColumn][options.searchTerm]);
 
     } else {
 
@@ -975,7 +1021,7 @@
 
     filterWorker.onerror = (function(e) {
       filterWorker.terminate();
-      options.filterTerm = '';
+      options.searchTerm = '';
       this.renderRowDataSet = tableData;
 
       if(typeof callback === 'function') {
@@ -988,7 +1034,7 @@
     }).bind(this);
 
     filterWorker.onmessage = (function(e) {
-      this.renderRowDataSet = this.sortedRows[options.sortByColumn][options.filterTerm] = e.data;
+      this.renderRowDataSet = this.sortedRows[options.sortByColumn][options.searchTerm] = e.data;
 
       if(typeof callback === 'function') {
         callback.bind(this)();
@@ -1002,8 +1048,10 @@
     }).bind(this);
 
     filterWorker.postMessage({
-      filter: options.filterTerm,
+      filter: options.searchTerm,
+      filterKey: options.searchFormatted ? 'formatted' : 'values',
       searchIndex: this.searchIndex,
+      columnOrder: this.columnOrder,
       tableData: tableData,
       highlightMatches: options.highlightMatches
     });
@@ -1121,7 +1169,12 @@
        * String to filter rows by. If '', will show all rows
        * @type {String}
        */
-      filterTerm: '',
+      searchTerm: '',
+      /**
+       * When searching the tableData, use the rendered, formatted text rather than the internal values
+       * @type {Boolean}
+       */
+      searchFormatted: false,
       /**
        * If set to true, any matches found against a filter will be wrapped with an element with class ".macro-table-filter-match"
        * @type {Boolean}
@@ -1186,6 +1239,7 @@
 
         case 'columns':
           this.searchIndex = []; //reset search index
+          this._setColumnOrder();
           this._reRender();
           break;
 
@@ -1213,7 +1267,7 @@
           this.sortedRows = null; //let _init reinitialize this
           //options.sortByColumn = '';
           //TODO call function here that will reset the column arrows indicating the sort order
-        case 'filterTerm':
+        case 'searchTerm':
         case 'summaryRow':
           //TODO: make summaryRow not need to call init()
           this._init(); //causes currentColumn and currentRow to reset to 0
@@ -1436,8 +1490,8 @@
       this.sortWebWorkerUrl = createBlobUrl(SortWebWorker);
       this.filterWebWorkerUrl = createBlobUrl(FilterWebWorker);
 
-      console.info('Sort Web Worker URL', this.sortWebWorkerUrl);
-      console.info('Filter Web Worker URL', this.filterWebWorkerUrl);
+      //console.info('Sort Web Worker URL', this.sortWebWorkerUrl);
+      //console.info('Filter Web Worker URL', this.filterWebWorkerUrl);
 
       this.scrollBarWidth = navigator.userAgent.indexOf(' AppleWebKit/') !== -1 ? this.styledScrollbarWidth : this.unStyledScrollbarWidth;
 
@@ -2292,7 +2346,7 @@
       this.selectedRowCount = 0;
       this.expandedRowCount = 0;
 
-      //sortedRows' keys go by column, then filterTerm
+      //sortedRows' keys go by column, then searchTerm
       if(this.sortedRows === null) {
         this.sortedRows = {
           '': {
@@ -2300,6 +2354,8 @@
           }
         };
       }
+
+      this._setColumnOrder();
 
       if(isTableDataValid && options.tableData.length !== 0 && this.renderRowDataSet.length === 0) {
         this.renderRowDataSet = options.tableData;
@@ -2323,7 +2379,7 @@
           this.element.removeClass('macro-table-display-message');
         } else {
           this.element.addClass('macro-table-display-message');
-          if(options.filterTerm === '') {
+          if(options.searchTerm === '') {
             this.element.find('div.macro-table-message').text(options.emptyInitializedMessage);
           } else {
             this.element.find('div.macro-table-message').text(options.emptyFilteredMessage);
@@ -2334,6 +2390,19 @@
       this._setRemovableColumnState();
 
       console.log('replaceRowWindow',this.replaceRowWindow,'maxTotalDomRows',this.maxTotalDomRows,'maxTotalDomColumns',this.maxTotalDomColumns,'middleDomRow',~~(this.maxTotalDomRows / 2),'triggerUpDomRow',this.triggerUpDomRow,'triggerDownDomRow',this.triggerDownDomRow);
+    },
+
+    /**
+     * Simple conveniece function to create/update a convenience map of the column order by field name
+     */
+    _setColumnOrder: function() {
+      var columns = this.options.columns,
+        i;
+
+      this.columnOrder = [];
+      for(i = columns.length; i--;) {
+        this.columnOrder.unshift(columns[i].field);
+      }
     },
 
     /**
@@ -3085,16 +3154,21 @@
     },
 
     /**
-     * @method filterTable
+     * @method searchTable
      * @description filter the displayed table rows to those that match the search term
-     * @param filterTerm {String} the term for which to search table rows for a match. if undefined, all rows are matched
-     * @return {Array} an array of matching rows
+     * @param {String} searchTerm The term for which to search table rows for a match. if undefined, all rows are matched
+     * @return {Array}            An array of matching rows
      */
-    filterTable: function(filterTerm) {
-      filterTerm = typeof filterTerm !== 'string' ? '' : filterTerm;
-      this._setOption('filterTerm', filterTerm);
+    searchTable: function(searchTerm) {
+      searchTerm = typeof searchTerm !== 'string' ? '' : searchTerm;
+      this._setOption('searchFormatted', true);
+      this._setOption('searchTerm', searchTerm);
 
       return this.renderRowDataSet;
+    },
+
+    filterTable: function() {
+
     },
 
     /**

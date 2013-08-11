@@ -473,7 +473,7 @@
         $('#search-field').click(function(e) {
           e.preventDefault();
 
-          $('#table').macroTable('filterTable',$('#search-field-input').val(), true);
+          $('#table').macroTable('searchTable', $('#search-field-input').val());
         });
 
       });
