@@ -464,6 +464,7 @@
       numColumns: 6
     });
 
+    $(window).scrollTop(0);
     rowHeight = $('#table').macroTable('option', 'rowHeight');
     $dataContainerWraper = $('#table div.macro-table-data-container-wrapper');
     containerOffsetTop = $dataContainerWraper.offset().top;
@@ -499,6 +500,7 @@
       numColumns: 6
     });
 
+    $(window).scrollTop(0);
     $dataContainerWraper = $('#table div.macro-table-data-container-wrapper');
     containerOffsetTop = $dataContainerWraper.offset().top;
     $('#table').macroTable('scrollToRow', scroll1, true);
@@ -532,6 +534,7 @@
 
       $dataContainerWraper, containerOffsetTop;
 
+    $(window).scrollTop(0);
     publicFunctions.initializeTable(totalRows, columnOptions);
 
     //load the data with expanded subrows
@@ -586,6 +589,7 @@
       containerWidth = 300,
       tableData, $dataContainerWraper, $scrollContainer, rowHeight, containerOffsetTop;
 
+    $(window).scrollTop(0);
     $('#qunit-fixture .wrapper').width(containerWidth + 'px');
 
     tableData = publicFunctions.initializeTable(totalRows, columnOptions);
@@ -669,6 +673,7 @@
       containerWidth = 300,
       tableData, $dataContainerWraper, $scrollContainer, rowHeight, containerOffsetTop;
 
+    $(window).scrollTop(0);
     $('#qunit-fixture .wrapper').width(containerWidth + 'px');
 
     tableData = publicFunctions.initializeTable(totalRows, columnOptions, {
@@ -754,6 +759,7 @@
       containerWidth = 300,
       tableData, $dataContainerWraper;
 
+    $(window).scrollTop(0);
     $('#qunit-fixture .wrapper').width(containerWidth + 'px');
 
     tableData = publicFunctions.initializeTable(totalRows, columnOptions);
@@ -816,6 +822,7 @@
       containerWidth = 300,
       tableData, $dataContainerWraper;
 
+    $(window).scrollTop(0);
     $('#qunit-fixture .wrapper').width(containerWidth + 'px');
 
     tableData = publicFunctions.initializeTable(totalRows, columnOptions, {
