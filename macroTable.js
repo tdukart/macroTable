@@ -864,7 +864,7 @@
 
     sortWorker.onmessage = (function(e) {
       this.sortedRows[sortedColumn][''] = e.data;
-
+      this.searchIndex = []; //postSortFilter will recalculate searchIndex with new order (TODO: maybe make this part of the worker)
       this.renderRowDataSet = this.sortedRows[sortedColumn]['']; //callback may contain references to this.renderRowDataSet, so it needs to be set to pre-filter state
       this.renderRowDataSet = postSortFilter.call(this, e.data, action, callback); //potentially changes self.renderRowDataSet if there is a filter active!
 
@@ -1000,7 +1000,7 @@
    * @param  {Number} toIndex   Index into which to move the column value
    */
   function rebuildSearchIndexColumns(action, fromIndex, toIndex) {
-    var options, rowData, i;
+    var options, rowDataValues, rowDataFormatted, i;
 
     if(action === 'add') {
       options = this.options;
@@ -1009,16 +1009,19 @@
 
     } else {
 
-      for(i = this.searchIndex.length - 1; i >= 0; i--) {
-        rowData = this.searchIndex[i].values;
+      for(i = this.searchIndex.length; i--;) {
+        rowDataValues = this.searchIndex[i].values;
+        rowDataFormatted = this.searchIndex[i].formatted;
         switch(action) {
           case 'move':
             //move the fromIndex value to the toIndex index
-            Array.prototype.splice.apply(rowData, [toIndex, 0].concat(rowData.splice(fromIndex, 1)));
+            Array.prototype.splice.apply(rowDataValues, [toIndex, 0].concat(rowDataValues.splice(fromIndex, 1)));
+            Array.prototype.splice.apply(rowDataFormatted, [toIndex, 0].concat(rowDataFormatted.splice(fromIndex, 1)));
             break;
 
           case 'delete':
-            rowData.splice(fromIndex, 1);
+            rowData.splice(rowDataValues, 1);
+            rowData.splice(rowDataFormatted, 1);
             break;
 
           default:
