@@ -211,15 +211,17 @@
         e.data.hasOwnProperty('columnFilters') && e.data.columnFilters instanceof Array &&
         e.data.hasOwnProperty('searchText') && typeof e.data.searchText === 'string') {
 
+      columnOrder = e.data.columnOrder;
+      searchIndex = e.data.searchIndex; //indexed table data ready for searching
+      columnFilters = e.data.columnFilters;
+
       if(!(e.data.searchedRows instanceof Array)) { //already have the cached searchedRows, all we want to do is filter it
         searchText = escapedSearchText = e.data.searchText.toLowerCase(); //string to match against row data
         doHighlightMatches = e.data.highlightMatches;
         if(doHighlightMatches) {
           escapedSearchText = searchText.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
         }
-        searchIndex = e.data.searchIndex; //indexed table data ready for searching
         tableData = e.data.tableData; //table's pure row object data
-        columnOrder = e.data.columnOrder;
 
         //perform the filtering and search
         for(i = searchIndex.length; i--;) {
@@ -298,12 +300,11 @@
         searchedRows = e.data.searchedRows;
       }
 
-      columnFilters = e.data.columnFilters;
-
       //filter out rows that don't pass the column filter definitions
-      filteredRows = searchedRows.filter(function(row) {
+      filteredRows = searchedRows.filter(function(row, index) {
         for(var i = columnFilters.length; i--;) {
-          if(typeof columnFilters[i].field !== 'undefined' && row.data[columnFilters[i].field] !== columnFilters[i].value) {
+          if(typeof columnFilters[i].field !== 'undefined' &&
+              searchIndex[index].values[columnOrder.indexOf(columnFilters[i].field)] !== columnFilters[i].value) {
             return false;
           }
         }
