@@ -194,113 +194,132 @@
    * @param {Event} e Mesage event
    */
   function FilterWebWorker(e) {
-    var filteredRows = [],
+    var searchedRows = [],
+      filteredRows = [],
       lastSearchMatchHierarchy = [],
       doHighlightMatches = false,
 
-      arraySomeFilter = function(value) {
-        return value.toString().toLowerCase().indexOf(filter) !== -1;
+      arraySomeSearch = function(value) {
+        return value.toString().toLowerCase().indexOf(searchText) !== -1;
       },
-      i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow, tableData, searchIndex, filter, filterKey, escapedFilter, rowString, columnOrder;
+      i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow, tableData, searchIndex, searchText, escapedSearchText, rowString, columnOrder, columnFilters, filterOutRow;
 
-    if(typeof e.data !== 'undefined' && e.data.hasOwnProperty('searchIndex') && e.data.searchIndex instanceof Array &&
+    if(typeof e.data !== 'undefined' &&
+        e.data.hasOwnProperty('searchIndex') && e.data.searchIndex instanceof Array &&
         e.data.hasOwnProperty('tableData') && e.data.tableData instanceof Array &&
         e.data.hasOwnProperty('columnOrder') && e.data.columnOrder instanceof Array &&
-        e.data.hasOwnProperty('filter') && typeof e.data.filter === 'string' &&
-        e.data.hasOwnProperty('filterKey') && typeof e.data.filterKey === 'string') {
+        e.data.hasOwnProperty('columnFilters') && e.data.columnFilters instanceof Array &&
+        e.data.hasOwnProperty('searchText') && typeof e.data.searchText === 'string') {
 
-      filter = escapedFilter = e.data.filter.toLowerCase(); //string to match against row data
-      doHighlightMatches = e.data.highlightMatches;
-      if(doHighlightMatches) {
-        escapedFilter = filter.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-      }
-      searchIndex = e.data.searchIndex; //indexed table data ready for searching
-      tableData = e.data.tableData; //table's pure row object data
-      filterKey = e.data.filterKey; //key to the array of data we should match from
-      columnOrder = e.data.columnOrder;
+      if(!(e.data.searchedRows instanceof Array)) { //already have the cached searchedRows, all we want to do is filter it
+        searchText = escapedSearchText = e.data.searchText.toLowerCase(); //string to match against row data
+        doHighlightMatches = e.data.highlightMatches;
+        if(doHighlightMatches) {
+          escapedSearchText = searchText.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+        }
+        searchIndex = e.data.searchIndex; //indexed table data ready for searching
+        tableData = e.data.tableData; //table's pure row object data
+        columnOrder = e.data.columnOrder;
 
-      //perform the filtering
-      for(i = searchIndex.length - 1; i >= 0; i--) {
-        searchRow = searchIndex[i];
+        //perform the filtering and search
+        for(i = searchIndex.length; i--;) {
+          searchRow = searchIndex[i];
 
-        //found a main/root row
-        if(searchRow.index.toString().indexOf(',') === -1) {
-          //do not insert the main row if it has already been backfilled by a matching sub row descendant
-          if(searchRow[filterKey].some(arraySomeFilter) && (filteredRows.length === 0 || filteredRows[0].index.toString() !== searchRow.index.toString())) { //row matches filter
+          //found a main/root row
+          if(searchRow.index.toString().indexOf(',') === -1) {
+            //do not insert the main row if it has already been backfilled by a matching sub row descendant
+            if(searchRow.formatted.some(arraySomeSearch) && (searchedRows.length === 0 || searchedRows[0].index.toString() !== searchRow.index.toString())) { //row matches filter
 
-            rowString = JSON.parse(JSON.stringify(searchRow.data));
+              rowString = JSON.parse(JSON.stringify(searchRow.tableData));
 
-            if(doHighlightMatches) {
-              Object.keys(rowString.data).forEach(function(field) {
-                var searchMatch = new RegExp('(' + escapedFilter + ')', 'gi'),
-                  rowData;
+              if(doHighlightMatches) {
+                Object.keys(rowString.data).forEach(function(field) {
+                  var searchMatch = new RegExp('(' + escapedSearchText + ')', 'gi'),
+                    index = columnOrder.indexOf(field),
+                    replaceResult, rowData;
 
-                if(filterKey !== 'values') {
                   //the goal is to notify the row builder that this formatted cell matched the search filter or not
                   //if it did match, we want to render the cell with the text as built in this worker
                   //if it didn't match, we want to allow the formatter function to take care of it, so HTML isn't stripped out
-                  rowData = searchRow[filterKey][columnOrder.indexOf(field)];
-                  if(rowData.match(searchMatch) === null) {
-                    rowData = rowString.data[field];
+                  rowData = searchRow.formatted[index].toString();
+                  replaceResult = rowData.replace(searchMatch, '<span class="macro-table-filter-match">$1</span>');
+                  if(rowData === replaceResult) {
+                    replaceResult = searchRow.values[index]; //no match, default to internal value so the formatter can be applied durring rendering
                   }
-                } else {
-                  rowData = rowString.data[field];
-                }
 
-                rowString.data[field] = rowData.toString().replace(searchMatch, '<span class="macro-table-filter-match">$1</span>');
-              });
+                  rowString.data[field] = replaceResult;
+                });
+              }
+
+              searchedRows.unshift(rowString);
+              searchedRows[0].subRows = [];
+              lastSearchMatchHierarchy = [searchedRows[0]];
             }
 
-            filteredRows.unshift(rowString);
-            filteredRows[0].subRows = [];
-            lastSearchMatchHierarchy = [filteredRows[0]];
-          }
+          //found a subrow
+          } else {
+            if(searchIndex[i].formatted.some(arraySomeSearch)) { //row matches filter
 
-        //found a subrow
-        } else {
-          if(searchIndex[i][filterKey].some(arraySomeFilter)) { //row matches filter
+              //needs to be added to its parent's subRow array.
+              //Its parent may not have matched, so it needs to be backfilled in that case
+              indexHierachy = searchRow.index.toString().split(',');
+              indexCheck = '';
+              for(j = 0, len = indexHierachy.length; j < len; j++) {
+                indexCheck += (j !== 0 ? ',' : '') + indexHierachy[j];
+                if(typeof lastSearchMatchHierarchy[j] === 'undefined' || lastSearchMatchHierarchy[j].index != indexCheck) {
 
-            //needs to be added to its parent's subRow array.
-            //Its parent may not have matched, so it needs to be backfilled in that case
-            indexHierachy = searchRow.index.toString().split(',');
-            indexCheck = '';
-            for(j = 0, len = indexHierachy.length; j < len; j++) {
-              indexCheck += (j !== 0 ? ',' : '') + indexHierachy[j];
-              if(typeof lastSearchMatchHierarchy[j] === 'undefined' || lastSearchMatchHierarchy[j].index != indexCheck) {
-
-                //get the real table row object
-                //TODO: maybe make this a convenience function -- give comma-delimited index, return the row object
-                realTableRow = tableData[indexHierachy[0]];
-                for(k = 1; k <= j; k++) {
-                  if(typeof realTableRow.subRows !== 'undeinfed') {
-                    realTableRow = realTableRow.subRows[indexHierachy[k]];
-                  } else {
-                    throw 'The index used does not align with the tableData structure'+indexCheck;
+                  //get the real table row object
+                  //TODO: maybe make this a convenience function -- give comma-delimited index, return the row object
+                  realTableRow = tableData[indexHierachy[0]];
+                  for(k = 1; k <= j; k++) {
+                    if(typeof realTableRow.subRows !== 'undeinfed') {
+                      realTableRow = realTableRow.subRows[indexHierachy[k]];
+                    } else {
+                      throw 'The index used does not align with the tableData structure'+indexCheck;
+                    }
                   }
-                }
 
-                //backfill table row objects and/or add the subrow to its parent
-                if(j === 0) {
-                  filteredRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
-                  filteredRows[0].subRows = [];
-                  lastSearchMatchHierarchy[j] = filteredRows[0];
-                } else {
-                  filteredRows[0].subRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
-                  filteredRows[0].subRows[0].subRows = [];
-                  lastSearchMatchHierarchy[j] = filteredRows[0].subRows[0];
-                }
-              } //if
-            } //for
-          } //if
-        } //else
-      } //for
+                  //backfill table row objects and/or add the subrow to its parent
+                  if(j === 0) {
+                    searchedRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
+                    searchedRows[0].subRows = [];
+                    lastSearchMatchHierarchy[j] = searchedRows[0];
+                  } else {
+                    searchedRows[0].subRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
+                    searchedRows[0].subRows[0].subRows = [];
+                    lastSearchMatchHierarchy[j] = searchedRows[0].subRows[0];
+                  }
+                } //if
+              } //for
+            } //if
+          } //else
+        } //for
+      } else {
+        searchedRows = e.data.searchedRows;
+      }
+
+      columnFilters = e.data.columnFilters;
+
+      //filter out rows that don't pass the column filter definitions
+      filteredRows = searchedRows.filter(function(row) {
+        for(var i = columnFilters.length; i--;) {
+          if(typeof columnFilters[i].field !== 'undefined' && row.data[columnFilters[i].field] !== columnFilters[i].value) {
+            return false;
+          }
+        }
+        return true;
+      });
 
     } else {
       throw 'Filter worker unexpected datastructure';
     }
 
+
     //return processed row data
-    postMessage(filteredRows);
+    postMessage({
+      searchedRows: searchedRows,
+      filteredRows: filteredRows
+    });
   }
 
 
@@ -597,8 +616,8 @@
     }
 
     if(typeof column.formatter === 'function' &&
-        //always format if not searching by formatted result or if you are and this column value isn't a match
-        (!this.options.searchFormatted || columnContent.indexOf('macro-table-filter-match') === -1)) {
+        //always format if this column value isn't a match
+        columnContent.indexOf('macro-table-filter-match') === -1) {
       //need to have $columnContentContainer defined here because the formatter may blow up if it doesn't get it
       columnContent = column.formatter(columnContent, row, $columnContentContainer);
     }
@@ -916,7 +935,10 @@
       buildSearchIndex.call(this, renderRowDataSet);
     }
 
-    if(options.searchTerm !== '') {
+    if(options.columnFilters.length > 0) {
+      workerFilterTableData.bind(this)(callback);
+      return;
+    } else if(options.searchTerm !== '') {
       renderRowDataSet = this.sortedRows[options.sortByColumn][options.searchTerm];
       if(typeof renderRowDataSet === 'undefined') {
         workerFilterTableData.bind(this)(callback);
@@ -956,7 +978,7 @@
 
       this.searchIndex.push({
         index: tableData[i].index,
-        data: tableData[i],
+        tableData: tableData[i],
         values: rowData,
         formatted: formattedRowData
       });
@@ -1022,6 +1044,7 @@
     filterWorker.onerror = (function(e) {
       filterWorker.terminate();
       options.searchTerm = '';
+      options.columnFilters = [];
       this.renderRowDataSet = tableData;
 
       if(typeof callback === 'function') {
@@ -1034,7 +1057,8 @@
     }).bind(this);
 
     filterWorker.onmessage = (function(e) {
-      this.renderRowDataSet = this.sortedRows[options.sortByColumn][options.searchTerm] = e.data;
+      this.renderRowDataSet = e.data.filteredRows; //what we want to show
+      this.sortedRows[options.sortByColumn][options.searchTerm] = e.data.searchedRows; //what we want to cache for future filters
 
       if(typeof callback === 'function') {
         callback.bind(this)();
@@ -1048,11 +1072,12 @@
     }).bind(this);
 
     filterWorker.postMessage({
-      filter: options.searchTerm,
-      filterKey: options.searchFormatted ? 'formatted' : 'values',
+      searchText: options.searchTerm,
       searchIndex: this.searchIndex,
       columnOrder: this.columnOrder,
+      columnFilters: options.columnFilters,
       tableData: tableData,
+      searchedRows: this.sortedRows[options.sortByColumn][options.searchTerm], //if not undefined, only gets filtered
       highlightMatches: options.highlightMatches
     });
   }
@@ -1171,10 +1196,11 @@
        */
       searchTerm: '',
       /**
-       * When searching the tableData, use the rendered, formatted text rather than the internal values
-       * @type {Boolean}
+       * An array of objects containing a column "field" and a "filter" function
+       * When there are multiple argument column filters, they are AND'd as opposed to OR'd
+       * @type {Array}
        */
-      searchFormatted: false,
+      columnFilters: [],
       /**
        * If set to true, any matches found against a filter will be wrapped with an element with class ".macro-table-filter-match"
        * @type {Boolean}
@@ -1268,6 +1294,7 @@
           //options.sortByColumn = '';
           //TODO call function here that will reset the column arrows indicating the sort order
         case 'searchTerm':
+        case 'columnFilters':
         case 'summaryRow':
           //TODO: make summaryRow not need to call init()
           this._init(); //causes currentColumn and currentRow to reset to 0
@@ -3155,20 +3182,28 @@
 
     /**
      * @method searchTable
-     * @description filter the displayed table rows to those that match the search term
+     * @description search the displayed table rows to those that match the search term
      * @param {String} searchTerm The term for which to search table rows for a match. if undefined, all rows are matched
      * @return {Array}            An array of matching rows
      */
     searchTable: function(searchTerm) {
       searchTerm = typeof searchTerm !== 'string' ? '' : searchTerm;
-      this._setOption('searchFormatted', true);
       this._setOption('searchTerm', searchTerm);
 
       return this.renderRowDataSet;
     },
 
-    filterTable: function() {
+    /**
+     * Filter the rows to be displayed by column and a verifying function
+     * @param  {Array} columnFilters An array of objects containing a column "field" and a "filter" function
+     *                               When there are multiple argument column filters, they are AND'd as opposed to OR'd
+     * @return {Array}               An array of the filtered rows
+     */
+    filterTable: function(columnFilters) {
+      columnFilters = columnFilters instanceof Array ? columnFilters : [];
+      this._setOption('columnFilters', columnFilters);
 
+      return this.renderRowDataSet;
     },
 
     /**

@@ -47,6 +47,7 @@
       <li><button id="summary-row-disable">Disable Summary Row</button></li>
       <li><button id="summary-row-enable">Enable Summary Row</button></li>
       <li><button id="search-field">Search</button><input id="search-field-input" value="10" /></li>
+      <li><button id="filter-field">Filter</button><input id="filter-column-field-input" value="column0" /><input id="filter-value-field-input" value="0(0)" /></li>
     </ul>
 
     <div id="qunit"></div>
@@ -474,6 +475,15 @@
           e.preventDefault();
 
           $('#table').macroTable('searchTable', $('#search-field-input').val());
+        });
+
+        $('#filter-field').click(function(e) {
+          e.preventDefault();
+
+          $('#table').macroTable('filterTable', [{
+            field: $('#filter-column-field-input').val(),
+            value: $('#filter-value-field-input').val()
+          }]);
         });
 
       });
