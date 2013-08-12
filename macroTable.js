@@ -2536,13 +2536,13 @@
         $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
 
         isMarginSet = false,
-        marginAdded = this.scrollBarWidth + this._renderHeaderRowControls(),
-        tableViewportWidth = ~~(options.width - marginAdded),
+        additionalMargin = this.scrollBarWidth + this._renderHeaderRowControls(),
+        tableViewportWidth = ~~(options.width - additionalMargin),
         totalColumnWidth = 0,
         totalOverriddenColumnWidth = 0,
         totalOverriddenColumnWidthCount = 0,
         dynamicHeaderWidth = this.$dynamicHeader.width(), //gets ruined by hiding/emptying, so save now
-        defaultColumnWidth, i, previousColumnWidth;
+        defaultColumnWidth, i, marginAdded, previousColumnWidth;
 
       this.$headerWrapper.hide();
 
@@ -2621,7 +2621,7 @@
 
         totalColumnWidth += columnWidth;
         if(!isMarginSet && totalColumnWidth > tableViewportWidth) {
-          marginAdded += columnWidth + previousColumnWidth;
+          marginAdded = additionalMargin + columnWidth + previousColumnWidth;
           isMarginSet = true;
         }
 
