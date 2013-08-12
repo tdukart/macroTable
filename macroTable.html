@@ -139,7 +139,8 @@
               resizable: typeof columnOptions.columnResizable !== 'undefined' && typeof columnOptions.columnResizable[i] ? columnOptions.columnResizable[i] : true,
               formatter: typeof columnOptions.columnFormatters !== 'undefined' &&  typeof columnOptions.columnFormatters[i] === 'function' ? columnOptions.columnFormatters[i] : undefined,
               onCellClick: typeof columnOptions.columnOnCellClickers !== 'undefined' && typeof columnOptions.columnOnCellClickers[i] === 'function' ?
-                columnOptions.columnOnCellClickers[i] : undefined
+                columnOptions.columnOnCellClickers[i] : undefined,
+              textWrap: typeof columnOptions.textWrap !== 'undefined' && typeof columnOptions.textWrap[i] ? columnOptions.textWrap[i] : undefined,
             });
           }
 
@@ -223,6 +224,9 @@
           columnFields: {
             3: 'columnfour'
           },
+          textWrap: {
+            0: false
+          }
         };
 
         $('#initialize-table').click(function() {

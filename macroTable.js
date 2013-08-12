@@ -101,6 +101,10 @@
       return function(a, b) {
         var aValue = a.data[sortByField],
           bValue = b.data[sortByField];
+
+        aValue = typeof aValue === 'undefined' ? '' : aValue;
+        bValue = typeof bValue === 'undefined' ? '' : bValue;
+
         return aValue == bValue ? 0 : (aValue > bValue ? 1 : -1);
       };
     }
@@ -606,13 +610,18 @@
    */
   function getColumnContent(column, row, includeMarkup) {
     var $columnContentContainer = $(document.createElement('span')).addClass('macro-table-cell-content'),
-      columnContent = row.data[column.field];
+      columnContent = row.data[column.field],
+      columnContentText;
+
     columnContent = typeof columnContent === 'undefined' ? '' : columnContent;
 
     if(includeMarkup) {
       //we want to pass the wrapper of the cell content to the formatter function in case a user wants to mess with it
       if(typeof column.onCellClick === 'function') {
         $columnContentContainer.addClass('macro-table-cell-clickable');
+      }
+      if(column.textWrap === false) {
+        $columnContentContainer.addClass('macro-table-no-wrap');
       }
     }
 
@@ -625,11 +634,14 @@
 
     $columnContentContainer.html(columnContent);
 
+    columnContentText = $columnContentContainer.text();
+    $columnContentContainer.prop('title', columnContentText);
+
     if(includeMarkup) {
       columnContent = $(document.createElement('div')).append($columnContentContainer).html();
     } else {
       //remove any html markup to help with future searching on formatted text
-      columnContent = $columnContentContainer.text();
+      columnContent = columnContentText;
     }
 
     $columnContentContainer = null;

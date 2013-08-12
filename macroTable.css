@@ -759,6 +759,13 @@ col.macro-table-row-selector-column  {
 }
 
 
+/* cell-specific rules */
+
+.macro-table-cell-content.macro-table-no-wrap {
+  white-space: nowrap;
+}
+
+
 /* clickable table cells */
 
 .macro-table-cell-content.macro-table-cell-clickable {
