@@ -2535,13 +2535,14 @@
         $leftScrollWrapperBody = this.$dataContainer.find('div.macro-table-scroll-wrapper'),
         $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
 
-        tableViewportWidth = ~~(options.width - this.scrollBarWidth - this._renderHeaderRowControls()),
-        marginAdded = 0,
+        isMarginSet = false,
+        marginAdded = this.scrollBarWidth + this._renderHeaderRowControls(),
+        tableViewportWidth = ~~(options.width - marginAdded),
         totalColumnWidth = 0,
         totalOverriddenColumnWidth = 0,
         totalOverriddenColumnWidthCount = 0,
         dynamicHeaderWidth = this.$dynamicHeader.width(), //gets ruined by hiding/emptying, so save now
-        defaultColumnWidth, i;
+        defaultColumnWidth, i, previousColumnWidth;
 
       this.$headerWrapper.hide();
 
@@ -2619,15 +2620,17 @@
         }
 
         totalColumnWidth += columnWidth;
-        if(marginAdded === 0 && totalColumnWidth > tableViewportWidth) {
-          //amount of space clipped from the last column + width of the "current column" when last column is visible, which allows to scroll right one column further
-          marginAdded = (totalColumnWidth - tableViewportWidth) + columnWidth;
+        if(!isMarginSet && totalColumnWidth > tableViewportWidth) {
+          marginAdded += columnWidth + previousColumnWidth;
+          isMarginSet = true;
         }
 
         //if the viewport is too wide to allow scrolling to the currentColumn, reduce the currentColumn until we can scroll to it, until we hit 0
         if(!!i && i === this.currentColumn && totalColumnWidth < tableViewportWidth) {
           this.currentColumn--;
         }
+
+        previousColumnWidth = columnWidth;
       }
 
       //size the scroll spacer to the theoretical max width of all the data + spacing margin
@@ -2997,7 +3000,7 @@
       this.displayRowWindow = height < rowHeight ? options.defaultTableHeightInRows : ~~((height - headerHeight - this.scrollBarWidth) / rowHeight);
 
       if(options.rowBuffer < this.displayRowWindow) {
-        console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',this.displayRowWindow,'. rowBuffer value being changed to',this.displayRowWindow);
+        //console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',this.displayRowWindow,'. rowBuffer value being changed to',this.displayRowWindow);
         options.rowBuffer = this.displayRowWindow;
       }
 
