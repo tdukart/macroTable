@@ -613,7 +613,7 @@
       columnContent = row.data[column.field],
       columnContentText;
 
-    columnContent = typeof columnContent === 'undefined' ? '' : columnContent;
+    columnContent = typeof columnContent === 'undefined' || columnContent === null ? '' : columnContent;
 
     if(includeMarkup) {
       //we want to pass the wrapper of the cell content to the formatter function in case a user wants to mess with it
