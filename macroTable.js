@@ -2537,12 +2537,13 @@
 
         isMarginSet = false,
         additionalMargin = this.scrollBarWidth + this._renderHeaderRowControls(),
+        marginAdded = additionalMargin,
         tableViewportWidth = ~~(options.width - additionalMargin),
         totalColumnWidth = 0,
         totalOverriddenColumnWidth = 0,
         totalOverriddenColumnWidthCount = 0,
         dynamicHeaderWidth = this.$dynamicHeader.width(), //gets ruined by hiding/emptying, so save now
-        defaultColumnWidth, i, marginAdded, previousColumnWidth;
+        defaultColumnWidth, i, previousColumnWidth;
 
       this.$headerWrapper.hide();
 
@@ -2621,7 +2622,7 @@
 
         totalColumnWidth += columnWidth;
         if(!isMarginSet && totalColumnWidth > tableViewportWidth) {
-          marginAdded = additionalMargin + columnWidth + previousColumnWidth;
+          marginAdded += columnWidth + previousColumnWidth - (totalColumnWidth - tableViewportWidth);
           isMarginSet = true;
         }
 
@@ -2631,6 +2632,14 @@
         }
 
         previousColumnWidth = columnWidth;
+      }
+
+      //if no margin has been added yet and the last column is resizable, give it a scroll so it can resize easily
+      if(!isMarginSet && columns[columns.length - 1].resizable !== false) {
+        //don't add extra space if there is already more than enough
+        if(tableViewportWidth - totalColumnWidth <= previousColumnWidth) {
+          marginAdded += previousColumnWidth + tableViewportWidth - totalColumnWidth;
+        }
       }
 
       //size the scroll spacer to the theoretical max width of all the data + spacing margin
