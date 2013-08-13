@@ -1158,7 +1158,7 @@
 
     options: {
       height: undefined, //default height of table, if not defined will fit to parent
-      width: undefined, //defailt width of table, if not defined will fit to parent
+      width: undefined, //defailt width of table, if not defined will fit to parent (can be in pixels or percent, see proportionalColumnWidths)
       rowBuffer: 5, //the max number of DOM rows that can be above and below the displaying row window
       /**
        * Array of objects whose order directly correlates to the display order of columns
@@ -1174,7 +1174,17 @@
        *    if a function, the column will be sorted using .sort() with this function passed as a parameter. default true
        */
       columns: [],
+      /**
+       * Default column width in pixels that will be used in emergencies
+       * @type {Number}
+       */
       defaultColumnWidth: 100,
+      /**
+       * Size columns based on percents of the table's viewport rather than pixels
+       * This affects the "width" option
+       * @type {Boolean}
+       */
+      proportionalColumnWidths: false,
       /**
        * Controls horizontal scrolling style. By default will scroll by whole columns.
        * False will scroll by pixel, which will change exactly as the scroll bar moves.
@@ -2040,7 +2050,7 @@
 
             //calculate how much the column should be resized, and resize the columns
             $columnSizers.width(newWidth);
-            self.options.columns[columnNumber].width = newWidth; //set so subsequent table rerenders keeps the width
+            self.options.columns[columnNumber].width = options.proportionalColumnWidths === true ? (newWidth * 100) / (options.width - self.scrollBarWidth - self.$staticHeader.width()) : newWidth; //set so subsequent table rerenders keeps the width
 
             self._renderTableHeader();
             self._resizeTable(); //resize table dimensions in case the header changed height, etc.
@@ -2543,7 +2553,7 @@
         totalOverriddenColumnWidth = 0,
         totalOverriddenColumnWidthCount = 0,
         dynamicHeaderWidth = this.$dynamicHeader.width(), //gets ruined by hiding/emptying, so save now
-        defaultColumnWidth, i, previousColumnWidth;
+        defaultColumnWidth, i, previousColumnWidth, thisColumn, columnWidth;
 
       this.$headerWrapper.hide();
 
@@ -2560,7 +2570,12 @@
       //if the remaining space doesn't provide enough space for each unsized column to be at least options.defaultColumnWidth wide, default to options.defaultColumnWidth
       for(i = columns.length; i--;) {
         if(typeof columns[i].width !== 'undefined') {
-          totalOverriddenColumnWidth += parseInt(columns[i].width, 10);
+          if(options.proportionalColumnWidths === true) {
+            columnWidth = parseFloat(columns[i].width, 10); //percentages could be decimal...
+            totalOverriddenColumnWidth += (columnWidth / 100) * tableViewportWidth;
+          } else {
+            totalOverriddenColumnWidthCount++;
+          }
         } else {
           totalOverriddenColumnWidthCount++;
         }
@@ -2570,14 +2585,19 @@
 
       //build the column headers
       for(i = columns.length; i--;) {
-        var thisColumn = columns[i],
-          columnWidth = typeof thisColumn.width !== 'undefined' ? parseInt(thisColumn.width, 10) : ~~defaultColumnWidth;
+        thisColumn = columns[i];
+        if(typeof thisColumn.width !== 'undefined') {
+          columnWidth = parseFloat(thisColumn.width, 10); //percentages could be decimal...
+          columnWidth = options.proportionalColumnWidths === true ? (columnWidth / 100) * tableViewportWidth : ~~defaultColumnWidth;
+        } else {
+          columnWidth = ~~defaultColumnWidth;
+        }
 
         if(i < this.maxTotalDomColumns) { //TODO: right now, this is always true because we show all columns in the DOM, always
           var $summaryColumn,
             $colSizer = $(document.createElement('col')).width(columnWidth),
             $headerColumn = $(document.createElement('th'))
-          .html('<div class="macro-table-column-header-text">' + thisColumn.title + '</div>')
+          .html('<div class="macro-table-column-header-text" title="' + thisColumn.title + '">' + thisColumn.title + '</div>')
           .addClass(thisColumn.className);
 
           if(thisColumn.align === 'center' || thisColumn.align === 'right') {

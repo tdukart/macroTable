@@ -283,6 +283,8 @@ button:hover .icon--delete::after {
   position: relative;
   padding-right: .75em; /* width of the sortable arrow icons */
   margin-right: .25em; /* space between right edge of triangles and X icon/edge of column */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .macro-table-column-sortable .macro-table-column-header-text::before,
