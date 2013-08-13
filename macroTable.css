@@ -292,13 +292,16 @@ button:hover .icon--delete::after {
   font-size: .7em;
   color: #ccc;
   position: absolute;
+  height: 1em;
+  width: 1em;
+  text-align: center;
 }
 
 .macro-table-column-sortable .macro-table-column-header-text::before {
   content: '\25B4';
   right: 0;
   top: 50%;
-  margin-top: -.2em;
+  margin-top: .1em;
   -moz-transform: rotate(180deg);
   -webkit-transform: rotate(180deg);
   transform: rotate(180deg);
@@ -308,7 +311,7 @@ button:hover .icon--delete::after {
   content: '\25B4';
   right: 0;
   bottom: 50%;
-  margin-bottom: -.2em;
+  margin-bottom: .1em;
 }
 
 .macro-table-column-sortable.macro-table-sort-descending .macro-table-column-header-text::before,
