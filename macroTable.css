@@ -594,6 +594,10 @@ button:hover .icon--delete::after {
   outline: -webkit-focus-ring-color auto 5px;
 }
 
+.macro-table-checkbox:active + .macro-table-checkbox-label {
+  background-color: #ccc;
+}
+
 .macro-table-checkbox {
   position: absolute;
   left: -200%;
