@@ -18,7 +18,7 @@
   height: 10px;
   margin-top: -5px;
   margin-left: -1px;
-  background: #ddd;
+  background: #ccc;
   /* css3 */
   -webkit-transform: rotate3d(0, 0, 1, 45deg);
   -moz-transform: rotate3d(0, 0, 1, 45deg);
@@ -41,7 +41,7 @@
   left: 0;
   height: 20px;
   width: 2px;
-  background-color: #ddd;
+  background-color: #ccc;
   margin-left: 2px;
 }
 
@@ -56,7 +56,7 @@
 /* firefox breaks "button .child:hover" */
 button:hover .icon--delete::before,
 button:hover .icon--delete::after {
-  background: #bbb;
+  background: #999;
 }
 
 
@@ -281,8 +281,7 @@ button:hover .icon--delete::after {
 
 .macro-table-column-sortable .macro-table-column-header-text {
   position: relative;
-  padding-right: .75em; /* width of the sortable arrow icons */
-  margin-right: .25em; /* space between right edge of triangles and X icon/edge of column */
+  padding-right: 12px; /* make space for the sortable arrow icons */
   overflow: hidden;
   text-overflow: ellipsis;
 }
