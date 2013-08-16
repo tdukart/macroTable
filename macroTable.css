@@ -290,7 +290,7 @@ button:hover .icon--delete::after {
 .macro-table-column-sortable .macro-table-column-header-text::before,
 .macro-table-column-sortable .macro-table-column-header-text::after {
   font-size: .7em;
-  color: #ccc;
+  color: #bbb;
   position: absolute;
   height: 1em;
   width: 1em;
@@ -575,6 +575,60 @@ button:hover .icon--delete::after {
   display: block;
 }
 
+.macro-table-checkbox-label {
+  cursor: pointer;
+  display: inline-block;
+  width: 12px; /* can't use em's because it makes the SVG blurry on non-retina */
+  height: 12px; /* can't use em's because it makes the SVG blurry on non-retina */
+  background-repeat: no-repeat;
+  background-color: #efefef;
+  border: 1px solid #999;
+  border-radius: .2em;
+  vertical-align: middle;
+  position: relative; /* to appear on top of dotted hierarchy lines */
+  box-sizing: border-box;
+}
+
+.macro-table-checkbox:focus + .macro-table-checkbox-label {
+  outline: 1px dotted #666;
+  outline: -webkit-focus-ring-color auto 5px;
+}
+
+.macro-table-checkbox {
+  position: absolute;
+  left: -200%;
+}
+
+.macro-table-checkbox:disabled + .macro-table-checkbox-label {
+  opacity: .55;
+}
+
+/* checked */
+.macro-table-checkbox:checked + .macro-table-checkbox-label {
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(102, 102, 102)' d='M 366,139L 216,289L 146,219L 96,269L 216,389L 416,189 z'/></svg>");
+}
+
+/* right triangle (collapsed) */
+.macro-table-checkbox.macro-table-row-expander + .macro-table-row-expander-label {
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(102, 102, 102)' d='M 181.334,128L 394.666,256L 181.334,384 z'/></svg>");
+}
+
+/* down triangle (expanded) */
+.macro-table-checkbox.macro-table-row-expander:checked + .macro-table-row-expander-label {
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(102, 102, 102)' d='M 384,149.334L 256,362.666L 128,149.334 z'/></svg>");
+}
+
+/* plus */
+.macro-table-checkbox.macro-table-expand-toggle + .macro-table-expand-toggle-label {
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(102, 102, 102)' d='M 406,216L 296,216 L 296,106 c0-5.52-4.47-10-10-10l-60,0 c-5.53,0-10,4.48-10,10l0,110 L 106,216 c-5.53,0-10,4.48-10,10l0,60 c0,5.53, 4.47,10, 10,10l 110,0 l0,110 c0,5.53, 4.47,10, 10,10l 60,0 c 5.53,0, 10-4.47, 10-10L 296,296 l 110,0 c 5.53,0, 10-4.47, 10-10l0-60 C 416,220.48, 411.53,216, 406,216z'/></svg>");
+}
+
+/* minus, indeterminate state */
+.macro-table-checkbox:indeterminate + .macro-table-checkbox-label,
+.macro-table-checkbox.macro-table-expand-toggle:checked + .macro-table-expand-toggle-label {
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(102, 102, 102)' d='M 106,216l 300,0 c 5.53,0, 10,4.48, 10,10l0,60 c0,5.53-4.47,10-10,10L 106,296 c-5.52,0-10-4.47-10-10l0-60 C 96,220.48, 100.48,216, 106,216z'/></svg>");
+}
+
 
 /* expanded rows dotted line hierarchy */
 
@@ -586,98 +640,13 @@ button:hover .icon--delete::after {
   box-sizing: border-box;
 }
 
-.macro-table .macro-table-static-header .macro-table-expand-toggle-container {
-  height: auto;
-}
-
-.macro-table .macro-table-row-expander-cell {
-  position: relative;
-  overflow: hidden;
-}
-
-.macro-table-expand-toggle,
-.macro-table-row-expander {
+.macro-table-expand-toggle-container .macro-table-row-expander-label { /* needed because firefox doesn't support relative positioning in table cells */
   position: absolute;
-  left: -200%;
-}
-
-.macro-table-expand-toggle + .macro-table-expand-toggle-label,
-.macro-table-row-expander + .macro-table-row-expander-label {
-  -webkit-appearance: checkbox;
-  -moz-appearance: checkbox;
-  height: 13px;
-  width: 13px;
-  -moz-box-sizing: border-box;
-  box-sizing: border-box;
-  position: absolute;
-  top: 50%;
-  margin-top: -6.5px;
-  right: 50%;
-  margin-right: -6.5px;
-}
-
-.macro-table-expand-toggle:disabled + .macro-table-expand-toggle-label,
-.macro-table-row-expander:disabled + .macro-table-row-expander-label {
-  opacity: .55;
-}
-
-.macro-table-expand-toggle:disabled + .macro-table-expand-toggle-label::before,
-.macro-table-expand-toggle:disabled + .macro-table-expand-toggle-label::after,
-.macro-table-row-expander:disabled + .macro-table-row-expander-label::before,
-.macro-table-row-expander:disabled + .macro-table-row-expander-label::after {
-  opacity: .8;
-}
-
-.macro-table-expand-toggle + .macro-table-expand-toggle-label::before {
-  content: "";
-  width: 8px;
-  height: 2px;
-  background-color: #666;
-  position: absolute;
-  top: 50%;
-  right: 50%;
-  margin: -3px -4px 0 0;
-}
-
-.macro-table-expand-toggle + .macro-table-expand-toggle-label::after {
-  content: "";
-  width: 2px;
-  height: 8px;
-  background-color: #666;
-  position: absolute;
-  top: 50%;
-  right: 50%;
-  margin: -6px -1px 0 0;
-}
-
-.macro-table-expand-toggle:checked + .macro-table-expand-toggle-label::after {
-  width: 0;
-}
-
-.macro-table-row-expander + .macro-table-row-expander-label::before {
-  content: "";
-  width: 0;
-  height: 0;
-  border-top: 3px solid transparent;
-  border-bottom: 3px solid transparent;
-  border-left: 5px solid #666;
-  position: absolute;
-  top: 50%;
-  right: 50%;
-  margin: -5px -3px 0 0;
-}
-
-.macro-table-row-expander:checked + .macro-table-row-expander-label::before {
-  content: "";
-  width: 0;
-  height: 0;
-  border-left: 3px solid transparent;
-  border-right: 3px solid transparent;
-  border-top: 5px solid #666;
-  position: absolute;
-  top: 50%;
-  right: 50%;
-  margin: -4px -3px 0 0;
+  left: 0;
+  margin: auto;
+  right: 0;
+  top: 1px;
+  bottom: 0;
 }
 
 .macro-table-subrow-hierarchy-vertical-line-top-half .macro-table-expand-toggle-container::before {

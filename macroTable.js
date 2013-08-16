@@ -627,7 +627,7 @@
 
     if(typeof column.formatter === 'function' &&
         //always format if this column value isn't a match
-        columnContent.indexOf('macro-table-filter-match') === -1) {
+        (typeof columnContent !== 'string' || columnContent.indexOf('macro-table-filter-match') === -1)) {
       //need to have $columnContentContainer defined here because the formatter may blow up if it doesn't get it
       columnContent = column.formatter(columnContent, row, $columnContentContainer);
     }
@@ -719,7 +719,10 @@
 
     //build static row
     if(isRowsSelectable) {
-      staticRowColumns += '<td class="macro-table-row-control-cell"><input type="checkbox" class="macro-table-checkbox macro-table-row-selector" data-row-index="'+index+'" '+(row.selected === true ? 'checked="checked"' : '')+'/></td>';
+      staticRowColumns += '<td class="macro-table-row-control-cell">' +
+        '<input id="macro-table-select-'+index+'" type="checkbox" class="macro-table-checkbox macro-table-row-selector" data-row-index="'+index+'" '+(row.selected === true ? 'checked="checked"' : '')+'/>' +
+        '<label for="macro-table-select-'+index+'" class="macro-table-checkbox-label"></label>' +
+      '</td>';
     }
 
     //build row expand column
@@ -748,7 +751,7 @@
       '<div class="macro-table-expand-toggle-container">' +
         (rowHasChildren ?
             '<input type="checkbox" id="macro-table-row-expander-'+timestamp+'" class="macro-table-checkbox macro-table-row-expander" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
-            '<label for="macro-table-row-expander-'+timestamp+'" class="macro-table-row-expander-label"></label>' : ''
+            '<label for="macro-table-row-expander-'+timestamp+'" class="macro-table-checkbox-label macro-table-row-expander-label"></label>' : ''
         ) +
       '</div>'+
     '</td>';
@@ -2699,6 +2702,7 @@
      */
     _renderHeaderRowControls: function() {
       var options = this.options,
+        timestamp = +new Date(),
         summaryRow = options.summaryRow,
         $macroTable = this.element,
         $staticColumnSizers = $macroTable.find('colgroup.macro-table-static-column-sizer'); //one in header, one in body
@@ -2712,7 +2716,10 @@
         var $checboxColumnSizer = $(document.createElement('col')).addClass('macro-table-row-selector-column')
           .width(this.rowSelectColumnWidth),
           $checkboxColumn = $(document.createElement('th')).addClass('macro-table-row-control-cell')
-          .html('<input type="checkbox" class="macro-table-checkbox macro-table-select-toggle" />');
+          .html(
+            '<input id="macro-table-select-toggle-'+timestamp+'" type="checkbox" class="macro-table-checkbox macro-table-select-toggle" />'+
+            '<label for="macro-table-select-toggle-'+timestamp+'" class="macro-table-checkbox-label"></label>'
+          );
 
         $staticColumnSizers.append($checboxColumnSizer);
         this.$staticHeaderRow.append($checkboxColumn);
@@ -2729,15 +2736,12 @@
 
       //set up table for rows with expandable children
       if(this.rowsWithChildrenCount > 0) {
-        var timestamp = +new Date(),
-          $expanderColumnSizer = $(document.createElement('col')).addClass('macro-table-row-expander-column')
+        var $expanderColumnSizer = $(document.createElement('col')).addClass('macro-table-row-expander-column')
           .width(this.expanderColumnWidth),
           $expanderColumn = $(document.createElement('th')).addClass('macro-table-row-control-cell macro-table-row-expander-cell')
           .html(
-            '<div class="macro-table-expand-toggle-container">'+
-              '<input type="checkbox" id="macro-table-expand-toggle-'+timestamp+'" class="macro-table-checkbox macro-table-expand-toggle" />'+
-              '<label for="macro-table-expand-toggle-'+timestamp+'" class="macro-table-expand-toggle-label"></label>'+
-            '</div>'
+            '<input type="checkbox" id="macro-table-expand-toggle-'+timestamp+'" class="macro-table-checkbox macro-table-expand-toggle" />'+
+            '<label for="macro-table-expand-toggle-'+timestamp+'" class="macro-table-checkbox-label macro-table-expand-toggle-label"></label>'
           );
 
         $staticColumnSizers.append($expanderColumnSizer);
