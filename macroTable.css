@@ -785,68 +785,63 @@ col.macro-table-row-selector-column  {
 .macro-table-scroll-container::-webkit-scrollbar-button {
   border: 1px solid #ccc;
 }
+
 .macro-table-scroll-container::-webkit-scrollbar-button:horizontal {
-  border-width: 1px 0 1px 0;
+  width: 16px;
+  border-width: 1px 0 1px 1px;
+  background-position: 2px 0;
 }
+
 .macro-table-scroll-container::-webkit-scrollbar-button:vertical {
-  border-width: 0 1px 0 1px;
+  height: 16px;
+  border-width: 1px 1px 0 1px;
+  background-position: 0 2px;
 }
-/*
-.scroll-container-ltr::-webkit-scrollbar-button:vertical {
-  border-width: 0 0 0 1px;
+
+.macro-table-scroll-container::-webkit-scrollbar-button:horizontal,
+.macro-table-scroll-container::-webkit-scrollbar-button:vertical {
+  background-color: #fff;
+  background-repeat: no-repeat;
 }
-.scroll-container-rtl::-webkit-scrollbar-button:vertical {
-  border-width: 0 1px 0 0;
+
+.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:hover,
+.macro-table-scroll-container::-webkit-scrollbar-button:vertical:hover {
+  background-color: #ccc;
 }
-*/
+
+.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:active,
+.macro-table-scroll-container::-webkit-scrollbar-button:vertical:active {
+  background-color: #999;
+}
+
 .macro-table-scroll-container::-webkit-scrollbar-button:horizontal:increment {
-  padding-left: 1px;
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -152px -62px;
-  width: 15px;
-}
-.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:increment:hover {
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -279px -100px;
+  width: 15px; /* these buttons get pushed over from the square in the cornder to make it look 1px larger than it is, so compensate */
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(153, 153, 153)' d='M 181.334,128L 394.666,256L 181.334,384 z'/></svg>");
 }
 .macro-table-scroll-container::-webkit-scrollbar-button:horizontal:increment:active {
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -420px -79px;
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(255, 255, 255)' d='M 181.334,128L 394.666,256L 181.334,384 z'/></svg>");
 }
 
 .macro-table-scroll-container::-webkit-scrollbar-button:horizontal:decrement {
-  border-left: 1px solid #ccc;
-  border-right: 1px solid #ccc;
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -40px -16px;
-  width: 17px;
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(153, 153, 153)' d='M 362.666,384L 149.334,256L 362.666,128 z'/></svg>");
 }
-.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:hover {
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -168px -62px;
-}
-.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:active {
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -115px -98px;
+.macro-table-scroll-container::-webkit-scrollbar-button:horizontal:decrement:active {
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(255, 255, 255)' d='M 362.666,384L 149.334,256L 362.666,128 z'/></svg>");
 }
 
 .macro-table-scroll-container::-webkit-scrollbar-button:vertical:increment {
-  padding-top: 1px;
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -356px -15px;
-  height: 15px;
-}
-.macro-table-scroll-container::-webkit-scrollbar-button:vertical:increment:hover {
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -356px 0;
+  height: 15px; /* these buttons get pushed over from the square in the cornder to make it look 1px larger than it is, so compensate */
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(153, 153, 153)' d='M 384,149.334L 256,362.666L 128,149.334 z'/></svg>");
 }
 .macro-table-scroll-container::-webkit-scrollbar-button:vertical:increment:active {
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -40px 0;
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(255, 255, 255)' d='M 384,149.334L 256,362.666L 128,149.334 z'/></svg>");
 }
 
 .macro-table-scroll-container::-webkit-scrollbar-button:vertical:decrement {
-  border-top: 1px solid #ccc;
-  border-bottom: 1px solid #ccc;
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -265px -62px;
-  height: 17px;
-}
-.macro-table-scroll-container::-webkit-scrollbar-button:vertical:decrement:hover {
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -263px -123px;
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(153, 153, 153)' d='M 128,362.666L 256,149.334L 384,362.666 z'/></svg>");
 }
 .macro-table-scroll-container::-webkit-scrollbar-button:vertical:decrement:active {
-  background: no-repeat url("http://ssl.gstatic.com/docs/spreadsheets/waffle_sprite33.png") -29px 0;
+  background-image: url("data:image/svg+xml,<svg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'><path fill='rgb(255, 255, 255)' d='M 128,362.666L 256,149.334L 384,362.666 z'/></svg>");
 }
 
 .macro-table-scroll-container::-webkit-scrollbar-track:vertical {
