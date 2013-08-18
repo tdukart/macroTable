@@ -1843,7 +1843,7 @@
         } else if($checkbox.hasClass('macro-table-expand-toggle')) {
           $checkboxes = $staticTableBody.find('input.macro-table-row-expander');
 
-          //header checkbox selected or indeterminate (rows have already been individually selected)
+          //header checkbox selected or indeterminate (rows have already been individually expanded)
           if(this.indeterminate === true || $checkbox.is(':checked')) {
 
             isToggled = true;
