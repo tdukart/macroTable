@@ -166,12 +166,12 @@
             //user has defined custom column sorting function
             if(typeof columnSorter === 'function') {
 
-              sortTableData(tableData, columnSorter); //sortByField not needed, as it's assumed columnSorter knows what to do
+              sortTableData(tableData, columnSorter, direction); //sortByField not needed, as it's assumed columnSorter knows what to do
 
             //no user-defined column sorter, use default string order
             } else {
 
-              sortTableData(tableData, defaultSort(sortByField));
+              sortTableData(tableData, defaultSort(sortByField), direction);
 
             }
           }
@@ -922,6 +922,7 @@
         action: action,
         tableData: options.tableData,
         sortByField: sortedColumn,
+        direction: columnData.direction,
         columnSorter: columnSorter
       });
 
