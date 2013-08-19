@@ -96,38 +96,19 @@ button:hover .icon--delete::after {
 }
 
 .macro-table .macro-table-static-data-container .macro-table-static {
-  margin-right: 2px; /* allow space for box-shadow */
-  -moz-box-shadow: 0 0 2px 2px #ccc;
-  -webkit-box-shadow: 0 0 2px 2px #ccc;
-  box-shadow: 0 0 2px 2px #ccc;
-}
-
-.macro-table.macro-table-loading .macro-table-static-data-container .macro-table-static {
-  -moz-box-shadow: -2px 0 2px 2px #ccc;
-  -webkit-box-shadow: -2px 0 2px 2px #ccc;
-  box-shadow: -2px 0 2px 2px #ccc;
+  margin-right: 2px; /* allow space for box-shadow */ /* do we really need this now that there's no right box shadow? */
+  -moz-box-shadow: 0 2px 2px 0 #ccc;
+  -webkit-box-shadow: 0 2px 2px 0 #ccc;
+  box-shadow: 0 2px 2px 0 #ccc;
 }
 
 .macro-table .macro-table-header .macro-table-dynamic {
   margin-bottom: 2px; /* allow space for box-shadow */
-  -moz-box-shadow: 1px -1px 2px 2px #ccc;
-  -webkit-box-shadow: 1px -1px 2px 2px #ccc;
-  box-shadow: 1px -1px 2px 2px #ccc;
+  -moz-box-shadow: 3px 0px 2px 0px #ccc;
+  -webkit-box-shadow: 3px 0px 2px 0px #ccc;
+  box-shadow: 3px 0px 2px 0px #ccc;
 }
 
-.macro-table.macro-table-loading .macro-table-header .macro-table-dynamic {
-  -moz-box-shadow: 1px -2px 2px 2px #ccc;
-  -webkit-box-shadow: 1px -2px 2px 2px #ccc;
-  box-shadow: 1px -2px 2px 2px #ccc;
-}
-
-/*
-.macro-table .macro-table-header .macro-table-dynamic {
-  -moz-box-shadow: 0 0 2px 2px #ccc, inset 0 0 2px #ccc;
-  -webkit-box-shadow: 0 0 2px 2px #ccc, inset 0 0 2px #ccc;
-  box-shadow: 0 0 2px 2px #ccc, inset 0 0 2px #ccc;
-}
-*/
 
 .macro-table-dynamic .macro-table-header-row th {
   padding: 0 1em;
