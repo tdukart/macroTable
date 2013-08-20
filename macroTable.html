@@ -159,16 +159,16 @@
           })
 
           .on('macrotablerowselect', function(e, data) {
-            alert('select ' + data.selectedRows.length);
+            console.log('select ' + data.selectedRows.length);
           })
           .on('macrotablerowdeselect', function(e, data) {
-            alert('deselect ' + data.selectedRows.length);
+            console.log('deselect ' + data.selectedRows.length);
           })
           .on('macrotablecolumnreorder', function(e, data) {
-            alert('reorder '+data.columns.length);
+            console.log('reorder '+data.columns.length);
           })
           .on('macrotablecolumnresize', function(e, data) {
-            alert(data.columnIndex+', '+data.width);
+            console.log(data.columnIndex+', '+data.width);
           })
           .on('macrotablerowexpand', function(e, data) {
             console.log('Expanded rows:',data.expandedRows);
@@ -493,13 +493,14 @@
 
       });
     </script>
+    <script type="text/javascript" src="tests/tableRender.js"></script>
+    <script type="text/javascript" src="tests/rowRenderData.js"></script>
+    <script type="text/javascript" src="tests/rowRenderSummary.js"></script>
+    <script type="text/javascript" src="tests/rowSelect.js"></script>
+    <script type="text/javascript" src="tests/tableScrolling.js"></script>
     <script type="text/javascript" src="tests/columnFormat.js"></script>
-    <script type="text/javascript" src="tests/renderData.js"></script>
-    <script type="text/javascript" src="tests/renderSummary.js"></script>
-    <script type="text/javascript" src="tests/renderWidget.js"></script>
-    <script type="text/javascript" src="tests/scrolling.js"></script>
-    <script type="text/javascript" src="tests/searchAndFilter.js"></script>
-    <script type="text/javascript" src="tests/snapshot.js"></script>
-    <script type="text/javascript" src="tests/sorting.js"></script>
+    <script type="text/javascript" src="tests/tableSearchAndFilter.js"></script>
+    <script type="text/javascript" src="tests/tableSnapshot.js"></script>
+    <script type="text/javascript" src="tests/columnSorting.js"></script>
   </body>
 </html>

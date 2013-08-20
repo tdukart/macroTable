@@ -77,7 +77,7 @@
 
     deepEqual(viewableData, tableDataTheoreticalDisplay, 'Theoretical rendered display matches actual');
     strictEqual($('#table tr.macro-table-row:visible').length, totalRows * 2, 'Correct number of rows rendered');
-    ok($('#table tbody.macro-table-static-column-content tr.macro-table-row0 label.macro-table-row-expander-label').length > 0, 'Subrow expander present for row with subrow');
+    ok($('#table tbody.macro-table-static-column-content tr.macro-table-row-0 label.macro-table-row-expander-label').length > 0, 'Subrow expander present for row with subrow');
   });
 
   test('Render Subrow (Expand)', 2, function() {
@@ -102,8 +102,8 @@
     event = $.Event('click');
 
     //expand the subrow
-    $('#table tbody.macro-table-static-column-content tr.macro-table-row0 label.macro-table-row-expander-label').trigger('click'); //check the checkbox so we can trigger the delegate event listener
-    event.target = $('#table tbody.macro-table-static-column-content tr.macro-table-row0 input.macro-table-checkbox.macro-table-row-expander')[0]; //even though a user would click the label, the target must be the input
+    $('#table tbody.macro-table-static-column-content tr.macro-table-row-0 label.macro-table-row-expander-label').trigger('click'); //check the checkbox so we can trigger the delegate event listener
+    event.target = $('#table tbody.macro-table-static-column-content tr.macro-table-row-0 input.macro-table-checkbox.macro-table-row-expander')[0]; //even though a user would click the label, the target must be the input
     $('#table div.macro-table-static-data-container').trigger(event);
 
     $.extend(tableDataTheoreticalDisplay, {}, tableData[0].subRows[0].data);
@@ -132,8 +132,8 @@
     event = $.Event('click');
 
     //expand the subrow
-    $('#table tbody.macro-table-static-column-content tr.macro-table-row0 label.macro-table-row-expander-label').trigger('click'); //check the checkbox so we can trigger the delegate event listener
-    event.target = $('#table tbody.macro-table-static-column-content tr.macro-table-row0 input.macro-table-checkbox.macro-table-row-expander')[0]; //even though a user would click the label, the target must be the input
+    $('#table tbody.macro-table-static-column-content tr.macro-table-row-0 label.macro-table-row-expander-label').trigger('click'); //check the checkbox so we can trigger the delegate event listener
+    event.target = $('#table tbody.macro-table-static-column-content tr.macro-table-row-0 input.macro-table-checkbox.macro-table-row-expander')[0]; //even though a user would click the label, the target must be the input
     $('#table div.macro-table-static-data-container').trigger(event);
 
     strictEqual($('#table td.macro-table-row-expander-cell').not('.macro-table-subrow-hierarchy-line-right').length, totalRows, 'Correct number of rows rendered');
@@ -161,16 +161,16 @@
     event = $.Event('click');
 
     //expand the subrow
-    $('#table tbody.macro-table-static-column-content tr.macro-table-row0 label.macro-table-row-expander-label').trigger('click'); //check the checkbox so we can trigger the delegate event listener
-    event.target = $('#table tbody.macro-table-static-column-content tr.macro-table-row0 input.macro-table-checkbox.macro-table-row-expander')[0]; //even though a user would click the label, the target must be the input
+    $('#table tbody.macro-table-static-column-content tr.macro-table-row-0 label.macro-table-row-expander-label').trigger('click'); //check the checkbox so we can trigger the delegate event listener
+    event.target = $('#table tbody.macro-table-static-column-content tr.macro-table-row-0 input.macro-table-checkbox.macro-table-row-expander')[0]; //even though a user would click the label, the target must be the input
     $('#table div.macro-table-static-data-container').trigger(event);
 
     strictEqual($('#table tr.macro-table-row').length, (tableData.length * 2) + (tableData[0].subRows.length * 2), 'Correct number of rows and subrows rendered');
     ok($('#table td.macro-table-subrow-hierarchy-line-right').length !== 0, 'Subrow dotted hierarchy lines present');
 
-    $('#table tbody.macro-table-static-column-content tr.macro-table-row0 label.macro-table-row-expander-label').trigger('click'); //uncheck the checkbox so we can trigger the delegate event listener
+    $('#table tbody.macro-table-static-column-content tr.macro-table-row-0 label.macro-table-row-expander-label').trigger('click'); //uncheck the checkbox so we can trigger the delegate event listener
     event = $.Event('click');
-    event.target = $('#table tbody.macro-table-static-column-content tr.macro-table-row0 input.macro-table-checkbox.macro-table-row-expander')[0]; //even though a user would click the label, the target must be the input
+    event.target = $('#table tbody.macro-table-static-column-content tr.macro-table-row-0 input.macro-table-checkbox.macro-table-row-expander')[0]; //even though a user would click the label, the target must be the input
     $('#table div.macro-table-static-data-container').trigger(event);
 
     strictEqual($('#table tr.macro-table-row').length, (tableData.length * 2), 'Correct number of rows rendered');

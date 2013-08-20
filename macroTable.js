@@ -663,34 +663,30 @@
       staticRowColumns = '',
       $dynamicRow = $(document.createElement('tr')).attr('data-row-index', index),
       $staticRow = $(document.createElement('tr')).attr('data-row-index', index),
+      $rows = $dynamicRow.add($staticRow),
+      timestamp = +new Date(),
       rowData, indexHierachy, tableDataSubRows, i, len;
 
     //give even rows a stripe color
     if(index % 2 === 0) {
-      $dynamicRow.addClass('macro-table-row-stripe');
-      $staticRow.addClass('macro-table-row-stripe');
+      $rows.addClass('macro-table-row-stripe');
     }
 
-    $dynamicRow.addClass('macro-table-row macro-table-row-'+index);
-    $staticRow.addClass('macro-table-row macro-table-row'+index);
+    $rows.addClass('macro-table-row macro-table-row-'+index);
 
     //if selecting rows is enabled and this row has already been selected, style appropriately
     if(isRowsSelectable && row.selected) {
-      $dynamicRow.addClass('macro-table-highlight macro-table-selected-row');
-      $staticRow.addClass('macro-table-highlight  macro-table-selected-row');
+      $rows.addClass('macro-table-highlight  macro-table-selected-row');
     }
 
     if(row.focused) {
-      $dynamicRow.addClass('macro-table-row-focused');
-      $staticRow.addClass('macro-table-row-focused');
+      $rows.addClass('macro-table-row-focused');
     }
 
     if(row.expanded === true) {
-      $dynamicRow.addClass('macro-table-row-expanded');
-      $staticRow.addClass('macro-table-row-expanded');
+      $rows.addClass('macro-table-row-expanded');
     } else {
-      $dynamicRow.addClass('macro-table-row-collapsed');
-      $staticRow.addClass('macro-table-row-collapsed');
+      $rows.addClass('macro-table-row-collapsed');
     }
 
     //build dynamically left-scrollable row
@@ -720,8 +716,8 @@
     //build static row
     if(isRowsSelectable) {
       staticRowColumns += '<td class="macro-table-row-control-cell">' +
-        '<input id="macro-table-select-'+index+'" type="checkbox" class="macro-table-checkbox macro-table-row-selector" data-row-index="'+index+'" '+(row.selected === true ? 'checked="checked"' : '')+'/>' +
-        '<label for="macro-table-select-'+index+'" class="macro-table-checkbox-label"></label>' +
+        '<input id="macro-table-select-'+index+'-'+timestamp+'" type="checkbox" class="macro-table-checkbox macro-table-row-selector macro-table-select-'+index+'" data-row-index="'+index+'" '+(row.selected === true ? 'checked="checked"' : '')+'/>' +
+        '<label for="macro-table-select-'+index+'-'+timestamp+'" class="macro-table-checkbox-label"></label>' +
       '</td>';
     }
 
@@ -746,12 +742,11 @@
       }
     }
 
-    var timestamp = +new Date();
     staticRowColumns += '<td class="macro-table-row-control-cell macro-table-row-expander-cell' + (expanderCellClass !== '' ? ' '+expanderCellClass : '') + '">' +
       '<div class="macro-table-expand-toggle-container">' +
         (rowHasChildren ?
-            '<input type="checkbox" id="macro-table-row-expander-'+timestamp+'" class="macro-table-checkbox macro-table-row-expander" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
-            '<label for="macro-table-row-expander-'+timestamp+'" class="macro-table-checkbox-label macro-table-row-expander-label"></label>' : ''
+            '<input type="checkbox" id="macro-table-row-expander-'+index+'-'+timestamp+'" class="macro-table-checkbox macro-table-row-expander macro-table-row-expander-'+index+'" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
+            '<label for="macro-table-row-expander-'+index+'-'+timestamp+'" class="macro-table-checkbox-label macro-table-row-expander-label"></label>' : ''
         ) +
       '</div>'+
     '</td>';
@@ -2801,6 +2796,9 @@
           var rowData = rowGroupLen > 1 && j > 0 ? row.subRows[j - 1] : row;
 
           this.expandedTableData.push(rowData);
+          if(rowData.selected) {
+            this.selectedRowCount++;
+          }
 
           //render the rows as long as we haven't gone over the DOM row threshold
           if(i >= this.currentRow - this.currentDomRow && renderCount < this.maxTotalDomRows && j < maxRenderCount) {
