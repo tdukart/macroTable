@@ -141,6 +141,7 @@
               onCellClick: typeof columnOptions.columnOnCellClickers !== 'undefined' && typeof columnOptions.columnOnCellClickers[i] === 'function' ?
                 columnOptions.columnOnCellClickers[i] : undefined,
               textWrap: typeof columnOptions.textWrap !== 'undefined' && typeof columnOptions.textWrap[i] ? columnOptions.textWrap[i] : undefined,
+              direction: typeof columnOptions.direction !== 'undefined' && typeof columnOptions.direction[i] ? columnOptions.direction[i] : undefined,
             });
           }
 
@@ -155,7 +156,7 @@
             highlightMatches: true,
             //scrollByColumn: false,
             removable: true,
-            //sortByColumn: 'column1'
+            sortByColumn: tableOptions.sortByColumn
           })
 
           .on('macrotablerowselect', function(e, data) {
@@ -499,8 +500,8 @@
     <script type="text/javascript" src="tests/rowSelect.js"></script>
     <script type="text/javascript" src="tests/tableScrolling.js"></script>
     <script type="text/javascript" src="tests/columnFormat.js"></script>
+    <script type="text/javascript" src="tests/columnSorting.js"></script>
     <script type="text/javascript" src="tests/tableSearchAndFilter.js"></script>
     <script type="text/javascript" src="tests/tableSnapshot.js"></script>
-    <script type="text/javascript" src="tests/columnSorting.js"></script>
   </body>
 </html>

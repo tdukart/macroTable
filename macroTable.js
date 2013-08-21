@@ -127,7 +127,7 @@
       //recursively walk the subRows tree to account for any subRows of subRows, etc.
       for(var i = tableData.length - 1; i >= 0; i--) {
         if(typeof tableData[i].subRows !== 'undefined') {
-          sortTableData(tableData[i].subRows, columnSorter);
+          sortTableData(tableData[i].subRows, columnSorter, direction);
         }
       }
     }
@@ -658,7 +658,7 @@
     var columns = this.options.columns,
       isRowsSelectable = this.options.rowsSelectable === true,
       rowHasChildren = typeof row.subRows !== 'undefined' && row.subRows.length,
-      expanderCellClass = '',
+      expanderCellClass = [],
       dynamicRowColumns = '',
       staticRowColumns = '',
       $dynamicRow = $(document.createElement('tr')).attr('data-row-index', index),
@@ -723,26 +723,32 @@
 
     //build row expand column
     if(rowHasChildren && row.expanded) {
-      expanderCellClass = 'macro-table-subrow-hierarchy-vertical-line-bottom-half';
+      expanderCellClass.push('macro-table-subrow-hierarchy-vertical-line-bottom-half');
     } else if(row.index.toString().indexOf(',') !== -1) {
-      expanderCellClass = 'macro-table-subrow-hierarchy-line-right '; //TODO: macro-table-subrow-hierarchy-line-right should be conditionally removed for subRows of subRows
+      expanderCellClass.push('macro-table-subrow-hierarchy-line-right'); //TODO: macro-table-subrow-hierarchy-line-right should be conditionally removed for subRows of subRows
 
       indexHierachy = row.index.split(',');
-      tableDataSubRows = this.options.tableData;
 
-      //loop through entire subRows hierarchy and stop 1 level above "row"
-      for(i = 0, len = indexHierachy.length - 1; i < len; i++) {
-        tableDataSubRows = tableDataSubRows[indexHierachy[i]].subRows;
+      for(i = this.renderRowDataSet.length; i--;) {
+        if(this.renderRowDataSet[i].index == indexHierachy[0]) {
+          tableDataSubRows = this.renderRowDataSet[i].subRows;
+          break;
+        }
+      }
+      for(i = tableDataSubRows.length; i--;) {
+        if(tableDataSubRows[i].index == row.index) {
+          break; //we know i is the ordered position of the subrow
+        }
       }
 
-      if(tableDataSubRows.length - 1 > indexHierachy[i]) { //FIXME: this will break for a subRow of a subRow, because we're looking directly at tableData (which is only top level rows)
-        expanderCellClass += 'macro-table-subrow-hierarchy-vertical-line-full';
+      if(tableDataSubRows.length - 1 > i) { //FIXME: this will break for a subRow of a subRow, because we're looking directly at tableData (which is only top level rows)
+        expanderCellClass.push('macro-table-subrow-hierarchy-vertical-line-full');
       } else {
-        expanderCellClass += 'macro-table-subrow-hierarchy-vertical-line-top-half';
+        expanderCellClass.push('macro-table-subrow-hierarchy-vertical-line-top-half');
       }
     }
 
-    staticRowColumns += '<td class="macro-table-row-control-cell macro-table-row-expander-cell' + (expanderCellClass !== '' ? ' '+expanderCellClass : '') + '">' +
+    staticRowColumns += '<td class="macro-table-row-control-cell macro-table-row-expander-cell' + (expanderCellClass.length > 0 ? ' '+expanderCellClass.join(' ') : '') + '">' +
       '<div class="macro-table-expand-toggle-container">' +
         (rowHasChildren ?
             '<input type="checkbox" id="macro-table-row-expander-'+index+'-'+timestamp+'" class="macro-table-checkbox macro-table-row-expander macro-table-row-expander-'+index+'" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
