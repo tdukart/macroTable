@@ -153,7 +153,7 @@
             rowsSelectable: tableOptions.rowsSelectable,
             columns: columns,
             emptyInitializedMessage: tableOptions.emptyInitializedMessage,
-            highlightMatches: true,
+            highlightMatches: tableOptions.highlightMatches,
             //scrollByColumn: false,
             removable: true,
             sortByColumn: tableOptions.sortByColumn
@@ -364,7 +364,8 @@
           publicFunctions.initializeTable(0, columnOptions, {
           //publicFunctions.initializeTable(test, columnOptions, {
             summaryRow: true,
-            rowsSelectable: true
+            rowsSelectable: true,
+            highlightMatches: false
           }, false);
         })
 

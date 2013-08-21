@@ -8,6 +8,8 @@
     var totalRows = 3,
       tableData = publicFunctions.initializeTable(totalRows, {
         numColumns: 3
+      }, {
+        highlightMatches: true
       }),
       search1 = '0(0)',
       search2 = '(0)',
@@ -29,6 +31,38 @@
         strictEqual($rowContainer.find('.macro-table-filter-match').eq(0).text(), search2, 'First search term correctly highlighted');
         strictEqual($rowContainer.find('.macro-table-filter-match').eq(1).text(), search2, 'Second search term correctly highlighted');
         strictEqual($rowContainer.find('.macro-table-filter-match').eq(2).text(), search2, 'Third search term correctly highlighted');
+
+        $('#table').macroTable('searchTable', search3);
+
+        setTimeout(function() {
+          strictEqual($rowContainer.find('tr').length, 0, 'No rows rendered for lack of matching search term');
+          start();
+        }, 100);
+      }, 100);
+    }, 100);
+  });
+
+  asyncTest('Search Table without Highlight', 5, function() {
+    var totalRows = 3,
+      tableData = publicFunctions.initializeTable(totalRows, {
+        numColumns: 3
+      }),
+      search1 = '0(0)',
+      search2 = '(0)',
+      search3 = 'fake search',
+      $rowContainer = $('#table .macro-table-data-container');
+
+    $('#table').macroTable('searchTable', search1);
+
+    setTimeout(function() {
+      strictEqual($rowContainer.find('tr').length, 1, 'Correct number of rows rendered due to search term matching one of them');
+      strictEqual($rowContainer.find('.macro-table-filter-match').length, 0, 'No highlighting found, as intended');
+
+      $('#table').macroTable('searchTable', search2);
+
+      setTimeout(function() {
+        strictEqual($rowContainer.find('tr').length, totalRows, 'All rows rendered with search term matching all of them');
+        strictEqual($rowContainer.find('.macro-table-filter-match').length, 0, 'No highlighting found for any matching row, as intended');
 
         $('#table').macroTable('searchTable', search3);
 
