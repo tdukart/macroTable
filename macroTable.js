@@ -3127,24 +3127,17 @@
         options = this.options,
         columns = options.columns,
         tableData = this.renderRowDataSet,
-        rowTraverseCount = 0;
+        i, j, row;
 
-      for(var i = 0, len = tableData.length; i < len; i++) {
-        var row = tableData[i];
+      //loop the main and sub rows
+      for(i = this.expandedTableData.length; i--;) {
+        row = this.expandedTableData[i];
+        tableRows[i] = [];
 
-        //loop the main row and its sub rows if it has any
-        for(var j = 0, rowGroupLen = 1 + (typeof row.subRows !== 'undefined' ? row.subRows.length : 0); j < rowGroupLen; j++) {
-          var rowData = rowGroupLen > 1 && j > 0 ? row.subRows[j - 1] : row;
-
-          tableRows[rowTraverseCount] = [];
-
-          //loop through the ordered columns datastructure so that order can be maintained in this output
-          for(var k = 0, columnLen = columns.length; k < columnLen; k++) {
-            tableRows[rowTraverseCount][k] = {};
-            tableRows[rowTraverseCount][k][columns[k].field] = rowData.data[columns[k].field];
-          }
-
-          rowTraverseCount++;
+        //loop through the ordered columns datastructure so that order can be maintained in this output
+        for(j = columns.length; j--;) {
+          tableRows[i][j] = {};
+          tableRows[i][j][columns[j].field] = row.data[columns[j].field];
         }
       }
 
