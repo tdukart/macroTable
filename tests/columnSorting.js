@@ -1,5 +1,5 @@
 (function() {
-  var tableData, sortColumn1Descending;
+  var tableData, sortColumn0Descending;
 
   /**
    * Test Module for testing the ability to sort rows by column
@@ -120,13 +120,97 @@
     }
   });
 
-  asyncTest('Reinitialize Table with Descending Ordered Column (Sorted by Click)', 2, function() {
+  asyncTest('Columns Sortable for Empty Table (Click)', 2, function() {
+    publicFunctions.initializeTable(0, {
+      numColumns: 3
+    });
+
+    var $firstColumnHeader = $('#table th.macro-table-column-sortable').first(),
+      $headerTable = $('div.macro-table-header-wrapper div.macro-table-header table'),
+      event;
+
+    event = $.Event('click');
+    event.target = $firstColumnHeader[0];
+    $headerTable.trigger(event);
+
+    setTimeout(function() {
+      ok($firstColumnHeader.hasClass('macro-table-sort-ascending'), 'Column is ordered ascending');
+
+      event = $.Event('click');
+      event.target = $firstColumnHeader[0];
+      $headerTable.trigger(event);
+
+      setTimeout(function() {
+        ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
+        start();
+      }, 100);
+    }, 100);
+  });
+
+  asyncTest('Columns Sortable for Empty Table Ascending (Programmatically)', 1, function() {
+    publicFunctions.initializeTable(tableData, {
+      numColumns: 3
+    }, {
+      sortByColumn: 'column0'
+    });
+
+    var $firstColumnHeader = $('#table th.macro-table-column-sortable').first();
+
+    setTimeout(function() {
+      ok($firstColumnHeader.hasClass('macro-table-sort-ascending'), 'Column is ordered ascending');
+      start();
+    }, 100);
+  });
+
+  asyncTest('Columns Sortable for Empty Table Descending (Programmatically)', 1, function() {
+    publicFunctions.initializeTable(tableData, {
+      numColumns: 3,
+      direction: {
+        0: -1 //sort descending for column0
+      }
+    }, {
+      sortByColumn: 'column0'
+    });
+
+    var $firstColumnHeader = $('#table th.macro-table-column-sortable').first();
+
+    setTimeout(function() {
+      ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
+      start();
+    }, 100);
+  });
+
+  asyncTest('Initialize Table with Descending Ordered Column', 2, function() {
+    tableData[2].expanded = true;
+    publicFunctions.initializeTable(0, {
+      numColumns: 3,
+      direction: {
+        0: -1 //sort descending for column0
+      }
+    }, {
+      sortByColumn: 'column0'
+    });
+
+    var $firstColumnHeader = $('#table th.macro-table-column-sortable').first();
+
+    setTimeout(function() {
+      $('#table').macroTable('option', 'tableData', tableData);
+
+      setTimeout(function() {
+        ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
+        deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column descending');
+        start();
+      }, 100);
+    }, 100);
+  });
+
+  asyncTest('Reinitialize Table with Descending Ordered Column (Sorted by Click)', 4, function() {
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 3
     });
 
-    var $firstColumnHeader = $('#table th.macro-table-column-sortable'),
+    var $firstColumnHeader = $('#table th.macro-table-column-sortable').first(),
       $headerTable = $('div.macro-table-header-wrapper div.macro-table-header table'),
       event;
 
@@ -140,11 +224,13 @@
       $headerTable.trigger(event);
 
       setTimeout(function() {
+        ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
         deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column descending');
 
         $('#table').macroTable('option', 'tableData', tableData);
 
         setTimeout(function() {
+          ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is still ordered descending');
           deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column still descending after data reload');
           start();
         }, 100);
@@ -152,7 +238,7 @@
     }, 100);
   });
 
-  asyncTest('Reinitialize Table with Descending Ordered Column (Sorted Programmatically)', 2, function() {
+  asyncTest('Reinitialize Table with Descending Ordered Column (Sorted Programmatically)', 4, function() {
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 3,
@@ -163,12 +249,16 @@
       sortByColumn: 'column0'
     });
 
+    var $firstColumnHeader = $('#table th.macro-table-column-sortable').first();
+
     setTimeout(function() {
+      ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
       deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column descending');
 
       $('#table').macroTable('option', 'tableData', tableData);
 
       setTimeout(function() {
+        ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is still ordered descending');
         deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column still descending after data reload');
         start();
       }, 100);
