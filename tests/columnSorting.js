@@ -1,11 +1,13 @@
 (function() {
-  var tableData, sortColumn0Descending, sortColumn3DescendingNumeric, sortColumn3DescendingDictionary, sortColumn3DescendingCustom;
+  var iteration, tableData, sortColumn0Descending, sortColumn3DescendingNumeric, sortColumn3DescendingDictionary, sortColumn3DescendingCustom;
 
   /**
    * Test Module for testing the ability to sort rows by column
    */
   module('Column Sorting', {
     setup: function() {
+      iteration = 0;
+
       tableData = [{
         index: 0,
         data: {
@@ -383,6 +385,26 @@
   });
 
   asyncTest('Columns Sortable for Empty Table (Click)', 2, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      switch(iteration++) {
+        case 0:
+          ok($firstColumnHeader.hasClass('macro-table-sort-ascending'), 'Column is ordered ascending');
+
+          var event = $.Event('click');
+          event.target = $firstColumnHeader[0];
+          $headerTable.trigger(event);
+          break;
+
+        case 1:
+          ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
+          start();
+          break;
+
+        default:
+          break;
+      }
+    });
+
     publicFunctions.initializeTable(0, {
       numColumns: 3
     });
@@ -394,22 +416,14 @@
     event = $.Event('click');
     event.target = $firstColumnHeader[0];
     $headerTable.trigger(event);
-
-    setTimeout(function() {
-      ok($firstColumnHeader.hasClass('macro-table-sort-ascending'), 'Column is ordered ascending');
-
-      event = $.Event('click');
-      event.target = $firstColumnHeader[0];
-      $headerTable.trigger(event);
-
-      setTimeout(function() {
-        ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
-        start();
-      }, 100);
-    }, 100);
   });
 
   asyncTest('Columns Sortable for Empty Table Ascending (Programmatically)', 1, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      ok($firstColumnHeader.hasClass('macro-table-sort-ascending'), 'Column is ordered ascending');
+      start();
+    });
+
     publicFunctions.initializeTable(tableData, {
       numColumns: 3
     }, {
@@ -417,14 +431,14 @@
     });
 
     var $firstColumnHeader = $('#table th.macro-table-column-sortable').first();
-
-    setTimeout(function() {
-      ok($firstColumnHeader.hasClass('macro-table-sort-ascending'), 'Column is ordered ascending');
-      start();
-    }, 100);
   });
 
   asyncTest('Columns Sortable for Empty Table Descending (Programmatically)', 1, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
+      start();
+    });
+
     publicFunctions.initializeTable(tableData, {
       numColumns: 3,
       direction: {
@@ -435,14 +449,26 @@
     });
 
     var $firstColumnHeader = $('#table th.macro-table-column-sortable').first();
-
-    setTimeout(function() {
-      ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
-      start();
-    }, 100);
   });
 
   asyncTest('Initialize Table with Descending Ordered Column', 2, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      switch(iteration++) {
+        case 0:
+          $('#table').macroTable('option', 'tableData', tableData);
+          break;
+
+        case 1:
+          ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
+          deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column descending');
+          start();
+          break;
+
+        default:
+          break;
+      }
+    });
+
     tableData[2].expanded = true;
     publicFunctions.initializeTable(0, {
       numColumns: 3,
@@ -454,19 +480,35 @@
     });
 
     var $firstColumnHeader = $('#table th.macro-table-column-sortable').first();
-
-    setTimeout(function() {
-      $('#table').macroTable('option', 'tableData', tableData);
-
-      setTimeout(function() {
-        ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
-        deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column descending');
-        start();
-      }, 100);
-    }, 100);
   });
 
   asyncTest('Reinitialize Table with Descending Ordered Column (Sorted by Click)', 4, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      switch(iteration++) {
+        case 0:
+          var event = $.Event('click');
+          event.target = $firstColumnHeader[0];
+          $headerTable.trigger(event);
+          break;
+
+        case 1:
+          ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
+          deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column descending');
+
+          $('#table').macroTable('option', 'tableData', tableData);
+          break;
+
+        case 2:
+          ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is still ordered descending');
+          deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column still descending after data reload');
+          start();
+          break;
+
+        default:
+          break;
+      }
+    });
+
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 3
@@ -479,28 +521,29 @@
     event = $.Event('click');
     event.target = $firstColumnHeader[0];
     $headerTable.trigger(event);
-
-    setTimeout(function() {
-      event = $.Event('click');
-      event.target = $firstColumnHeader[0];
-      $headerTable.trigger(event);
-
-      setTimeout(function() {
-        ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
-        deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column descending');
-
-        $('#table').macroTable('option', 'tableData', tableData);
-
-        setTimeout(function() {
-          ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is still ordered descending');
-          deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column still descending after data reload');
-          start();
-        }, 100);
-      }, 100);
-    }, 100);
   });
 
   asyncTest('Reinitialize Table with Descending Ordered Column (Sorted Programmatically)', 4, function() {
+   $('#table').on('macrotablecolumnsort', function(e) {
+      switch(iteration++) {
+        case 0:
+          ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
+          deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column descending');
+
+          $('#table').macroTable('option', 'tableData', tableData);
+          break;
+
+        case 1:
+          ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is still ordered descending');
+          deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column still descending after data reload');
+          start();
+          break;
+
+        default:
+          break;
+      }
+    });
+
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 3,
@@ -512,22 +555,14 @@
     });
 
     var $firstColumnHeader = $('#table th.macro-table-column-sortable').first();
-
-    setTimeout(function() {
-      ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is ordered descending');
-      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column descending');
-
-      $('#table').macroTable('option', 'tableData', tableData);
-
-      setTimeout(function() {
-        ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is still ordered descending');
-        deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column still descending after data reload');
-        start();
-      }, 100);
-    }, 100);
   });
 
   asyncTest('Numeric Sorting', 1, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingNumeric, 'Table snapshot ordered fourth column descending numeric');
+      start();
+    });
+
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 4,
@@ -540,14 +575,14 @@
     }, {
       sortByColumn: 'column3'
     });
-
-    setTimeout(function() {
-      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingNumeric, 'Table snapshot ordered fourth column descending numeric');
-      start();
-    }, 100);
   });
 
   asyncTest('Dictionary Sorting ("dictionary")', 1, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
+      start();
+    });
+
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 4,
@@ -560,14 +595,14 @@
     }, {
       sortByColumn: 'column3'
     });
-
-    setTimeout(function() {
-      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
-      start();
-    }, 100);
   });
 
   asyncTest('Dictionary Sorting ("string")', 1, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
+      start();
+    });
+
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 4,
@@ -580,14 +615,14 @@
     }, {
       sortByColumn: 'column3'
     });
-
-    setTimeout(function() {
-      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
-      start();
-    }, 100);
   });
 
   asyncTest('Dictionary Sorting (true)', 1, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
+      start();
+    });
+
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 4,
@@ -600,14 +635,14 @@
     }, {
       sortByColumn: 'column3'
     });
-
-    setTimeout(function() {
-      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
-      start();
-    }, 100);
   });
 
   asyncTest('Dictionary Sorting (default)', 1, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
+      start();
+    });
+
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 4,
@@ -617,14 +652,14 @@
     }, {
       sortByColumn: 'column3'
     });
-
-    setTimeout(function() {
-      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
-      start();
-    }, 100);
   });
 
   asyncTest('Custom Sorting', 1, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingCustom, 'Table snapshot ordered fourth column descending numeric');
+      start();
+    });
+
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 4,
@@ -641,11 +676,6 @@
     }, {
       sortByColumn: 'column3'
     });
-
-    setTimeout(function() {
-      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingCustom, 'Table snapshot ordered fourth column descending numeric');
-      start();
-    }, 100);
   });
 
 /*

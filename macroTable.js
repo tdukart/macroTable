@@ -883,7 +883,7 @@
 
     sortWorker = new Worker(this.sortWebWorkerUrl);
 
-    sortWorker.onerror = (function(e) {
+    sortWorker.onerror = function(e) {
       sortWorker.terminate();
       this.renderRowDataSet = options.tableData;
 
@@ -895,9 +895,12 @@
 
       $veil.hide();
       console.error('Error sorting column.');
-    }).bind(this);
+      this._trigger('columnsort', null, {
+        error: true
+      });
+    }.bind(this);
 
-    sortWorker.onmessage = (function(e) {
+    sortWorker.onmessage = function(e) {
       this.sortedRows[sortedColumn][''] = e.data;
       this.searchIndex = []; //postSortFilter will recalculate searchIndex with new order (TODO: maybe make this part of the worker)
       this.renderRowDataSet = this.sortedRows[sortedColumn]['']; //callback may contain references to this.renderRowDataSet, so it needs to be set to pre-filter state
@@ -916,7 +919,8 @@
 
       sortWorker.terminate();
       //console.log('sorted data',e.data);
-    }).bind(this);
+      this._trigger('columnsort', null, columnData);
+    }.bind(this);
 
     if(typeof this.sortedRows[sortedColumn] === 'undefined') {
       this.sortedRows[sortedColumn] = {};
@@ -1076,13 +1080,15 @@
     var options = this.options,
       tableData = options.tableData,
       $veil = $('div.macro-table-data-veil', this.element),
+      isFiltering = options.columnFilters.length > 0,
+      isSearching = options.searchTerm !== '',
       filterWorker;
 
     $veil.show(); //probably already shown from workerSortRow
 
-    filterWorker = new Worker(this.filterWebWorkerUrl),
+    filterWorker = new Worker(this.filterWebWorkerUrl);
 
-    filterWorker.onerror = (function(e) {
+    filterWorker.onerror = function(e) {
       filterWorker.terminate();
       options.searchTerm = '';
       options.columnFilters = [];
@@ -1095,9 +1101,20 @@
       this._renderTableRows(this.renderRowDataSet);
       $veil.hide();
       console.error('Error filtering rows.');
-    }).bind(this);
 
-    filterWorker.onmessage = (function(e) {
+      if(isFiltering) {
+        this._trigger('filter', null, {
+          error: true
+        });
+      }
+      if(isSearching) {
+        this._trigger('search', null, {
+          error: true
+        });
+      }
+    }.bind(this);
+
+    filterWorker.onmessage = function(e) {
       this.renderRowDataSet = e.data.filteredRows; //what we want to show
       this.sortedRows[options.sortByColumn][options.searchTerm] = e.data.searchedRows; //what we want to cache for future filters
 
@@ -1110,7 +1127,18 @@
       $veil.hide();
 
       filterWorker.terminate();
-    }).bind(this);
+
+      if(isFiltering) {
+        this._trigger('filter', null, {
+          columnFilters: options.columnFilters
+        });
+      }
+      if(isSearching) {
+        this._trigger('search', null, {
+          searchTerm: options.searchTerm
+        });
+      }
+    }.bind(this);
 
     filterWorker.postMessage({
       searchText: options.searchTerm,
@@ -1127,6 +1155,27 @@
   $.widget('n.macroTable', {
 
     /** Subscribable events */
+
+    /**
+     * Callback run on completion of a table filter
+     * called with the array of filters applied
+     * could be used for storing users preferences, etc.
+     */
+    //filter
+
+    /**
+     * Callback run on completion of a table search
+     * called with the search term used
+     * could be used for storing users preferences, etc.
+     */
+    //search
+
+    /**
+     * Callback run on completion of a column sort
+     * called with the newly ordered column key and the direction
+     * could be used for storing users preferences, etc.
+     */
+    //columnsort
 
     /**
      * Callback run on reordering columns
