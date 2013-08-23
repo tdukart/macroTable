@@ -1394,8 +1394,27 @@
           this.sortedRows = null; //let _init reinitialize this
           //options.sortByColumn = '';
           //TODO call function here that will reset the column arrows indicating the sort order
+          this._init(); //causes currentColumn and currentRow to reset to 0
+          break;
+
         case 'searchTerm':
+          this._init(); //causes currentColumn and currentRow to reset to 0
+          break;
+
         case 'columnFilters':
+          value = value instanceof Array ? value : [];
+          this._super(key, value);
+
+          this._init(); //causes currentColumn and currentRow to reset to 0
+
+          //async filtering won't actually take place if there are no filters, so trigger the event here
+          if(value.length === 0) {
+            this._trigger('filter', null, {
+              columnFilters: value
+            });
+          }
+          break;
+
         case 'summaryRow':
           //TODO: make summaryRow not need to call init()
           this._init(); //causes currentColumn and currentRow to reset to 0
@@ -3320,9 +3339,7 @@
      * @return {Array}               An array of the filtered rows
      */
     filterTable: function(columnFilters) {
-      columnFilters = columnFilters instanceof Array ? columnFilters : [];
       this._setOption('columnFilters', columnFilters);
-
       return this.renderRowDataSet;
     },
 
