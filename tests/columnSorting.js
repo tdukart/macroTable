@@ -658,11 +658,5 @@
     }, 1000);
   });
 
-  test('sort by column', 1, function() {
-    var event = $.Event('mousedown');
-    event.which = 1;
-    $(document).trigger(event);
-  });
-
 */
 })();
