@@ -1,5 +1,5 @@
 (function() {
-  var tableData, sortColumn0Descending;
+  var tableData, sortColumn0Descending, sortColumn3DescendingNumeric, sortColumn3DescendingDictionary, sortColumn3DescendingCustom;
 
   /**
    * Test Module for testing the ability to sort rows by column
@@ -11,42 +11,48 @@
         data: {
           column0: '1',
           column1: 'c',
-          column2: 'B'
+          column2: 'B',
+          column3: '111'
         }
       }, {
         index: 1,
         data: {
           column0: '2',
           column1: 'b',
-          column2: 'A'
+          column2: 'A',
+          column3: '2'
         }
       }, {
         index: 2,
         data: {
           column0: '3',
           column1: 'a',
-          column2: 'C'
+          column2: 'C',
+          column3: '33'
         },
         subRows: [{
           index: '2,0',
           data: {
             column0: '1',
             column1: 'c',
-            column2: 'B'
+            column2: 'B',
+            column3: '11'
           }
         }, {
           index: '2,1',
           data: {
             column0: '2',
             column1: 'b',
-            column2: 'A'
+            column2: 'A',
+            column3: '222'
           }
         }, {
           index: '2,2',
           data: {
             column0: '3',
             column1: 'a',
-            column2: 'C'
+            column2: 'C',
+            column3: '3'
           }
         }]
       }];
@@ -115,6 +121,262 @@
         },
         {
           "column2": "B"
+        }
+      ]];
+
+      sortColumn3DescendingNumeric = [[
+        {
+          "column0": "1"
+        },
+        {
+          "column1": "c"
+        },
+        {
+          "column2": "B"
+        },
+        {
+          "column3": "111"
+        }
+      ],
+      [
+        {
+          "column0": "3"
+        },
+        {
+          "column1": "a"
+        },
+        {
+          "column2": "C"
+        },
+        {
+          "column3": "33"
+        }
+      ],
+      [
+        {
+          "column0": "2"
+        },
+        {
+          "column1": "b"
+        },
+        {
+          "column2": "A"
+        },
+        {
+          "column3": "222"
+        }
+      ],
+      [
+        {
+          "column0": "1"
+        },
+        {
+          "column1": "c"
+        },
+        {
+          "column2": "B"
+        },
+        {
+          "column3": "11"
+        }
+      ],
+      [
+        {
+          "column0": "3"
+        },
+        {
+          "column1": "a"
+        },
+        {
+          "column2": "C"
+        },
+        {
+          "column3": "3"
+        }
+      ],
+      [
+        {
+          "column0": "2"
+        },
+        {
+          "column1": "b"
+        },
+        {
+          "column2": "A"
+        },
+        {
+          "column3": "2"
+        }
+      ]];
+
+      sortColumn3DescendingDictionary = [[
+        {
+          "column0": "3"
+        },
+        {
+          "column1": "a"
+        },
+        {
+          "column2": "C"
+        },
+        {
+          "column3": "33"
+        }
+      ],
+      [
+        {
+          "column0": "3"
+        },
+        {
+          "column1": "a"
+        },
+        {
+          "column2": "C"
+        },
+        {
+          "column3": "3"
+        }
+      ],
+      [
+        {
+          "column0": "2"
+        },
+        {
+          "column1": "b"
+        },
+        {
+          "column2": "A"
+        },
+        {
+          "column3": "222"
+        }
+      ],
+      [
+        {
+          "column0": "1"
+        },
+        {
+          "column1": "c"
+        },
+        {
+          "column2": "B"
+        },
+        {
+          "column3": "11"
+        }
+      ],
+      [
+        {
+          "column0": "2"
+        },
+        {
+          "column1": "b"
+        },
+        {
+          "column2": "A"
+        },
+        {
+          "column3": "2"
+        }
+      ],
+      [
+        {
+          "column0": "1"
+        },
+        {
+          "column1": "c"
+        },
+        {
+          "column2": "B"
+        },
+        {
+          "column3": "111"
+        }
+      ]];
+
+      sortColumn3DescendingCustom = [
+      [
+        {
+          "column0": "1"
+        },
+        {
+          "column1": "c"
+        },
+        {
+          "column2": "B"
+        },
+        {
+          "column3": "111"
+        }
+      ],
+      [
+        {
+          "column0": "3"
+        },
+        {
+          "column1": "a"
+        },
+        {
+          "column2": "C"
+        },
+        {
+          "column3": "33"
+        }
+      ],
+      [
+        {
+          "column0": "2"
+        },
+        {
+          "column1": "b"
+        },
+        {
+          "column2": "A"
+        },
+        {
+          "column3": "222"
+        }
+      ],
+      [
+        {
+          "column0": "1"
+        },
+        {
+          "column1": "c"
+        },
+        {
+          "column2": "B"
+        },
+        {
+          "column3": "11"
+        }
+      ],
+      [
+        {
+          "column0": "3"
+        },
+        {
+          "column1": "a"
+        },
+        {
+          "column2": "C"
+        },
+        {
+          "column3": "3"
+        }
+      ],
+      [
+        {
+          "column0": "2"
+        },
+        {
+          "column1": "b"
+        },
+        {
+          "column2": "A"
+        },
+        {
+          "column3": "2"
         }
       ]];
     }
@@ -262,6 +524,127 @@
         deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column still descending after data reload');
         start();
       }, 100);
+    }, 100);
+  });
+
+  asyncTest('Numeric Sorting', 1, function() {
+    tableData[2].expanded = true;
+    publicFunctions.initializeTable(tableData, {
+      numColumns: 4,
+      direction: {
+        3: -1 //sort descending for column0
+      },
+      columnsSortable: {
+        3: 'numeric'
+      }
+    }, {
+      sortByColumn: 'column3'
+    });
+
+    setTimeout(function() {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingNumeric, 'Table snapshot ordered fourth column descending numeric');
+      start();
+    }, 100);
+  });
+
+  asyncTest('Dictionary Sorting ("dictionary")', 1, function() {
+    tableData[2].expanded = true;
+    publicFunctions.initializeTable(tableData, {
+      numColumns: 4,
+      direction: {
+        3: -1 //sort descending for column0
+      },
+      columnsSortable: {
+        3: 'dictionary'
+      }
+    }, {
+      sortByColumn: 'column3'
+    });
+
+    setTimeout(function() {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
+      start();
+    }, 100);
+  });
+
+  asyncTest('Dictionary Sorting ("string")', 1, function() {
+    tableData[2].expanded = true;
+    publicFunctions.initializeTable(tableData, {
+      numColumns: 4,
+      direction: {
+        3: -1 //sort descending for column0
+      },
+      columnsSortable: {
+        3: 'string'
+      }
+    }, {
+      sortByColumn: 'column3'
+    });
+
+    setTimeout(function() {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
+      start();
+    }, 100);
+  });
+
+  asyncTest('Dictionary Sorting (true)', 1, function() {
+    tableData[2].expanded = true;
+    publicFunctions.initializeTable(tableData, {
+      numColumns: 4,
+      direction: {
+        3: -1 //sort descending for column0
+      },
+      columnsSortable: {
+        3: true
+      }
+    }, {
+      sortByColumn: 'column3'
+    });
+
+    setTimeout(function() {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
+      start();
+    }, 100);
+  });
+
+  asyncTest('Dictionary Sorting (default)', 1, function() {
+    tableData[2].expanded = true;
+    publicFunctions.initializeTable(tableData, {
+      numColumns: 4,
+      direction: {
+        3: -1 //sort descending for column0
+      }
+    }, {
+      sortByColumn: 'column3'
+    });
+
+    setTimeout(function() {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingDictionary, 'Table snapshot ordered fourth column descending numeric');
+      start();
+    }, 100);
+  });
+
+  asyncTest('Custom Sorting', 1, function() {
+    tableData[2].expanded = true;
+    publicFunctions.initializeTable(tableData, {
+      numColumns: 4,
+      direction: {
+        3: -1 //sort descending for column0
+      },
+      columnsSortable: {
+        3: function(a, b) {
+          var aValue = a.data[sortByField] || '',
+            bValue = b.data[sortByField] || '';
+          return aValue.length - bValue.length;
+        }
+      }
+    }, {
+      sortByColumn: 'column3'
+    });
+
+    setTimeout(function() {
+      deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn3DescendingCustom, 'Table snapshot ordered fourth column descending numeric');
+      start();
     }, 100);
   });
 

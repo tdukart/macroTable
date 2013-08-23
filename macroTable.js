@@ -97,7 +97,7 @@
      * Default means of sorting column values.
      * @param sortByField {String} column field name to sort table rows by
      */
-    function defaultSort(sortByField) {
+    function dictionarySort(sortByField) {
       return function(a, b) {
         var aValue = a.data[sortByField],
           bValue = b.data[sortByField];
@@ -106,6 +106,18 @@
         bValue = typeof bValue === 'undefined' ? '' : bValue;
 
         return aValue == bValue ? 0 : (aValue > bValue ? 1 : -1);
+      };
+    }
+
+    /**
+     * Wrapper for a generic number sorting function giving it scope into which column field to use
+     * @param sortByField {String} column field name to sort table rows by
+     */
+    function numberSort(sortByField) {
+      return function(a, b) {
+        var aValue = a.data[sortByField],
+          bValue = b.data[sortByField];
+        return aValue - bValue;
       };
     }
 
@@ -161,18 +173,25 @@
 
             direction = e.data.direction == -1 ? -1 : 1; //direction can only be 1 (ascending) and -1 (descending)
 
-            eval('columnSorter = ' + e.data.columnSorter); //de-serialize the user-defined column sorting function
+            columnSorter = e.data.columnSorter;
 
-            //user has defined custom column sorting function
-            if(typeof columnSorter === 'function') {
+            if(columnSorter === 'numeric') {
+              sortTableData(tableData, numberSort(sortByField), direction);
 
-              sortTableData(tableData, columnSorter, direction); //sortByField not needed, as it's assumed columnSorter knows what to do
+            } else if(columnSorter === 'dictionary' || columnSorter === 'string') {
+              sortTableData(tableData, dictionarySort(sortByField), direction);
 
-            //no user-defined column sorter, use default string order
             } else {
+              eval('columnSorter = ' + columnSorter); //de-serialize the user-defined column sorting function
 
-              sortTableData(tableData, defaultSort(sortByField), direction);
+              //user has defined custom column sorting function
+              if(typeof columnSorter === 'function') {
+                sortTableData(tableData, columnSorter, direction); //sortByField not needed, as it's assumed columnSorter knows what to do
 
+              //no user-defined column sorter, use default string order
+              } else  {
+                sortTableData(tableData, dictionarySort(sortByField), direction);
+              }
             }
           }
           break;
@@ -913,6 +932,7 @@
 
       //console.log('pre-sorted data',options.tableData);
 
+      columnSorter = columnData.sortable; //could be boolean, 'numeric', a function, or anything else which will result in dictionary
       if(typeof columnData.sortable === 'function') {
         columnSorter = columnData.sortable.toString();
       }
@@ -1175,8 +1195,9 @@
        * @field formatter {Function} (optional) formats the provided data to be displayed in a row's column
        * @field className {String} (optional) class to be added to the column title element
        * @field resizable {Boolean} allow column to be resized. default true
-       * @field sortable {Boolean/Function} if true allow column to be sorted via .sort() on a row's column value,
-       *    if a function, the column will be sorted using .sort() with this function passed as a parameter. default true
+       * @field sortable {Boolean/Function/String} if true allow column to be sorted via .sort() on a row's column value,
+       *    if a string equal to 'numeric', will use a numeric sort, any other string will result in a dictionary sort
+       *    if a function, the column will be sorted using .sort() with this function passed as a parameter. default true (dictionary)
        */
       columns: [],
       /**
