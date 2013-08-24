@@ -476,7 +476,7 @@
 
       $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
       $tableBody = this.$dataContainer.find('tbody.macro-table-column-content'),
-      $tableRows = $tableBody.find('tr'),
+      $tableRows = $tableBody.children(),
       newRenderCount = 0, //number of new rows we need to remove and re-add with new values
       scrollToRowIndex;
 
@@ -500,7 +500,7 @@
 
       //console.log('re-render',rowNumber,'(DOM row)',currentDomRow);
 
-      $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
+      $tableRows = $tableBody.children(); //refetch rows, since they've likely changed
 
     //more normal situations
     } else {
@@ -522,7 +522,7 @@
             this.currentDomRow -= rebuildRows.call(this, rowNumber + this.maxTotalDomRows - this.currentDomRow, rowNumber + this.maxTotalDomRows - this.currentDomRow + this.replaceRowWindow, direction);
             console.log('scrolling down',rowNumber,'(DOM row)',this.currentDomRow);
 
-            $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
+            $tableRows = $tableBody.children(); //refetch rows, since they've likely changed
           }
 
         //in the finalDomRowWindow, add margin to bottom of wrapper to allow scrolling the last row completely into the visible window
@@ -541,7 +541,7 @@
           this.currentDomRow += rebuildRows.call(this, rowNumber - this.currentDomRow - 1 - this.replaceRowWindow, rowNumber - this.currentDomRow, direction);
           console.log('scrolling up',rowNumber,'(DOM row)',this.currentDomRow);
 
-          $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
+          $tableRows = $tableBody.children(); //refetch rows, since they've likely changed
         }
 
       } //scroll up
