@@ -356,18 +356,15 @@
    */
   function rebuildRows(startRowIndex, endRowIndex, direction) {
     var $tableContentWrapper = this.$dataContainerWrapper,
-      $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
 
-      $tableBody = this.$dataContainer.find('tbody.macro-table-column-content'),
-      $staticTableBody = $staticTableContainer.find('tbody.macro-table-static-column-content'),
+      $tableBody = $tableContentWrapper.find('tbody.macro-table-column-content'),
+      $staticTableBody = $tableContentWrapper.find('tbody.macro-table-static-column-content'),
 
       $rows,
       $staticRows,
       renderCount = 0,
       rowData,
-      rowElements,
-      staticHeight,
-      dynamicHeight;
+      rowElements;
 
     startRowIndex = startRowIndex < 0 ? 0 : startRowIndex;
     direction = direction || 0; //default to "no scroll" for complete re-render
