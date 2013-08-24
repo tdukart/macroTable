@@ -677,30 +677,33 @@
       $dynamicRow = $(document.createElement('tr')).attr('data-row-index', index),
       $staticRow = $(document.createElement('tr')).attr('data-row-index', index),
       $rows = $dynamicRow.add($staticRow),
+      rowClasses = [],
       timestamp = +new Date(),
       rowData, indexHierachy, tableDataSubRows, i, len;
 
     //give even rows a stripe color
     if(index % 2 === 0) {
-      $rows.addClass('macro-table-row-stripe');
+      rowClasses.push('macro-table-row-stripe');
     }
 
-    $rows.addClass('macro-table-row macro-table-row-'+index);
+    rowClasses.push('macro-table-row macro-table-row-'+index);
 
     //if selecting rows is enabled and this row has already been selected, style appropriately
     if(isRowsSelectable && row.selected) {
-      $rows.addClass('macro-table-highlight  macro-table-selected-row');
+      rowClasses.push('macro-table-highlight  macro-table-selected-row');
     }
 
     if(row.focused) {
-      $rows.addClass('macro-table-row-focused');
+      rowClasses.push('macro-table-row-focused');
     }
 
     if(row.expanded === true) {
-      $rows.addClass('macro-table-row-expanded');
+      rowClasses.push('macro-table-row-expanded');
     } else {
-      $rows.addClass('macro-table-row-collapsed');
+      rowClasses.push('macro-table-row-collapsed');
     }
+
+    $rows.addClass(rowClasses.join(' '));
 
     //build dynamically left-scrollable row
     for(i = 0, len = columns.length; i < len; i++) {
