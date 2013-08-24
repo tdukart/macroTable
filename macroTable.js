@@ -355,7 +355,7 @@
    * @returns {Number} the actual number of rows rendered
    */
   function rebuildRows(startRowIndex, endRowIndex, direction) {
-    var $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
+    var $tableContentWrapper = this.$dataContainerWrapper,
       $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
 
       $tableBody = this.$dataContainer.find('tbody.macro-table-column-content'),
@@ -421,7 +421,7 @@
   function calculateAndApplyBottomMargin() {
     var distanceFromBottomToNewLastDomRow = 0,
       $macroTable = this.element,
-      $tableContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
+      $tableContainerWrapper = this.$dataContainerWrapper,
       $tableRows = this.$dataContainer.find('tbody.macro-table-column-content tr'),
       $tableScrollSpacer = $macroTable.find('div.macro-table-scroll-spacer'),
       $tableScrollWrappers = $tableContainerWrapper.find('div.macro-table-scroll-wrapper'),
@@ -472,7 +472,7 @@
       finalDomRowWindow = Math.max(0, visibleRowCount - this.maxTotalDomRows), //the final row window render starts at this row
       isInFinalDomWindow = this.currentRow > finalDomRowWindow,
 
-      $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
+      $tableContentWrapper = this.$dataContainerWrapper,
 
       $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
       $tableBody = this.$dataContainer.find('tbody.macro-table-column-content'),
@@ -1706,7 +1706,8 @@
       this.$staticHeaderRow = this.$staticHeader.find('tr.macro-table-static-header-row');
       this.$staticSummaryRow = this.$staticHeader.find('tr.macro-table-static-summary-row');
       this.$resizer = $macroTable.find('div.macro-table-resize-guide');
-      this.$dataContainer = $macroTable.find('div.macro-table-data-container');
+      this.$dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper');
+      this.$dataContainer = this.$dataContainerWrapper.find('div.macro-table-data-container');
       this.$columnControls = $macroTable.find('div.macro-table-column-controls');
       this.$removeColumnButton = this.$columnControls.find('button.macro-table-remove-column');
 
@@ -2869,7 +2870,7 @@
         rowHeight = options.rowHeight,
         maxRenderCount = this.maxTotalDomRows,
         $macroTable = this.element,
-        $dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper'),
+        $dataContainerWrapper = this.$dataContainerWrapper,
         $staticDataContainer = $dataContainerWrapper.find('div.macro-table-static-data-container'),
         $tableBody = $dataContainerWrapper.find('tbody.macro-table-column-content'),
         $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content'),
@@ -3128,7 +3129,7 @@
       this.displayRowWindow = height < rowHeight ? options.defaultTableHeightInRows : ~~((height - headerHeight - this.scrollBarWidth) / rowHeight);
 
       //size the data container wrapper
-      $macroTable.find('div.macro-table-data-container-wrapper')
+      this.$dataContainerWrapper
       .height(height - headerHeight - this.scrollBarWidth) //-1 to account for bottom border of header
       .width(width - this.scrollBarWidth - 1); //-1 to account for left border
 
