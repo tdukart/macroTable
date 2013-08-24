@@ -671,57 +671,57 @@
     var columns = this.options.columns,
       isRowsSelectable = this.options.rowsSelectable === true,
       rowHasChildren = typeof row.subRows !== 'undefined' && row.subRows.length,
-      expanderCellClass = [],
+      expanderCellClass = ' ',
       dynamicRowColumns = '',
       staticRowColumns = '',
       $dynamicRow = $(document.createElement('tr')).attr('data-row-index', index),
       $staticRow = $(document.createElement('tr')).attr('data-row-index', index),
       $rows = $dynamicRow.add($staticRow),
-      rowClasses = [],
+      rowClasses = '',
       timestamp = +new Date(),
-      rowData, indexHierachy, tableDataSubRows, i, len;
+      rowData, indexHierachy, tableDataSubRows, i, cellClass, columnContent;
 
     //give even rows a stripe color
     if(index % 2 === 0) {
-      rowClasses.push('macro-table-row-stripe');
+      rowClasses += ' macro-table-row-stripe';
     }
 
-    rowClasses.push('macro-table-row macro-table-row-'+index);
+    rowClasses += ' macro-table-row macro-table-row-'+index;
 
     //if selecting rows is enabled and this row has already been selected, style appropriately
     if(isRowsSelectable && row.selected) {
-      rowClasses.push('macro-table-highlight  macro-table-selected-row');
+      rowClasses += ' macro-table-highlight macro-table-selected-row';
     }
 
     if(row.focused) {
-      rowClasses.push('macro-table-row-focused');
+      rowClasses += ' macro-table-row-focused';
     }
 
     if(row.expanded === true) {
-      rowClasses.push('macro-table-row-expanded');
+      rowClasses += ' macro-table-row-expanded';
     } else {
-      rowClasses.push('macro-table-row-collapsed');
+      rowClasses += ' macro-table-row-collapsed';
     }
 
     $rows.addClass(rowClasses.join(' '));
 
     //build dynamically left-scrollable row
-    for(i = 0, len = columns.length; i < len; i++) {
-      var cellClass = [],
-        columnContent = getColumnContent.call(this, columns[i], row, true);
+    for(i = columns.length; i--;) {
+      cellClass = '';
+      columnContent = getColumnContent.call(this, columns[i], row, true);
 
       if(columns[i].resizable !== false) {
-        cellClass.push('macro-table-column-resizable');
+        cellClass += ' macro-table-column-resizable';
       }
 
       //if the cell is justified right or center, add the appropriate class
       switch(columns[i].align) {
         case 'right':
         case 'center':
-          cellClass.push('macro-table-justify-'+columns[i].align);
+          cellClass += ' macro-table-justify-'+columns[i].align;
           break;
 
-        case 'left':
+        //case 'left':
         default:
           break;
       }
@@ -739,9 +739,9 @@
 
     //build row expand column
     if(rowHasChildren && row.expanded) {
-      expanderCellClass.push('macro-table-subrow-hierarchy-vertical-line-bottom-half');
+      expanderCellClass += ' macro-table-subrow-hierarchy-vertical-line-bottom-half';
     } else if(row.index.toString().indexOf(',') !== -1) {
-      expanderCellClass.push('macro-table-subrow-hierarchy-line-right'); //TODO: macro-table-subrow-hierarchy-line-right should be conditionally removed for subRows of subRows
+      expanderCellClass += ' macro-table-subrow-hierarchy-line-right'; //TODO: macro-table-subrow-hierarchy-line-right should be conditionally removed for subRows of subRows
 
       indexHierachy = row.index.split(',');
 
@@ -758,9 +758,9 @@
       }
 
       if(tableDataSubRows.length - 1 > i) { //FIXME: this will break for a subRow of a subRow, because we're looking directly at tableData (which is only top level rows)
-        expanderCellClass.push('macro-table-subrow-hierarchy-vertical-line-full');
+        expanderCellClass += ' macro-table-subrow-hierarchy-vertical-line-full';
       } else {
-        expanderCellClass.push('macro-table-subrow-hierarchy-vertical-line-top-half');
+        expanderCellClass += ' macro-table-subrow-hierarchy-vertical-line-top-half';
       }
     }
 
