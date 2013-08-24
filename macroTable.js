@@ -533,7 +533,7 @@
 
         this.currentDomRow = Math.max(this.currentDomRow + direction, 0); //the DOM row that the table would be at, if a detach weren't about to happen
 
-        if(this.currentDomRow <= this.triggerUpDomRow && rowNumber > this.replaceRowWindow) {
+        if(this.currentDomRow <= this.triggerUpDomRow && rowNumber > this.currentDomRow) {
 
           this.currentDomRow += rebuildRows.call(this, rowNumber - this.currentDomRow - 1 - this.replaceRowWindow, rowNumber - this.currentDomRow, direction);
           console.log('scrolling up',rowNumber,'(DOM row)',this.currentDomRow);
