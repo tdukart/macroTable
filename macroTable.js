@@ -552,10 +552,13 @@
     this.$dataContainer.scrollTop(scrollTop);
     $staticTableContainer.scrollTop(scrollTop);
 
-    if(reScrollNeeded && this.scrollToRowIndex !== null) {
-      this.scrollToRow(this.scrollToRowIndex);
-    }
+    scrollToRowIndex = this.scrollToRowIndex;
     this.scrollToRowIndex = null;
+    if(reScrollNeeded && scrollToRowIndex !== null) {
+      this.scrollToRow(scrollToRowIndex);
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -2429,37 +2432,42 @@
 
       //scroll function for the scroll container, using the scrollbars
       this.$scrollContainer.scroll(function(e) {
-        var lastScrollTop = self.scrollTop,
-          lastTableScrollLeft = self.scrollLeft;
+        var lastScrollTop = this.scrollTop,
+          lastTableScrollLeft = this.scrollLeft,
+          triggerScrollEvent = true,
+          rowsToScroll;
 
-        self.scrollTop = $(this).scrollTop();
-        self.scrollLeft = $(this).scrollLeft();
+        this.scrollTop = $(e.target).scrollTop();
+        this.scrollLeft = $(e.target).scrollLeft();
 
-        var rowsToScroll = Math.abs(~~(self.scrollTop / rowHeight) - ~~(lastScrollTop / rowHeight));
+        rowsToScroll = Math.abs(~~(this.scrollTop / rowHeight) - ~~(lastScrollTop / rowHeight));
         if(rowsToScroll > 0) {
-          if(lastScrollTop < self.scrollTop) {
+          if(lastScrollTop < this.scrollTop) {
 
-            self.currentRow += rowsToScroll;
+            this.currentRow += rowsToScroll;
             if(!breakTableScroll) {
-              scrollTableVertical.call(self, rowsToScroll, forceTableScrollRender);
+              triggerScrollEvent = scrollTableVertical.call(this, rowsToScroll, forceTableScrollRender);
               //console.log('scrolling down to row',currentRow,'by',rowsToScroll,'rows');
             }
 
-          } else if (lastScrollTop > self.scrollTop){
+          } else if (lastScrollTop > this.scrollTop){
 
-            self.currentRow -= rowsToScroll;
+            this.currentRow -= rowsToScroll;
             if(!breakTableScroll) {
-              scrollTableVertical.call(self, -rowsToScroll, forceTableScrollRender);
+              triggerScrollEvent = scrollTableVertical.call(this, -rowsToScroll, forceTableScrollRender);
               //console.log('scrolling up to row',currentRow,'by',rowsToScroll,'rows');
             }
           }
         }
 
-        if(self.scrollLeft != lastTableScrollLeft) {
-          scrollTableHorizontal.call(self);
+        if(this.scrollLeft != lastTableScrollLeft) {
+          scrollTableHorizontal.call(this);
         }
         //console.log('Scrolling .macro-table-scroll-container: lastScrollTop',lastScrollTop,'scrollTop',scrollTop,'calculatedRow',calculatedRow,'lastCalculatedRow',lastCalculatedRow,'rowsToScroll',rowsToScroll);
-      });
+        if(triggerScrollEvent) {
+          this._trigger('scroll', e);
+        }
+      }.bind(this));
 
       this._initializeScrollBarOffsets();
 

@@ -260,6 +260,9 @@
             field: filterColumn2,
             value: filterValue2
           }]); //will fire macrotablesearch and macrotablefilter
+          break;
+
+        case 7: //have to wait for pending filter worker before we can reliably trigger the search worker (race condition with two workers running at the same time)
           $('#table').macroTable('searchTable', search3); //will fire macrotablesearch and macrotablefilter
           break;
 

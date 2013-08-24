@@ -53,7 +53,7 @@
     }, 100);
   });
 
-  asyncTest('Select All Rows', 16, function() {
+  asyncTest('Select All Rows', 15, function() {
     var totalRows = 3,
       tableData = publicFunctions.initializeTable(totalRows, {
         numColumns: 1
@@ -107,7 +107,6 @@
 
             setTimeout(function() {
               ok($selectAll[0].indeterminate === true, 'Select all is indeterminate with 2/3 rows selected');
-              ok($selectAll.is(':checked') === false, 'Select all is not checked with 2/3 rows selected');
 
               event = $.Event('click');
               event.target = $selectAll.next('label').click().end()[0];
