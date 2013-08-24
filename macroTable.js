@@ -369,6 +369,7 @@
       staticHeight,
       dynamicHeight;
 
+    startRowIndex = startRowIndex < 0 ? 0 : startRowIndex;
     direction = direction || 0; //default to "no scroll" for complete re-render
 
     //detach the table from the DOM for impending manipulation ideally, but need to know row heights, so can't...
@@ -459,15 +460,16 @@
   /**
    * function to handle the table container scrolling
    * will identify the case where a row swap needs to happen and will take care of it as well
-   * @param direction {Number} number of rows to scroll (negative for up, positive for down)
+   * @param {Number} direction number of rows to scroll (negative for up, positive for down)
+   * @param {Boolean} rerender Override to force a full table row reload
+   * @return {Boolean} true if the scroll process is over, false if re-scroll needs to happen for the added margin/padding
    */
   function scrollTableVertical(direction, rerender) {
-    var rowBuffer = this.options.rowBuffer,
-      reScrollNeeded = false,
+    var reScrollNeeded = false,
       rowNumber = this.currentRow,
       visibleRowCount = this.expandedTableData.length,
 
-      finalDomRowWindow = Math.max(0, visibleRowCount - rowBuffer - rowBuffer - this.displayRowWindow), //the final row window render starts at this row
+      finalDomRowWindow = Math.max(0, visibleRowCount - this.maxTotalDomRows), //the final row window render starts at this row
       isInFinalDomWindow = this.currentRow > finalDomRowWindow,
 
       $tableContentWrapper = this.element.find('div.macro-table-data-container-wrapper'),
@@ -475,10 +477,11 @@
       $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
       $tableBody = this.$dataContainer.find('tbody.macro-table-column-content'),
       $tableRows = $tableBody.find('tr'),
-      newRenderCount = 0; //number of new rows we need to remove and re-add with new values
+      newRenderCount = 0, //number of new rows we need to remove and re-add with new values
+      scrollToRowIndex;
 
     //a huge scroll, passed the normal row swap threshold (grab the thumb with the mouse and whip it all the way in one direction)
-    if(this.currentDomRow + direction >= this.maxTotalDomRows || this.currentDomRow + direction <= 0 || rerender) {
+    if(this.currentDomRow + direction >= this.maxTotalDomRows || this.currentDomRow + direction < 0 || rerender) {
 
       //final dom window should always render the maxTotalDomRows number of rows
       if(isInFinalDomWindow) {
@@ -490,7 +493,7 @@
       //not in final dom window, proceed as normal
       } else {
 
-        var topRowBuffer = rowNumber < rowBuffer ? rowNumber : rowBuffer; //account for when on the first rowBuffer number of rows
+        var topRowBuffer = rowNumber < this.displayRowWindow ? rowNumber : this.displayRowWindow; //account for when on the first rowBuffer number of rows
         rebuildRows.call(this, rowNumber - topRowBuffer, rowNumber - topRowBuffer + this.maxTotalDomRows);
         this.currentDomRow = topRowBuffer;
       }
@@ -505,27 +508,21 @@
       //scrolling down
       if(direction > 0) {
 
-        this.currentDomRow = Math.min(this.currentDomRow + direction, Math.max(rowBuffer + rowBuffer + this.displayRowWindow, visibleRowCount - this.maxTotalDomRows)); //the DOM row that the table would be at, if a detach weren't about to happen
+        this.currentDomRow = Math.min(this.currentDomRow + direction, Math.max(this.maxTotalDomRows, visibleRowCount - this.maxTotalDomRows)); //the DOM row that the table would be at, if a detach weren't about to happen
 
         //convenience variables to make debugging the logic easier
         var remainingDomRows = $tableRows.filter(':gt('+(this.currentDomRow - 1)+')').length,
-          moreRowRenderingNeeded = visibleRowCount - rowNumber > remainingDomRows && remainingDomRows <= this.maxTotalDomRows - rowBuffer - 1;
+          moreRowRenderingNeeded = visibleRowCount - rowNumber > remainingDomRows && remainingDomRows <= this.maxTotalDomRows - this.displayRowWindow - 1;
 
         //render new rows appropriate to current DOM possition, or if a big jump landed into the final DOM window and need the remaining rows fleshed out
         if(!isInFinalDomWindow || moreRowRenderingNeeded) {
 
           if(this.currentDomRow >= this.triggerDownDomRow) {
 
-            newRenderCount = this.currentDomRow - rowBuffer;
-            if(newRenderCount <= 0) {
-              console.warn('newRenderCount should never be less than 1 but it is',newRenderCount,'Probably due to overloaded scroll listener');
-            } else {
+            this.currentDomRow -= rebuildRows.call(this, rowNumber + this.maxTotalDomRows - this.currentDomRow, rowNumber + this.maxTotalDomRows - this.currentDomRow + this.replaceRowWindow, direction);
+            console.log('scrolling down',rowNumber,'(DOM row)',this.currentDomRow);
 
-              this.currentDomRow -= rebuildRows.call(this, rowNumber + this.maxTotalDomRows - this.currentDomRow, rowNumber + this.maxTotalDomRows - this.currentDomRow + newRenderCount, direction);
-              //console.log('scrolling down',rowNumber,'(DOM row)',currentDomRow);
-
-              $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
-            }
+            $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
           }
 
         //in the finalDomRowWindow, add margin to bottom of wrapper to allow scrolling the last row completely into the visible window
@@ -541,16 +538,10 @@
 
         if(this.currentDomRow <= this.triggerUpDomRow && rowNumber > this.replaceRowWindow) {
 
-          newRenderCount = this.maxTotalDomRows - this.currentDomRow - this.displayRowWindow - rowBuffer;
-          if(newRenderCount <= 0) {
-            console.warn('newRenderCount should never be less than 1 but it is',newRenderCount,'Probably due to overloaded scroll listener');
-          } else {
+          this.currentDomRow += rebuildRows.call(this, rowNumber - this.currentDomRow - 1 - this.replaceRowWindow, rowNumber - this.currentDomRow, direction);
+          console.log('scrolling up',rowNumber,'(DOM row)',this.currentDomRow);
 
-            this.currentDomRow += rebuildRows.call(this, rowNumber - this.currentDomRow - 1 - newRenderCount, rowNumber - this.currentDomRow, direction);
-            //console.log('scrolling up',rowNumber,'(DOM row)',currentDomRow);
-
-            $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
-          }
+          $tableRows = $tableBody.find('tr'); //refetch rows, since they've likely changed
         }
 
       } //scroll up
@@ -1233,7 +1224,12 @@
     options: {
       height: undefined, //default height of table, if not defined will fit to parent
       width: undefined, //defailt width of table, if not defined will fit to parent (can be in pixels or percent, see proportionalColumnWidths)
-      rowBuffer: 5, //the max number of DOM rows that can be above and below the displaying row window
+      /**
+       * The default value used for replaceRowWindow, the number of rows that are removed/appended when a scroll window has been triggered
+       * This number will be overridden by displayRowWindow if it is a smaller value
+       * @type {Number}
+       */
+      scrollRowWindow: 50,
       /**
        * Array of objects whose order directly correlates to the display order of columns
        * Column object has the following fields:
@@ -1356,9 +1352,6 @@
           break;
 
         case 'rowHeight':
-          break;
-
-        case 'rowBuffer':
           break;
 
         case 'disabled':
@@ -3111,7 +3104,7 @@
         options = this.options,
         rowHeight = options.rowHeight,
         rowSelectorOffset = options.rowsSelectable === true ? this.rowSelectColumnWidth : 0,
-        headerHeight, middleDomRow;
+        headerHeight;
 
       //initialized undefined dimensions with parent dimensions
       height = height || this._getFallbackHeightToResize();
@@ -3125,11 +3118,6 @@
 
       //determine how many rows will fit in the provided height
       this.displayRowWindow = height < rowHeight ? options.defaultTableHeightInRows : ~~((height - headerHeight - this.scrollBarWidth) / rowHeight);
-
-      if(options.rowBuffer < this.displayRowWindow) {
-        //console.error('options.rowBuffer',options.rowBuffer,'cannot be less than displayRowWindow',this.displayRowWindow,'. rowBuffer value being changed to',this.displayRowWindow);
-        options.rowBuffer = this.displayRowWindow;
-      }
 
       //size the data container wrapper
       $macroTable.find('div.macro-table-data-container-wrapper')
@@ -3154,11 +3142,10 @@
       this.$resizer.height(height - this.scrollBarWidth);
 
       //set globals based on new table dimensions
-      this.replaceRowWindow = ~~(options.rowBuffer / 2);
-      this.maxTotalDomRows = this.displayRowWindow + (options.rowBuffer * 2);
-      middleDomRow = ~~(this.maxTotalDomRows / 2);
-      this.triggerUpDomRow = middleDomRow - ~~(this.displayRowWindow / 2) - this.replaceRowWindow;
-      this.triggerDownDomRow = middleDomRow - ~~(this.displayRowWindow / 2) + this.replaceRowWindow;
+      this.replaceRowWindow = Math.max(this.displayRowWindow, options.scrollRowWindow);
+      this.maxTotalDomRows = (this.replaceRowWindow * 2) + (this.displayRowWindow * 2);
+      this.triggerUpDomRow = this.displayRowWindow; //this.displayRowWindow number of rows above the viewport, unseen
+      this.triggerDownDomRow = this.replaceRowWindow * 2; //this.displayRowWindow number of rows bellow the viewport, unseen
     },
 
     /**
@@ -3269,7 +3256,8 @@
      */
     scrollToRow: function(scrollToRow, byIndex) {
       var options = this.options,
-        tableData = this.renderRowDataSet;
+        tableData = this.renderRowDataSet,
+        rowsToScroll;
 
       if(byIndex && typeof tableData[scrollToRow] !== 'undefined') {
         scrollToRow = this.expandedTableData.indexOf(tableData[scrollToRow]);
@@ -3279,7 +3267,7 @@
 
       console.log('scroll to row',scrollToRow);
 
-      var rowsToScroll = scrollToRow - this.currentRow;
+      rowsToScroll = scrollToRow - this.currentRow;
       if(rowsToScroll !== 0) {
         this.scrollToRowIndex = scrollToRow;
         this.$scrollContainer.scrollTop(this.scrollTop + (rowsToScroll * options.rowHeight));
