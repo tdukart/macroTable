@@ -671,7 +671,7 @@
     var columns = this.options.columns,
       isRowsSelectable = this.options.rowsSelectable === true,
       rowHasChildren = typeof row.subRows !== 'undefined' && row.subRows.length,
-      expanderCellClass = ' ',
+      expanderCellClass = '',
       dynamicRowColumns = '',
       staticRowColumns = '',
       $dynamicRow = $(document.createElement('tr')).attr('data-row-index', index),
@@ -703,7 +703,7 @@
       rowClasses += ' macro-table-row-collapsed';
     }
 
-    $rows.addClass(rowClasses.join(' '));
+    $rows.addClass(rowClasses);
 
     //build dynamically left-scrollable row
     for(i = columns.length; i--;) {
