@@ -726,7 +726,7 @@
           break;
       }
 
-      dynamicRowColumns += '<td'+(cellClass.length ? ' class="'+cellClass.join(' ')+'"' : '')+' data-column-index="'+i+'">'+columnContent+'</td>';
+      dynamicRowColumns = '<td class="'+ cellClass.slice(1) +'" data-column-index="'+i+'">'+columnContent+'</td>' + dynamicRowColumns;
     }
 
     //build static row
@@ -764,7 +764,7 @@
       }
     }
 
-    staticRowColumns += '<td class="macro-table-row-control-cell macro-table-row-expander-cell' + (expanderCellClass.length > 0 ? ' '+expanderCellClass.join(' ') : '') + '">' +
+    staticRowColumns += '<td class="macro-table-row-control-cell macro-table-row-expander-cell' + expanderCellClass + '">' +
       '<div class="macro-table-expand-toggle-container">' +
         (rowHasChildren ?
             '<input type="checkbox" id="macro-table-row-expander-'+index+'-'+timestamp+'" class="macro-table-checkbox macro-table-row-expander macro-table-row-expander-'+index+'" data-row-index="'+index+'" '+(row.expanded === true ? 'checked="checked"' : '')+'/>' +
