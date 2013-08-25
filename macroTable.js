@@ -258,6 +258,7 @@
               rowString = JSON.parse(JSON.stringify(searchRow.tableData));
 
               if(doHighlightMatches) {
+                delete rowString.formattedData; //we don't want the call to getColumnContent to used any cached values for this row
                 Object.keys(rowString.data).forEach(function(field) {
                   var searchMatch = new RegExp('(' + escapedSearchText + ')', 'gi'),
                     index = columnOrder.indexOf(field),
@@ -349,16 +350,17 @@
 
   /**
    * convenience function to clear out the data content and rerender the appropriate rows based on the new scroll position
-   * @param startRowIndex {Number} the index into the tableData where the rows should start rendering from (should ALWAYS be smaller than endRowIndex)
-   * @param endRowIndex {Number} the index into the tableData where the last row is to be rendered number (should ALWAYS be larger than swtartRowIndex)
-   * @param direction {Number} the number of rows the table was scrolled, positive for down, negative for up
-   * @returns {Number} the actual number of rows rendered
+   * @param  {Number} startRowIndex The index into the tableData where the rows should start rendering from (should ALWAYS be smaller than endRowIndex)
+   * @param  {Number} endRowIndex   The index into the tableData where the last row is to be rendered number (should ALWAYS be larger than swtartRowIndex)
+   * @param  {Number} direction     The number of rows the table was scrolled, positive for down, negative for up
+   * @param  {Event}  scrollEvent   Original event object for the scroll
+   * @return {Number}               The actual number of rows rendered
    */
-  function rebuildRows(startRowIndex, endRowIndex, direction) {
+  function rebuildRows(startRowIndex, endRowIndex, direction, scrollEvent) {
     var time = +new Date();
     var $tableContentWrapper = this.$dataContainerWrapper,
 
-      $tableBody = $tableContentWrapper.find('tbody.macro-table-column-content'),
+      $tableBody = this.$tableBody,
       $staticTableBody = $tableContentWrapper.find('tbody.macro-table-static-column-content'),
 
       dynamicFragment = document.createDocumentFragment(),
@@ -377,8 +379,8 @@
 
     //detach the table from the DOM for impending manipulation ideally, but need to know row heights, so can't...
     $tableContentWrapper.hide();
-    $rows = $tableBody.find('tr');
-    $staticRows = $staticTableBody.find('tr');
+    $rows = $tableBody.children();
+    $staticRows = $staticTableBody.children();
 
     $tableBody.empty();
     $staticTableBody.empty();
@@ -411,6 +413,8 @@
     rowData = null;
     rowElements = null;
 
+    console.error('rebuildRows while',(+new Date())-time);
+
     //add back previous selection of rows
     if(direction < 0) {
       $rows.filter(':lt('+(this.maxTotalDomRows - renderCount)+')').each(function(index, element) {
@@ -436,9 +440,25 @@
 
     $tableContentWrapper.show();
 
-    verticallySizeRows(newRows);
+    //resize the rows out of the thread, which is much faster and
+    //more reliable because the rows have reflowed once this is executed
+    clearTimeout(this.verticalRowSizePid);
+    this.verticalRowSizePid = setTimeout(function() {
+      var time = +new Date();
+      verticallySizeRows.call(this, newRows);
 
-    console.error('rebuildRows',(+new Date())-time);
+      newRows = null;
+      this.verticalRowSizePid = null;
+
+      //if shimScrollPending, that means the scroll to intended row failed because of non-standatd row heights
+      //and an additional "shim-scroll" has been queued up to correct the miss now that the row heights are known.
+      //this shim-scroll will trigger the scroll event instead (in the .scroll() handler)
+      if(!this.shimScrollPending) {
+        this._trigger('scroll', scrollEvent);
+      }
+
+      console.error('rebuildRows size',(+new Date())-time);
+    }.bind(this), 0);
 
     return Math.abs(renderCount);
   }
@@ -492,11 +512,12 @@
   /**
    * function to handle the table container scrolling
    * will identify the case where a row swap needs to happen and will take care of it as well
-   * @param {Number} direction number of rows to scroll (negative for up, positive for down)
-   * @param {Boolean} rerender Override to force a full table row reload
-   * @return {Boolean} true if the scroll process is over, false if re-scroll needs to happen for the added margin/padding
+   * @param  {Number}  direction   Number of rows to scroll (negative for up, positive for down)
+   * @param  {Boolean} rerender    Override to force a full table row reload
+   * @param  {Event}   scrollEvent Original event object for the scroll
+   * @return {Boolean}             True if the scroll process is over, false if re-scroll needs to happen for the added margin/padding
    */
-  function scrollTableVertical(direction, rerender) {
+  function scrollTableVertical(direction, rerender, scrollEvent) {
     var reScrollNeeded = false,
       rowNumber = this.currentRow,
       visibleRowCount = this.expandedTableData.length,
@@ -504,10 +525,7 @@
       finalDomRowWindow = Math.max(0, visibleRowCount - this.maxTotalDomRows), //the final row window render starts at this row
       isInFinalDomWindow = this.currentRow > finalDomRowWindow,
 
-      $tableContentWrapper = this.$dataContainerWrapper,
-
-      $staticTableContainer = $tableContentWrapper.find('div.macro-table-static-data-container'),
-      $tableBody = this.$dataContainer.find('tbody.macro-table-column-content'),
+      $tableBody = this.$tableBody,
       $tableRows = $tableBody.children(),
       newRenderCount = 0, //number of new rows we need to remove and re-add with new values
       scrollToRowIndex;
@@ -518,7 +536,7 @@
       //final dom window should always render the maxTotalDomRows number of rows
       if(isInFinalDomWindow) {
 
-        rebuildRows.call(this, visibleRowCount < this.maxTotalDomRows ? 0 : visibleRowCount - this.maxTotalDomRows, visibleRowCount);
+        rebuildRows.call(this, visibleRowCount < this.maxTotalDomRows ? 0 : visibleRowCount - this.maxTotalDomRows, visibleRowCount, 0, scrollEvent);
         this.currentDomRow = visibleRowCount < this.maxTotalDomRows ? rowNumber : this.maxTotalDomRows - (visibleRowCount - rowNumber); //the DOM row index if all rows are the same height, which is determined in the next line...
         reScrollNeeded = calculateAndApplyBottomMargin.call(this); //at the bottom, make sure the scroll margins are in place
 
@@ -526,7 +544,7 @@
       } else {
 
         var topRowBuffer = rowNumber < this.displayRowWindow ? rowNumber : this.displayRowWindow; //account for when on the first rowBuffer number of rows
-        rebuildRows.call(this, rowNumber - topRowBuffer, rowNumber - topRowBuffer + this.maxTotalDomRows);
+        rebuildRows.call(this, rowNumber - topRowBuffer, rowNumber - topRowBuffer + this.maxTotalDomRows, 0, scrollEvent);
         this.currentDomRow = topRowBuffer;
       }
 
@@ -551,7 +569,7 @@
 
           if(this.currentDomRow >= this.triggerDownDomRow) {
 
-            this.currentDomRow -= rebuildRows.call(this, rowNumber + this.maxTotalDomRows - this.currentDomRow, rowNumber + this.maxTotalDomRows - this.currentDomRow + this.replaceRowWindow, direction);
+            this.currentDomRow -= rebuildRows.call(this, rowNumber + this.maxTotalDomRows - this.currentDomRow, rowNumber + this.maxTotalDomRows - this.currentDomRow + this.replaceRowWindow, direction, scrollEvent);
             console.log('scrolling down',rowNumber,'(DOM row)',this.currentDomRow);
 
             $tableRows = $tableBody.children(); //refetch rows, since they've likely changed
@@ -570,7 +588,7 @@
 
         if(this.currentDomRow <= this.triggerUpDomRow && rowNumber > this.currentDomRow) {
 
-          this.currentDomRow += rebuildRows.call(this, rowNumber - this.currentDomRow - 1 - this.replaceRowWindow, rowNumber - this.currentDomRow, direction);
+          this.currentDomRow += rebuildRows.call(this, rowNumber - this.currentDomRow - 1 - this.replaceRowWindow, rowNumber - this.currentDomRow, direction, scrollEvent);
           console.log('scrolling up',rowNumber,'(DOM row)',this.currentDomRow);
 
           $tableRows = $tableBody.children(); //refetch rows, since they've likely changed
@@ -582,13 +600,25 @@
     var scrollTop = $tableRows.length > 0 ? $tableRows.eq(this.currentDomRow).offset().top - $tableBody.offset().top : 0;
     //console.log('current dom row (top visible row)',currentDomRow,'currentRow',currentRow,'row index',expandedTableData[currentRow],'from top',scrollTop);
     this.$dataContainer.scrollTop(scrollTop);
-    $staticTableContainer.scrollTop(scrollTop);
+    this.$staticDataContainer.scrollTop(scrollTop);
 
     scrollToRowIndex = this.scrollToRowIndex;
     this.scrollToRowIndex = null;
     if(reScrollNeeded && scrollToRowIndex !== null) {
-      this.scrollToRow(scrollToRowIndex);
+      //if <, the row we want is in the viewport and _scrollToRow will call _refreshRows, which will set off another verticalRowSizePid
+      //if >=, then a minor scroll needs to take place to make sure the intended row is visible, but no additional verticalRowSizePid will be called
+      var currentDomRowOffset = (scrollToRowIndex >= this.expandedTableData.length ? this.expandedTableData.length - 1 : scrollToRowIndex) - this.currentRow,
+        $intendedRow = $tableRows.eq(this.currentDomRow + currentDomRowOffset);
+      if($intendedRow.offset().top + $intendedRow.height() < this.$dataContainer.offset().top + this.$dataContainer.height()) {
+        clearTimeout(this.verticalRowSizePid);
+        this.verticalRowSizePid = null;
+      } else {
+        this.shimScrollPending = true; //flag to let verticalRowSizePid that the upcoming call to _scrollToRow -> scroll event will be doing the _trigger
+      }
+      this._scrollToRow(scrollToRowIndex, null, true);
       return false;
+    } else {
+      this.shimScrollPending = false;
     }
     return true;
   }
@@ -648,27 +678,32 @@
 
   /**
    * Convenience function for rendering the readable data for a column cell
+   * This function will cache the format so on subsequen renders it will return faster
    * @param  {Object}   column         Table column definition
    * @param  {Object}   row            Table row object
    * @param  {Boolean}  includeMarkup  Include with the returned result the wrapper and internal markup
    * @return {String}                  The column text that will appear in the rendered cell
    */
   function getColumnContent(column, row, includeMarkup) {
+    if(!row.formattedData) {
+      row.formattedData = {};
+    } else if(row.formattedData[column.field]) {
+      return row.formattedData[column.field][includeMarkup ? 'markup' : 'clean'];
+    }
+
     var columnContentContainer = document.createElement('span'),
       columnContent = row.data[column.field],
-      cssClass = 'macro-table-cell-content',
-      columnContentText;
+      cssClass = 'macro-table-cell-content';
 
+    row.formattedData[column.field] = {};
     columnContent = typeof columnContent === 'undefined' || columnContent === null ? '' : columnContent;
 
-    if(includeMarkup) {
-      //we want to pass the wrapper of the cell content to the formatter function in case a user wants to mess with it
-      if(typeof column.onCellClick === 'function') {
-        cssClass += ' macro-table-cell-clickable';
-      }
-      if(column.textWrap === false) {
-        cssClass += ' macro-table-no-wrap';
-      }
+    //we want to pass the wrapper of the cell content to the formatter function in case a user wants to mess with it
+    if(typeof column.onCellClick === 'function') {
+      cssClass += ' macro-table-cell-clickable';
+    }
+    if(column.textWrap === false) {
+      cssClass += ' macro-table-no-wrap';
     }
 
     columnContentContainer.className = cssClass;
@@ -682,20 +717,16 @@
 
     columnContentContainer.innerHTML = columnContent;
 
-    columnContentText = columnContentContainer.textContent;
-    columnContentContainer.setAttribute('title', columnContentText);
+    row.formattedData[column.field].clean = columnContentContainer.textContent;
+    columnContentContainer.setAttribute('title', columnContentContainer.textContent);
 
-    if(includeMarkup) {
-      columnContent = document.createElement('div');
-      columnContent.appendChild(columnContentContainer);
-      columnContent = columnContent.innerHTML;
-    } else {
-      //remove any html markup to help with future searching on formatted text
-      columnContent = columnContentText;
-    }
+    columnContent = document.createElement('div');
+    columnContent.appendChild(columnContentContainer);
+    row.formattedData[column.field].markup = columnContent.innerHTML;
 
     columnContentContainer = null;
-    return columnContent;
+
+    return row.formattedData[column.field][includeMarkup ? 'markup' : 'clean'];
   }
 
   /**
@@ -805,9 +836,16 @@
       $staticRow.addClass('macro-table-row-expandable');
     }
 
+    //use cached height value if it exists and save time later in verticallySizeRows
+    if(row.calculatedHeight) {
+      $dynamicRow.css('height', row.calculatedHeight);
+      $staticRow.css('height', row.calculatedHeight);
+    }
+
     return {
       dynamicRow: $dynamicRow,
-      staticRow: $staticRow
+      staticRow: $staticRow,
+      rowData: row //for use in verticallySizeRows
     };
   }
 
@@ -816,22 +854,57 @@
    * @param  {Object} rowElements Object containing the static and dynamic rows, as returned by renderRow
    */
   function verticallySizeRows(rowElements) {
-    var staticHeight, dynamicHeight, i;
+    var defaultRowHeight = this.options.rowHeight,
+      $currentRowElement, staticHeight, dynamicHeight, rowData, scrollTop, i;
 
-     //reconcile possible different heights between static and dynamic rows
+    var time = +new Date();
+
+    //reconcile possible different heights between static and dynamic rows
     for(i = rowElements.length; i--;) {
-      staticHeight = rowElements[i].staticRow.height()+1; //compensate for fractional pixel heights in FF
-      dynamicHeight = rowElements[i].dynamicRow.height()+1; //compensate for fractional pixel heights in FF
-      if(staticHeight > dynamicHeight) {
-        rowElements[i].dynamicRow.height(staticHeight);
-        rowElements[i].staticRow.height(staticHeight)
-        .find('div.macro-table-expand-toggle-container').height(staticHeight-1);
-      } else if(staticHeight < dynamicHeight) {
-        rowElements[i].dynamicRow.height(dynamicHeight);
-        rowElements[i].staticRow.height(dynamicHeight)
-        .find('div.macro-table-expand-toggle-container').height(dynamicHeight-1);
+      rowData = rowElements[i].rowData = rowElements[i].rowData || {};
+
+      if(rowData.calculatedHeight) {
+        delete rowElements[i].rowData; //already calculated, skip to save performance hit
+        continue;
+      }
+      staticHeight = rowElements[i].staticRow.height();
+      dynamicHeight = rowElements[i].dynamicRow.height();
+      if(staticHeight >= dynamicHeight) {
+        rowData.calculatedHeight = staticHeight;
+      } else { // if(staticHeight < dynamicHeight) {
+        rowData.calculatedHeight = dynamicHeight;
+      }
+
+      //compensate for fractional pixel heights in FF
+      if(rowData.calculatedHeight > defaultRowHeight) {
+        rowData.calculatedHeight++;
       }
     }
+
+    //we have all the sizes we need, now hide everything to prevent reflows while we set them
+    this.$dataContainerWrapper.hide();
+
+    for(i = rowElements.length; i--;) {
+      rowData = rowElements[i].rowData;
+      if(typeof rowData === 'undefined') {
+        continue;
+      }
+      rowElements[i].dynamicRow.height(rowData.calculatedHeight);
+      rowElements[i].staticRow.height(rowData.calculatedHeight)
+      .find('div.macro-table-expand-toggle-container').height(rowData.calculatedHeight - 1);
+    }
+
+    $currentRowElement = this.$tableBody.children().filter(':nth-child('+(this.currentDomRow + 1)+')');
+
+    //all done, let the performance hit commence
+    this.$dataContainerWrapper.show();
+
+    //may need to fix the scrollTop if the heights moved the row positions enough
+    scrollTop = $currentRowElement.length > 0 ? $currentRowElement.offset().top - this.$tableBody.offset().top : 0;
+    this.$dataContainer.scrollTop(scrollTop);
+    this.$staticDataContainer.scrollTop(scrollTop);
+
+    console.warn('sized',(+new Date())-time);
   }
 
   /**
@@ -1731,6 +1804,8 @@
       this.$resizer = $macroTable.find('div.macro-table-resize-guide');
       this.$dataContainerWrapper = $macroTable.find('div.macro-table-data-container-wrapper');
       this.$dataContainer = this.$dataContainerWrapper.find('div.macro-table-data-container');
+      this.$tableBody = this.$dataContainer.find('tbody.macro-table-column-content');
+      this.$staticDataContainer = this.$dataContainerWrapper.find('div.macro-table-static-data-container');
       this.$columnControls = $macroTable.find('div.macro-table-column-controls');
       this.$removeColumnButton = this.$columnControls.find('button.macro-table-remove-column');
 
@@ -2470,7 +2545,7 @@
 
             this.currentRow += rowsToScroll;
             if(!breakTableScroll) {
-              triggerScrollEvent = scrollTableVertical.call(this, rowsToScroll, forceTableScrollRender);
+              triggerScrollEvent = scrollTableVertical.call(this, rowsToScroll, forceTableScrollRender, e);
               //console.log('scrolling down to row',currentRow,'by',rowsToScroll,'rows');
             }
 
@@ -2478,7 +2553,7 @@
 
             this.currentRow -= rowsToScroll;
             if(!breakTableScroll) {
-              triggerScrollEvent = scrollTableVertical.call(this, -rowsToScroll, forceTableScrollRender);
+              triggerScrollEvent = scrollTableVertical.call(this, -rowsToScroll, forceTableScrollRender, e);
               //console.log('scrolling up to row',currentRow,'by',rowsToScroll,'rows');
             }
           }
@@ -2488,7 +2563,7 @@
           scrollTableHorizontal.call(this);
         }
         //console.log('Scrolling .macro-table-scroll-container: lastScrollTop',lastScrollTop,'scrollTop',scrollTop,'calculatedRow',calculatedRow,'lastCalculatedRow',lastCalculatedRow,'rowsToScroll',rowsToScroll);
-        if(triggerScrollEvent) {
+        if(this.verticalRowSizePid === null && triggerScrollEvent) {
           this._trigger('scroll', e);
         }
       }.bind(this));
@@ -2519,6 +2594,8 @@
       this.currentDomColumn = 0;
       this.selectedRowCount = 0;
       this.expandedRowCount = 0;
+
+      this.verticalRowSizePid = null;
 
       this.$dynamicRowTemplate = $(document.createElement('tr'));
       //build dynamically left-scrollable row
@@ -2830,16 +2907,16 @@
 
       this.$headerWrapper.show(); //needs to be visible so column width calculation can be performed
 
-      verticallySizeRows([{
-        dynamicRow: this.$dynamicHeaderRow,
-        staticRow: this.$staticHeaderRow
+      verticallySizeRows.call(this, [{
+        dynamicRow: this.$dynamicHeaderRow.css('height', ''),
+        staticRow: this.$staticHeaderRow.css('height', '')
       }]);
 
       if(typeof summaryRow === 'object') {
         $macroTable.addClass('macro-table-display-summary-row');
-        verticallySizeRows([{
-          dynamicRow: this.$dynamicSummaryRow,
-          staticRow: this.$staticSummaryRow
+        verticallySizeRows.call(this, [{
+          dynamicRow: this.$dynamicSummaryRow.css('height', ''),
+          staticRow: this.$staticSummaryRow.css('height', '')
         }]);
       } else {
         $macroTable.removeClass('macro-table-display-summary-row');
@@ -2935,7 +3012,7 @@
         $macroTable = this.element,
         $dataContainerWrapper = this.$dataContainerWrapper,
         $staticDataContainer = $dataContainerWrapper.find('div.macro-table-static-data-container'),
-        $tableBody = $dataContainerWrapper.find('tbody.macro-table-column-content'),
+        $tableBody = this.$tableBody,
         $staticTableBody = $dataContainerWrapper.find('tbody.macro-table-static-column-content'),
 
         dynamicFragment = document.createDocumentFragment(),
@@ -2987,7 +3064,7 @@
       }
 
       //return table to the old scoll position
-      $currentRowElement = $tableBody.find('tr').filter(':nth-child('+(this.currentDomRow + 1)+')');
+      $currentRowElement = $tableBody.children().filter(':nth-child('+(this.currentDomRow + 1)+')');
       scrollPosition = this.$dataContainer.scrollTop() + ($currentRowElement.length === 0 ? 0 : $currentRowElement.position().top);
 
       this.$dataContainer.add($staticDataContainer)
@@ -2995,7 +3072,7 @@
 
       $dataContainerWrapper.show(); //needs to be visible so row height calculation can be performed
 
-      verticallySizeRows(newRows);
+      verticallySizeRows.call(this, newRows);
     },
 
     /**
@@ -3186,9 +3263,15 @@
     _resizeTable: function(height, width) {
       var $macroTable = this.element,
         options = this.options,
+        tableData = options.tableData,
         rowHeight = options.rowHeight,
         rowSelectorOffset = options.rowsSelectable === true ? this.rowSelectColumnWidth : 0,
-        headerHeight;
+        headerHeight, i;
+
+      //the cached height needs to be re-calculated because the realy heights probably changed
+      for(i = tableData.length; i--;) {
+        delete tableData[i].calculatedHeight;
+      }
 
       //initialized undefined dimensions with parent dimensions
       height = height || this._getFallbackHeightToResize();
@@ -3339,6 +3422,19 @@
      *  than the true row number (which may differ if any sub rows are expanded)
      */
     scrollToRow: function(scrollToRow, byIndex) {
+      this._scrollToRow(scrollToRow, byIndex);
+    },
+
+    /**
+     * Scroll the table to the desired row (internal use only)
+     * @param {Number}  scrollToRowthe row or row index to scroll the table to
+     * @param {Boolean} byIndex        true if scrolling to the row index number rather
+     *                                 than the true row number (which may differ if any sub rows are expanded)
+     * @param {Boolean} forceTrigger   If true, handle the _trigger call to scroll
+     *                                 here rather than in the scroll handler if there are no rows to scroll
+     * @param {Event}   scrollEvent    Original event object for the scroll
+     */
+    _scrollToRow: function(scrollToRow, byIndex, forceTrigger, scrollEvent) {
       var options = this.options,
         tableData = this.renderRowDataSet,
         rowsToScroll;
@@ -3358,6 +3454,10 @@
 
       } else {
         this._refreshRows();
+        //needed when scrolling into the final window and it's discovered that rows aren't all default heights
+        if(this.verticalRowSizePid === null && forceTrigger) {
+          this._trigger('scroll', scrollEvent);
+        }
       }
     },
 
