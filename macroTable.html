@@ -209,9 +209,9 @@
               //class added at random to try and screw up sorting
               return '<span class="'+~~((Math.random()*1000)+1)+'">'+text+'</span>';
             },
-            5: function(value, row, $container) {
+            5: function(value, row, container) {
               if(row.index == 2) {
-                $container.removeClass('macro-table-cell-clickable');
+                $(container).removeClass('macro-table-cell-clickable');
               }
               return value + ' :(';
             }

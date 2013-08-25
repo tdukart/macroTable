@@ -704,6 +704,21 @@ col.macro-table-row-selector-column  {
 
 /* Expanded / Collapsed rows rules */
 
+.macro-table-row-selector-cell,
+.macro-table-row-expander-cell .macro-table-checkbox,
+.macro-table-row-expander-cell .macro-table-checkbox-label {
+  display: none;
+}
+
+.macro-table-row-selectable .macro-table-row-selector-cell {
+  display: table-cell;
+}
+
+.macro-table-row-expandable .macro-table-row-expander-cell .macro-table-checkbox,
+.macro-table-row-expandable .macro-table-row-expander-cell .macro-table-checkbox-label {
+  display: inline-block;
+}
+
 .macro-table-sub-row {
   display: none;
 }
