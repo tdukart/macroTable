@@ -228,6 +228,40 @@
       arraySomeSearch = function(value) {
         return value.toString().toLowerCase().indexOf(searchText) !== -1;
       },
+
+      /**
+       * Convenience function for preparing a row to have its matching text highlighted
+       * The "row" parameter is modified and changes are passed by reference back to the main loop
+       * @param  {String} escapedSearchText The escaped string used for the regular expression
+       * @param  {Object} row               The row object itself containing the formattedData field (to be deleted)
+       *                                    and the data field, which will be overridden with the highlighted value markup
+       * @param  {Object} searchRow         The indexed, meta-row object from the passed-in searchIndex
+       */
+      highlightMatch = function(escapedSearchText, row, searchRow) {
+        delete row.formattedData; //we don't want the call to getColumnContent to used any cached values for this row
+        Object.keys(row.data).forEach(function(field) {
+          var searchMatch = new RegExp('(' + escapedSearchText + ')', 'gi'),
+            index = columnOrder.indexOf(field),
+            replaceResult, rowData;
+
+          //contains data that isn't rendered in the table, so ignore it
+          if(index === -1) {
+            return;
+          }
+
+          //the goal is to notify the row builder that this formatted cell matched the search filter or not
+          //if it did match, we want to render the cell with the text as built in this worker
+          //if it didn't match, we want to allow the formatter function to take care of it, so HTML isn't stripped out
+          rowData = searchRow.formatted[index].toString();
+          replaceResult = rowData.replace(searchMatch, '<span class="macro-table-filter-match">$1</span>');
+          if(rowData === replaceResult) {
+            replaceResult = searchRow.values[index]; //no match, default to internal value so the formatter can be applied durring rendering
+          }
+
+          row.data[field] = replaceResult;
+        });
+      },
+
       i, j, k, len, searchRow, indexHierachy, indexCheck, realTableRow, tableData, searchIndex, searchText, escapedSearchText, rowString, columnOrder, columnFilters, filterOutRow;
 
     if(typeof e.data !== 'undefined' &&
@@ -261,25 +295,10 @@
               rowString = JSON.parse(JSON.stringify(searchRow.tableData));
 
               if(doHighlightMatches) {
-                delete rowString.formattedData; //we don't want the call to getColumnContent to used any cached values for this row
-                Object.keys(rowString.data).forEach(function(field) {
-                  var searchMatch = new RegExp('(' + escapedSearchText + ')', 'gi'),
-                    index = columnOrder.indexOf(field),
-                    replaceResult, rowData;
-
-                  //the goal is to notify the row builder that this formatted cell matched the search filter or not
-                  //if it did match, we want to render the cell with the text as built in this worker
-                  //if it didn't match, we want to allow the formatter function to take care of it, so HTML isn't stripped out
-                  rowData = searchRow.formatted[index].toString();
-                  replaceResult = rowData.replace(searchMatch, '<span class="macro-table-filter-match">$1</span>');
-                  if(rowData === replaceResult) {
-                    replaceResult = searchRow.values[index]; //no match, default to internal value so the formatter can be applied durring rendering
-                  }
-
-                  rowString.data[field] = replaceResult;
-                });
+                highlightMatch(escapedSearchText, rowString, searchRow);
               }
 
+              rowString.expanded = true;
               searchedRows.unshift(rowString);
               searchedRows[0].subRows = [];
               lastSearchMatchHierarchy = [searchedRows[0]];
@@ -304,17 +323,25 @@
                     if(typeof realTableRow.subRows !== 'undeinfed') {
                       realTableRow = realTableRow.subRows[indexHierachy[k]];
                     } else {
-                      throw 'The index used does not align with the tableData structure'+indexCheck;
+                      throw 'The index used does not align with the tableData structure '+indexCheck;
                     }
                   }
 
-                  //backfill table row objects and/or add the subrow to its parent
+                  realTableRow = JSON.parse(JSON.stringify(realTableRow));
+
+                  //backfill table row object
                   if(j === 0) {
-                    searchedRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
+                    realTableRow.expanded = true;
+                    searchedRows.unshift(realTableRow);
                     searchedRows[0].subRows = [];
                     lastSearchMatchHierarchy[j] = searchedRows[0];
+
+                  //add the subrow to its parent which is now definitely in the searchedRows object
                   } else {
-                    searchedRows[0].subRows.unshift(JSON.parse(JSON.stringify(realTableRow)));
+                    if(doHighlightMatches) {
+                      highlightMatch(escapedSearchText, realTableRow, searchRow);
+                    }
+                    searchedRows[0].subRows.unshift(realTableRow);
                     searchedRows[0].subRows[0].subRows = [];
                     lastSearchMatchHierarchy[j] = searchedRows[0].subRows[0];
                   }
@@ -1524,7 +1551,17 @@
           break;
 
         case 'searchTerm':
+          value = typeof value === 'string' ? value : '';
+          this._super(key, value);
+
           this._init(); //causes currentColumn and currentRow to reset to 0
+
+          //async searching won't actually take place if there is no search term, so trigger the event here
+          if(value === '') {
+            this._trigger('search', null, {
+              searchTerm: value
+            });
+          }
           break;
 
         case 'columnFilters':
