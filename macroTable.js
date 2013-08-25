@@ -845,7 +845,8 @@
     //use cached height value if it exists and save time later in verticallySizeRows
     if(row.calculatedHeight) {
       $dynamicRow.css('height', row.calculatedHeight);
-      $staticRow.css('height', row.calculatedHeight);
+      $staticRow.css('height', row.calculatedHeight)
+      .find('div.macro-table-expand-toggle-container').css('height', row.calculatedHeight - 1);
     }
 
     return {
