@@ -164,12 +164,11 @@
     if(typeof e.data !== 'undefined' && e.data.hasOwnProperty('tableData') && e.data.tableData instanceof Array) {
 
       tableData = e.data.tableData; //table's row data
+      sortByField = e.data.sortByField; //column field name to sort the data by
 
       switch(e.data.action) {
         case 'sort':
           if(e.data.hasOwnProperty('sortByField')) {
-
-            sortByField = e.data.sortByField; //column field name to sort the data by
 
             direction = e.data.direction == -1 ? -1 : 1; //direction can only be 1 (ascending) and -1 (descending)
 
@@ -196,7 +195,7 @@
           }
           break;
 
-        case 'order':
+        //case 'order':
         default:
           reverseTableData(tableData);
           break;
@@ -207,7 +206,11 @@
     }
 
     //return process tableData
-    postMessage(tableData);
+    postMessage({
+      pid: e.data.pid,
+      sortByField: sortByField, //passed through so the message listener knows where to cache
+      tableData: tableData
+    });
 
   }
 
@@ -342,6 +345,9 @@
 
     //return processed row data
     postMessage({
+      pid: e.data.pid,
+      sortByField: e.data.sortByField, //passed through so the message listener knows where to cache
+      searchText: e.data.searchText, //passed through so the message listener knows where to cache
       searchedRows: searchedRows,
       filteredRows: filteredRows
     });
@@ -969,47 +975,59 @@
       $veil = $('div.macro-table-data-veil', this.element),
       columnSorter, sortWorker, action;
 
+    this.sortWorkerPid = +new Date();
+
     $veil.show();
 
     sortWorker = new Worker(this.sortWebWorkerUrl);
 
     sortWorker.onerror = function(e) {
       sortWorker.terminate();
-      this.renderRowDataSet = options.tableData;
 
-      if(typeof callback === 'function') {
-        callback.bind(this)();
-      }
+      if(e.data.pid === this.sortWorkerPid) {
+        this.sortWorkerPid = null;
 
-      this._renderTableRows(this.renderRowDataSet);
+        this.renderRowDataSet = options.tableData;
 
-      $veil.hide();
-      console.error('Error sorting column.');
-      this._trigger('columnsort', null, {
-        error: true
-      });
-    }.bind(this);
+        if(typeof callback === 'function') {
+          callback.bind(this)();
+        }
 
-    sortWorker.onmessage = function(e) {
-      this.sortedRows[sortedColumn][''] = e.data;
-      this.searchIndex = []; //postSortFilter will recalculate searchIndex with new order (TODO: maybe make this part of the worker)
-      this.renderRowDataSet = this.sortedRows[sortedColumn]['']; //callback may contain references to this.renderRowDataSet, so it needs to be set to pre-filter state
-      this.renderRowDataSet = postSortFilter.call(this, e.data, action, callback); //potentially changes self.renderRowDataSet if there is a filter active!
-
-      if(typeof this.renderRowDataSet !== 'undefined') {
         this._renderTableRows(this.renderRowDataSet);
 
         $veil.hide();
+        console.error('Error sorting column.');
+        this._trigger('columnsort', null, {
+          error: true
+        });
       }
+    }.bind(this);
 
-      $columnSizers.addClass('macro-table-highlight');
-
-      $columnHeader.removeClass('macro-table-sort-loading')
-      .addClass(columnData.direction < 0 ? 'macro-table-sort-descending' : 'macro-table-sort-ascending');
-
+    sortWorker.onmessage = function(e) {
       sortWorker.terminate();
-      //console.log('sorted data',e.data);
-      this._trigger('columnsort', null, columnData);
+      this.sortedRows[e.data.sortByField][''] = e.data.tableData;
+
+      if(e.data.pid === this.sortWorkerPid) {
+        this.sortWorkerPid = null;
+
+        this.searchIndex = []; //postSortFilter will recalculate searchIndex with new order (TODO: maybe make this part of the worker)
+        this.renderRowDataSet = this.sortedRows[e.data.sortByField]['']; //callback may contain references to this.renderRowDataSet, so it needs to be set to pre-filter state
+        this.renderRowDataSet = postSortFilter.call(this, e.data.tableData, action, callback); //potentially changes self.renderRowDataSet if there is a filter active!
+
+        if(typeof this.renderRowDataSet !== 'undefined') {
+          this._renderTableRows(this.renderRowDataSet);
+
+          $veil.hide();
+        }
+
+        $columnSizers.addClass('macro-table-highlight');
+
+        $columnHeader.removeClass('macro-table-sort-loading')
+        .addClass(columnData.direction < 0 ? 'macro-table-sort-descending' : 'macro-table-sort-ascending');
+
+        //console.log('sorted data',e.data);
+        this._trigger('columnsort', null, columnData);
+      }
     }.bind(this);
 
     if(typeof this.sortedRows[sortedColumn] === 'undefined') {
@@ -1034,6 +1052,7 @@
       action = 'sort';
 
       sortWorker.postMessage({
+        pid: this.sortWorkerPid,
         action: action,
         tableData: options.tableData,
         sortByField: sortedColumn,
@@ -1046,8 +1065,10 @@
       //console.log('pre-sorted data',this.renderRowDataSet);
       action = 'order';
       sortWorker.postMessage({
+        pid: this.sortWorkerPid,
         action: action,
-        tableData: this.renderRowDataSet
+        tableData: this.renderRowDataSet,
+        sortByField: sortedColumn
       });
     }
   }
@@ -1174,63 +1195,75 @@
       isSearching = options.searchTerm !== '',
       filterWorker;
 
+    this.filterWorkerPid = +new Date();
+
     $veil.show(); //probably already shown from workerSortRow
 
     filterWorker = new Worker(this.filterWebWorkerUrl);
 
     filterWorker.onerror = function(e) {
       filterWorker.terminate();
-      options.searchTerm = '';
-      options.columnFilters = [];
-      this.renderRowDataSet = tableData;
 
-      if(typeof callback === 'function') {
-        callback.bind(this)();
-      }
+      if(e.data.pid === this.filterWorkerPid) {
+        this.filterWorkerPid = null;
 
-      this._renderTableRows(this.renderRowDataSet);
-      $veil.hide();
-      console.error('Error filtering rows.');
+        options.searchTerm = '';
+        options.columnFilters = [];
+        this.renderRowDataSet = tableData;
 
-      if(isFiltering) {
-        this._trigger('filter', null, {
-          error: true
-        });
-      }
-      if(isSearching) {
-        this._trigger('search', null, {
-          error: true
-        });
+        if(typeof callback === 'function') {
+          callback.bind(this)();
+        }
+
+        this._renderTableRows(this.renderRowDataSet);
+        $veil.hide();
+        console.error('Error filtering rows.');
+
+        if(isFiltering) {
+          this._trigger('filter', null, {
+            error: true
+          });
+        }
+        if(isSearching) {
+          this._trigger('search', null, {
+            error: true
+          });
+        }
       }
     }.bind(this);
 
     filterWorker.onmessage = function(e) {
-      this.renderRowDataSet = e.data.filteredRows; //what we want to show
-      this.sortedRows[options.sortByColumn][options.searchTerm] = e.data.searchedRows; //what we want to cache for future filters
-
-      if(typeof callback === 'function') {
-        callback.bind(this)();
-      }
-
-      this._renderTableRows(this.renderRowDataSet);
-
-      $veil.hide();
-
       filterWorker.terminate();
+      this.renderRowDataSet = e.data.filteredRows; //what we want to show
+      this.sortedRows[e.data.sortByField][e.data.searchText] = e.data.searchedRows; //what we want to cache for future filters
 
-      if(isFiltering) {
-        this._trigger('filter', null, {
-          columnFilters: options.columnFilters
-        });
-      }
-      if(isSearching) {
-        this._trigger('search', null, {
-          searchTerm: options.searchTerm
-        });
+      if(e.data.pid === this.filterWorkerPid) {
+        this.filterWorkerPid = null;
+
+        if(typeof callback === 'function') {
+          callback.bind(this)();
+        }
+
+        this._renderTableRows(this.renderRowDataSet);
+
+        $veil.hide();
+
+        if(isFiltering) {
+          this._trigger('filter', null, {
+            columnFilters: options.columnFilters
+          });
+        }
+        if(isSearching) {
+          this._trigger('search', null, {
+            searchTerm: options.searchTerm
+          });
+        }
       }
     }.bind(this);
 
     filterWorker.postMessage({
+      pid: this.filterWorkerPid,
+      sortByField: options.sortByColumn,
       searchText: options.searchTerm,
       searchIndex: this.searchIndex,
       columnOrder: this.columnOrder,

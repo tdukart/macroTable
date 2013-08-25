@@ -228,7 +228,7 @@
      * Once for the call itself, and another for the subsequent call, which will fire both events
      * @type {Number}
      */
-    iteration = -2; //we want the events to fire 3 times before starting the test
+    iteration = -1; //we want the events to fire 3 times before starting the test
 
     $('#table').on('macrotablefilter macrotablesearch', function(e) {
       switch(iteration++) {
