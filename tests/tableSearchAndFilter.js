@@ -55,6 +55,109 @@
     $('#table').macroTable('searchTable', search1);
   });
 
+  asyncTest('Search Table Sub Rows Collapsed', 4, function() {
+    $('#table').on('macrotablesearch', function(e) {
+      switch(iteration++) {
+        case 0:
+          strictEqual($rowContainer.find('tr').length, totalRows + numSubRows, 'Correct number of rows rendered due to search term matching all of them');
+
+          $('#table').macroTable('searchTable', search2);
+          break;
+
+        case 1:
+          strictEqual($rowContainer.find('tr').length, 1 + numSubRows, 'All subrows and their parent row rendered with search term matching all of them');
+
+          $('#table').macroTable('searchTable', search3);
+          break;
+
+        case 2:
+          strictEqual($rowContainer.find('tr').length, 2, 'Only one subrow and its parent rendered because search term matched only a single subrow');
+
+          $('#table').macroTable('searchTable', '');
+          break;
+
+        case 3:
+          strictEqual($rowContainer.find('tr').length, totalRows, 'All rows but no subrows rendered after search term cleared');
+          start();
+          break;
+      }
+    });
+
+    var totalRows = 3,
+      numSubRows = 3,
+      columnOptions = {
+        numColumns: 1
+      },
+      tableData = publicFunctions.initializeTable(0, columnOptions, {
+        highlightMatches: true
+      }),
+      search1 = '0',
+      search2 = '<0>',
+      search3 = '1<0>',
+      $rowContainer = $('#table .macro-table-data-container');
+
+    $('#table').macroTable('option', {
+      tableData: publicFunctions.generateTableData(totalRows, columnOptions, {
+        0: numSubRows
+      })
+    });
+
+    $('#table').macroTable('searchTable', search1);
+  });
+
+  asyncTest('Search Table Sub Rows Expanded', 4, function() {
+    $('#table').on('macrotablesearch', function(e) {
+      switch(iteration++) {
+        case 0:
+          strictEqual($rowContainer.find('tr').length, totalRows + numSubRows, 'Correct number of rows rendered due to search term matching all of them');
+
+          $('#table').macroTable('searchTable', search2);
+          break;
+
+        case 1:
+          strictEqual($rowContainer.find('tr').length, 1 + numSubRows, 'All subrows and their parent row rendered with search term matching all of them');
+
+          $('#table').macroTable('searchTable', search3);
+          break;
+
+        case 2:
+          strictEqual($rowContainer.find('tr').length, 2, 'Only one subrow and its parent rendered because search term matched only a single subrow');
+
+          $('#table').macroTable('searchTable', '');
+          break;
+
+        case 3:
+          strictEqual($rowContainer.find('tr').length, totalRows + numSubRows, 'All rows and subrows rendered after search term cleared');
+          start();
+          break;
+
+        default:
+          break;
+      }
+    });
+
+    var totalRows = 3,
+      numSubRows = 3,
+      columnOptions = {
+        numColumns: 1
+      },
+      tableData = publicFunctions.initializeTable(0, columnOptions, {
+        highlightMatches: true
+      }),
+      search1 = '0',
+      search2 = '<0>',
+      search3 = '1<0>',
+      $rowContainer = $('#table .macro-table-data-container');
+
+    $('#table').macroTable('option', {
+      tableData: publicFunctions.generateTableData(totalRows, columnOptions, {
+        0: numSubRows
+      }, null, true)
+    });
+
+    $('#table').macroTable('searchTable', search1);
+  });
+
   asyncTest('Search Table without Highlight', 5, function() {
     $('#table').on('macrotablesearch', function(e) {
       switch(iteration++) {
@@ -228,7 +331,7 @@
      * Once for the call itself, and another for the subsequent call, which will fire both events
      * @type {Number}
      */
-    iteration = -2; //we want the events to fire 3 times before starting the test
+    iteration = -1; //we want the events to fire 3 times before starting the test
 
     $('#table').on('macrotablefilter macrotablesearch', function(e) {
       switch(iteration++) {

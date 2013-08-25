@@ -138,7 +138,7 @@
     strictEqual($('#table .macro-table-data-container-wrapper input.macro-table-row-expander').length, tableData.length, 'Expander buttons found for rows');
   });
 
-  test('Table Rows without Sub-Rows Do Not Have Expander Buttons', 4, function() {
+  test('Table Rows without Sub-Rows Do Not Have Expander Buttons', 3, function() {
     publicFunctions.initializeTable(3, {
       numColumns: 1
     });
@@ -146,7 +146,6 @@
     ok(!$('#table').hasClass('macro-table-rows-expandable'), 'Table rows not expandable');
     strictEqual($('#table input.macro-table-expand-toggle').length, 0, 'Header expand all toggle button not found');
     ok(!$('#table .macro-table-data-container-wrapper .macro-table-row-expander-cell').is(':visible'), 'No expander cells visible in table');
-    strictEqual($('#table .macro-table-data-container-wrapper input.macro-table-row-expander').length, 0, 'No expander buttons found for rows');
   });
 
   asyncTest('Expand Row (By Click)', 11, function() {
