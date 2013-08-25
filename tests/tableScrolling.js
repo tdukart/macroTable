@@ -158,7 +158,7 @@
     $('#table').macroTable('scrollToRow', scroll1, true);
   });
 
-  asyncTest('Table without Summary Row Scrolls to Last Row', 5, function() {
+  asyncTest('Table without Summary Row Scrolls to Last Row', 6, function() {
     $('#table').on('macrotablescroll', function(e) {
       switch(iteration++) {
         case 0:
@@ -180,9 +180,11 @@
 
         case 2:
           var $lastRow = $dataContainerWraper.find('table.macro-table-dynamic tr.macro-table-row').last();
+          var $lastRowStatic = $dataContainerWraper.find('table.macro-table-static tr.macro-table-row').last();
           equal($lastRow.attr('data-row-index'), totalRows - 1, 'Last row is last in the current row window');
           ok($lastRow.offset().top <  + $dataContainerWraper.height(), 'Top of last row visible in table viewport');
           ok($lastRow.offset().top + $lastRow.height() < containerOffsetTop + $dataContainerWraper.height(), 'Bottom of last row visible in table viewport');
+          strictEqual($lastRow.height(), $lastRowStatic.height(), 'Dynamic and static components of last row are the same height');
           start();
           break;
 
@@ -247,7 +249,7 @@
     $scrollContainer = $('#table div.macro-table-scroll-container').scrollTop(scrollToRow * rowHeight);
   });
 
-  asyncTest('Table with Summary Row Scrolls to Last Row', 5, function() {
+  asyncTest('Table with Summary Row Scrolls to Last Row', 6, function() {
     $('#table').on('macrotablescroll', function(e) {
       switch(iteration++) {
         case 0:
@@ -269,9 +271,11 @@
 
         case 2:
           var $lastRow = $dataContainerWraper.find('table.macro-table-dynamic tr.macro-table-row').last();
+          var $lastRowStatic = $dataContainerWraper.find('table.macro-table-static tr.macro-table-row').last();
           equal($lastRow.attr('data-row-index'), totalRows - 1, 'Last row is last in the current row window');
           ok($lastRow.offset().top <  + $dataContainerWraper.height(), 'Top of last row visible in table viewport');
           ok($lastRow.offset().top + $lastRow.height() < containerOffsetTop + $dataContainerWraper.height(), 'Bottom of last row visible in table viewport');
+          strictEqual($lastRow.height(), $lastRowStatic.height(), 'Dynamic and static components of last row are the same height');
           start();
           break;
 
@@ -337,14 +341,16 @@
     $scrollContainer = $('#table div.macro-table-scroll-container').scrollTop(scrollToRow * rowHeight);
   });
 
-  asyncTest('Table without Summary Row Scrolls to Last Row Via API', 3, function() {
+  asyncTest('Table without Summary Row Scrolls to Last Row Via API', 4, function() {
     //shows 10 rows worth of height + header, and fits width to 100%
 
     $('#table').on('macrotablescroll', function(e) {
       var $lastRow = $dataContainerWraper.find('table.macro-table-dynamic tr.macro-table-row').last();
+      var $lastRowStatic = $dataContainerWraper.find('table.macro-table-static tr.macro-table-row').last();
       equal($lastRow.attr('data-row-index'), totalRows - 1, 'Last row is last in the current row window');
       ok($lastRow.offset().top < $dataContainerWraper.offset().top + $dataContainerWraper.height(), 'Top of last row visible in table viewport');
       ok($lastRow.offset().top + $lastRow.height() < $dataContainerWraper.offset().top + $dataContainerWraper.height(), 'Bottom of last row visible in table viewport');
+      strictEqual($lastRow.height(), $lastRowStatic.height(), 'Dynamic and static components of last row are the same height');
       start();
     });
 
@@ -461,4 +467,95 @@
 
     $dataContainerWraper = $('#table div.macro-table-data-container-wrapper');
   });
+
+  asyncTest('Table Rows Irregular Heights Match After Scrolling', 10, function() {
+
+    $('#table').on('macrotablescroll', function(e) {
+      switch(iteration++) {
+        case 0:
+          $('#table').macroTable('scrollToRow', totalRows, true);
+          break;
+
+        case 1:
+          var $lastRow = $dataContainerWraper.find('table.macro-table-dynamic tr.macro-table-row').last();
+          var $lastRowStatic = $dataContainerWraper.find('table.macro-table-static tr.macro-table-row').last();
+          equal($lastRow.attr('data-row-index'), totalRows - 1, 'Last row is last in the current row window');
+          ok($lastRow.offset().top < $dataContainerWraper.offset().top + $dataContainerWraper.height(), 'Top of last dynamic row visible in table viewport');
+          ok($lastRowStatic.offset().top < $dataContainerWraper.offset().top + $dataContainerWraper.height(), 'Top of last static row visible in table viewport');
+          ok($lastRow.offset().top + $lastRow.height() < $dataContainerWraper.offset().top + $dataContainerWraper.height(), 'Bottom of last dynamic row visible in table viewport');
+          ok($lastRowStatic.offset().top + $lastRowStatic.height() < $dataContainerWraper.offset().top + $dataContainerWraper.height(), 'Bottom of last static row visible in table viewport');
+          strictEqual($lastRow.height(), $lastRowStatic.height(), 'Dynamic and static components of last row are the same height');
+
+          $('#table').macroTable('option', {
+            summaryRow: false
+          });
+          break;
+
+        case 2:
+          var $firstRow = $dataContainerWraper.find('table.macro-table-dynamic tr.macro-table-row').first();
+          var $firstRowStatic = $dataContainerWraper.find('table.macro-table-static tr.macro-table-row').first();
+          equal($firstRow.attr('data-row-index'), 0, '0th row is first in the current row window');
+          strictEqual($firstRow.offset().top, $dataContainerWraper.offset().top, 'First dynamic row is at 0-offset');
+          strictEqual($firstRowStatic.offset().top, $dataContainerWraper.offset().top, 'First static row is at 0-offset');
+          strictEqual($firstRow.height(), $firstRowStatic.height(), 'Dynamic and static components of first row are the same height');
+          start();
+          break;
+
+        default:
+          break;
+      }
+    });
+
+    var totalRows = 200,
+      firstScroll = 177,
+      totalColumns = 6,
+      columnOptions = {
+        numColumns: 6
+      },
+      tableData, $dataContainerWraper;
+
+    $(window).scrollTop(0);
+
+    tableData = publicFunctions.initializeTable(totalRows, columnOptions, {
+      summaryRow: true
+    });
+
+    $('#table').macroTable('option', {
+      tableData: publicFunctions.generateTableData(totalRows, columnOptions, {
+        1: 9,
+        10: 30
+      }, {
+        10: {
+          2: 'jhgfjhgfjhgf'
+        },
+        192: {
+          1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
+        },
+        193: {
+          1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
+        },
+        194: {
+          1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
+        },
+        195: {
+          1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
+        },
+        196: {
+          1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
+        },
+        197: {
+          1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
+        },
+        198: {
+          1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
+        },
+        199: {
+          1: 'ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh ahh'
+        }
+      })
+    }).macroTable('scrollToRow', firstScroll, true);
+
+    $dataContainerWraper = $('#table div.macro-table-data-container-wrapper');
+  });
+
 })();
