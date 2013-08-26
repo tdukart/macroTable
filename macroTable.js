@@ -847,7 +847,10 @@
           id: 'macro-table-row-expander-'+rowIndex+'-'+timestamp,
           'data-row-index': rowIndex
         })
-        .prop('checked', row.expanded === true)
+        .prop({
+          checked: !!row.expanded,
+          disabled: !rowHasChildren //disable for safety
+        })
         .end()
         .find('label').attr('for', 'macro-table-row-expander-'+rowIndex+'-'+timestamp);
       } else if($cell.hasClass('macro-table-row-selector-cell')) {
@@ -856,7 +859,10 @@
           id: 'macro-table-select-'+rowIndex+'-'+timestamp,
           'data-row-index': rowIndex
         })
-        .prop('checked', row.selected === true)
+        .prop({
+          checked: !!row.selected,
+          disabled: !isRowsSelectable //disable for safety
+        })
         .end()
         .find('label').attr('for', 'macro-table-select-'+rowIndex+'-'+timestamp);
       }
@@ -2155,7 +2161,7 @@
             //reset the force re-render flag
             setTimeout(function() {
               forceTableScrollRender = false;
-              self._trigger('rowexpand', null, {
+              self._trigger(isToggled ? 'rowexpand' : 'rowcollapse', null, {
                 expandedRows: self.expandedRowIndexes
               });
             }, 0);
@@ -2173,27 +2179,22 @@
           $checkboxRow = $checkbox.closest('tr'),
           domRowIndex = $checkboxRow.index(),
           dataRowIndex = $checkbox.data('row-index'),
+          isChecked = $checkbox.is(':checked'),
           $dataRow = $dynamicTableBody.find('tr').eq(domRowIndex);
 
         //select/deselect a row
         if($checkbox.hasClass('macro-table-row-selector')) {
 
-          if($checkbox.is(':checked')) {
+          if(isChecked) {
             $checkboxRow.addClass('macro-table-highlight macro-table-selected-row');
             $dataRow.addClass('macro-table-highlight macro-table-selected-row');
             self.expandedTableData[dataRowIndex].selected = true;
             self.selectedRowCount++;
-            self._trigger('rowselect', null, {
-              selectedRows: self.getSelectedRows()
-            });
           } else {
             $checkboxRow.removeClass('macro-table-highlight macro-table-selected-row');
             $dataRow.removeClass('macro-table-highlight macro-table-selected-row');
             self.expandedTableData[dataRowIndex].selected = false;
             self.selectedRowCount--;
-            self._trigger('rowdeselect', null, {
-              selectedRows: self.getSelectedRows()
-            });
           }
 
           //set header checkbox state
@@ -2212,10 +2213,14 @@
             $selectAllHeaderCheckbox[0].indeterminate = true;
           }
 
+          self._trigger(isChecked ? 'rowselect' : 'rowdeselect', null, {
+            selectedRows: self.getSelectedRows()
+          });
+
         //expand/collapse a row
         } else if($checkbox.hasClass('macro-table-row-expander')) {
 
-          if($checkbox.is(':checked')) {
+          if(isChecked) {
             $dataRow.removeClass('macro-table-row-collapsed')
             .addClass('macro-table-row-expanded');
 
@@ -2245,24 +2250,23 @@
 
           //set header checkbox state
           if(self.expandedRowCount === 0) { //no rows expanded
-
             $expandAllHeaderCheckbox.prop('checked', false);
-            //$expandAllHeaderCheckbox[0].indeterminate = false;
 
           } else if(self.expandedRowCount == self.rowsWithChildrenCount) { //all expandable rows expanded
-
             $expandAllHeaderCheckbox.prop('checked', true);
-            //$expandAllHeaderCheckbox[0].indeterminate = false;
 
-          } //else { //at least one row expanded, but not all
-
-            //$expandAllHeaderCheckbox[0].indeterminate = true;
-          //}
+          } else { //at least one row expanded, but not all
+            if(self.expandedRowCount < self.rowsWithChildrenCount / 2) {
+              $expandAllHeaderCheckbox.prop('checked', false);
+            } else {
+              $expandAllHeaderCheckbox.prop('checked', true);
+            }
+          }
 
           $macroTable.find('div.macro-table-scroll-spacer')
           .height(rowHeight * self.expandedTableData.length);
 
-          self._trigger('rowexpand', null, {
+          self._trigger(isChecked ? 'rowexpand' : 'rowcollapse', null, {
             expandedRows: self.expandedRowIndexes.sort()
           });
         }

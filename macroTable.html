@@ -173,7 +173,10 @@
             console.log(data.columnIndex+', '+data.width);
           })
           .on('macrotablerowexpand', function(e, data) {
-            console.log('Expanded rows:',data.expandedRows);
+            console.log('Expanded rows (expand):',data.expandedRows);
+          })
+          .on('macrotablerowcollapse', function(e, data) {
+            console.log('Expanded rows (collapse):',data.expandedRows);
           });
 
           if(delayDomInsertion) {

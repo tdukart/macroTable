@@ -714,6 +714,8 @@ col.macro-table-row-selector-column  {
   display: table-cell;
 }
 
+.macro-table-rows-expandable .macro-table-row-expander-cell .macro-table-checkbox.macro-table-expand-toggle,
+.macro-table-rows-expandable .macro-table-row-expander-cell .macro-table-checkbox-label.macro-table-expand-toggle-label,
 .macro-table-row-expandable .macro-table-row-expander-cell .macro-table-checkbox,
 .macro-table-row-expandable .macro-table-row-expander-cell .macro-table-checkbox-label {
   display: inline-block;
