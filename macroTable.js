@@ -355,10 +355,23 @@
       }
 
       //filter out rows that don't pass the column filter definitions
-      filteredRows = searchedRows.filter(function(row, index) {
-        for(var i = columnFilters.length; i--;) {
+      filteredRows = JSON.parse(JSON.stringify(searchedRows)).filter(function filterCallback(row) {
+        var i, searchIndexMatch;
+        //we need to filter subrows too
+        if(typeof row.subRows !== 'undefined') {
+          row.subRows = row.subRows.filter(filterCallback);
+        }
+        //find the searchIndex that matches the row we're on
+        for(i = searchIndex.length; i--;) {
+          if(searchIndex[i].index == row.index) {
+            searchIndexMatch = searchIndex[i];
+            break;
+          }
+        }
+        for(i = columnFilters.length; i--;) {
           if(typeof columnFilters[i].field !== 'undefined' &&
-              searchIndex[index].values[columnOrder.indexOf(columnFilters[i].field)] !== columnFilters[i].value) {
+              searchIndexMatch.values[columnOrder.indexOf(columnFilters[i].field)] !== columnFilters[i].value &&
+              (typeof row.subRows === 'undefined' || row.subRows.length === 0)) {
             return false;
           }
         }
@@ -1277,6 +1290,10 @@
         if(typeof callback === 'function') {
           callback.bind(this)();
         }
+
+        //the call to _init uses this as well, which can cause the expand column to disappear if filtering causes a flip between a dataset with and without subrows
+        this.rowsWithChildrenCount = countRowsWithChildren.call(this);
+        this._renderHeaderRowControls();
 
         this._renderTableRows(this.renderRowDataSet);
 
