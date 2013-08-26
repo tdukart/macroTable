@@ -418,7 +418,24 @@
       renderCount = 0,
       rowData,
       rowElements,
-      insertBeforeNode;
+      insertBeforeNode,
+
+    rebuildWrapUp = function(blockTrigger) {
+      var time = +new Date();
+      verticallySizeRows.call(this, newRows);
+
+      newRows = null;
+      this.verticalRowSizePid = null;
+
+      //if shimScrollPending, that means the scroll to intended row failed because of non-standatd row heights
+      //and an additional "shim-scroll" has been queued up to correct the miss now that the row heights are known.
+      //this shim-scroll will trigger the scroll event instead (in the .scroll() handler)
+      if(!blockTrigger && !this.shimScrollPending) {
+        this._trigger('scroll', scrollEvent);
+      }
+
+      console.error('rebuildRows size',(+new Date())-time);
+    }.bind(this);
 
     startRowIndex = startRowIndex < 0 ? 0 : startRowIndex;
     direction = direction || 0; //default to "no scroll" for complete re-render
@@ -489,22 +506,11 @@
     //resize the rows out of the thread, which is much faster and
     //more reliable because the rows have reflowed once this is executed
     clearTimeout(this.verticalRowSizePid);
-    this.verticalRowSizePid = setTimeout(function() {
-      var time = +new Date();
-      verticallySizeRows.call(this, newRows);
-
-      newRows = null;
-      this.verticalRowSizePid = null;
-
-      //if shimScrollPending, that means the scroll to intended row failed because of non-standatd row heights
-      //and an additional "shim-scroll" has been queued up to correct the miss now that the row heights are known.
-      //this shim-scroll will trigger the scroll event instead (in the .scroll() handler)
-      if(!this.shimScrollPending) {
-        this._trigger('scroll', scrollEvent);
-      }
-
-      console.error('rebuildRows size',(+new Date())-time);
-    }.bind(this), 0);
+    if(direction !== 0) {
+      this.verticalRowSizePid = setTimeout(rebuildWrapUp, 0);
+    } else {
+      rebuildWrapUp(true);
+    }
 
     return Math.abs(renderCount);
   }
