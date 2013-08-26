@@ -195,6 +195,39 @@
 
   asyncTest('Toggle Selectable Row Feature', 4, function() {
     //toggle rowsSelectable off and on with a row selected and check the getSelectedRows call
+
+    $('#table').on('macrotablerowselect', function() {
+      var event;
+
+      switch(iteration++) {
+        case 1:
+          $('#table').macroTable('option', 'rowsSelectable', false);
+
+          strictEqual($('#table').macroTable('getSelectedRows').length, 0, 'Row not selectable after row toggle off/on');
+
+          $('#table').macroTable('option', 'rowsSelectable', true);
+
+          event = $.Event('click');
+          event.target = $('#table input.macro-table-select-0').next('label').click().end()[0];
+          $staticBody.trigger(event);
+          break;
+
+        default:
+          break;
+      }
+    }).on('macrotablerowdeselect', function() {
+      switch(iteration++) {
+        case 0:
+          var event = $.Event('click');
+          event.target = $('#table input.macro-table-select-0').next('label').click().end()[0];
+          $staticBody.trigger(event);
+          break;
+
+        default:
+          break;
+      }
+    });
+
     var totalRows = 1,
       tableData = publicFunctions.initializeTable([{
         index: 0,
@@ -205,7 +238,17 @@
       }], {
         numColumns: 1
       }),
-      $staticBody = $('#table .macro-table-static-data-container'),
+      $staticBody = $('#table .macro-table-static-data-container').delegate('input.macro-table-select-0', 'click', function() {
+        switch(iteration++) {
+          case 5:
+            strictEqual($('#table').macroTable('getSelectedRows').length, 0, 'Row not selectable after off/on/off toggle and reenable selectable rows');
+            start();
+            break;
+
+          default:
+            break;
+        }
+      }),
       event;
 
     strictEqual($('#table').macroTable('getSelectedRows').length, 0, 'Row not currently selected after initializing as selected');
@@ -217,25 +260,5 @@
     event = $.Event('click');
     event.target = $('#table input.macro-table-select-0').next('label').click().end()[0];
     $staticBody.trigger(event);
-    event = $.Event('click');
-    event.target = $('#table input.macro-table-select-0').next('label').click().end()[0];
-    $staticBody.trigger(event);
-
-    setTimeout(function() {
-      $('#table').macroTable('option', 'rowsSelectable', false);
-
-      strictEqual($('#table').macroTable('getSelectedRows').length, 0, 'Row not selectable after row toggle off/on');
-
-      $('#table').macroTable('option', 'rowsSelectable', true);
-
-      event = $.Event('click');
-      event.target = $('#table input.macro-table-select-0').next('label').click().end()[0];
-      $staticBody.trigger(event);
-
-      setTimeout(function() {
-        strictEqual($('#table').macroTable('getSelectedRows').length, 0, 'Row not selectable after off/on/off toggle and reenable selectable rows');
-        start();
-      }, 100);
-    }, 100);
   });
 })();
