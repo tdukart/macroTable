@@ -403,7 +403,8 @@
    * @return {Number}               The actual number of rows rendered
    */
   function rebuildRows(startRowIndex, endRowIndex, direction, scrollEvent) {
-    var time = +new Date();
+    this._log('time', 'Time rebuildRows while');
+
     var $tableContentWrapper = this.$dataContainerWrapper,
 
       $tableBody = this.$tableBody,
@@ -422,6 +423,7 @@
 
     rebuildWrapUp = function(blockTrigger) {
       var time = +new Date();
+      this._log('time', 'Time rebuildRows size');
       verticallySizeRows.call(this, newRows);
 
       newRows = null;
@@ -434,7 +436,7 @@
         this._trigger('scroll', scrollEvent);
       }
 
-      console.error('rebuildRows size',(+new Date())-time);
+      this._log('timeEnd', 'Time rebuildRows size');
     }.bind(this);
 
     startRowIndex = startRowIndex < 0 ? 0 : startRowIndex;
@@ -476,7 +478,7 @@
     rowData = null;
     rowElements = null;
 
-    console.error('rebuildRows while',(+new Date())-time);
+    this._log('timeEnd', 'Time rebuildRows while');
 
     //add back previous selection of rows
     if(direction < 0) {
@@ -600,7 +602,7 @@
         this.currentDomRow = topRowBuffer;
       }
 
-      //console.log('re-render',rowNumber,'(DOM row)',currentDomRow);
+      this._log('debug', 're-render', rowNumber, '(DOM row)', this.currentDomRow);
 
       $tableRows = $tableBody.children(); //refetch rows, since they've likely changed
 
@@ -622,7 +624,7 @@
           if(this.currentDomRow >= this.triggerDownDomRow) {
 
             this.currentDomRow -= rebuildRows.call(this, rowNumber + this.maxTotalDomRows - this.currentDomRow, rowNumber + this.maxTotalDomRows - this.currentDomRow + this.replaceRowWindow, direction, scrollEvent);
-            console.log('scrolling down',rowNumber,'(DOM row)',this.currentDomRow);
+            this._log('debug', 'scrolling down', rowNumber, '(DOM row)', this.currentDomRow);
 
             $tableRows = $tableBody.children(); //refetch rows, since they've likely changed
           }
@@ -641,7 +643,7 @@
         if(this.currentDomRow <= this.triggerUpDomRow && rowNumber > this.currentDomRow) {
 
           this.currentDomRow += rebuildRows.call(this, rowNumber - this.currentDomRow - 1 - this.replaceRowWindow, rowNumber - this.currentDomRow, direction, scrollEvent);
-          console.log('scrolling up',rowNumber,'(DOM row)',this.currentDomRow);
+          this._log('debug', 'scrolling up', rowNumber, '(DOM row)', this.currentDomRow);
 
           $tableRows = $tableBody.children(); //refetch rows, since they've likely changed
         }
@@ -650,7 +652,7 @@
     } //else
 
     var scrollTop = $tableRows.length > 0 ? $tableRows.eq(this.currentDomRow).offset().top - $tableBody.offset().top : 0;
-    //console.log('current dom row (top visible row)',currentDomRow,'currentRow',currentRow,'row index',expandedTableData[currentRow],'from top',scrollTop);
+    this._log('debug', 'current dom row (top visible row)', this.currentDomRow, 'currentRow', this.currentRow, 'row index', this.expandedTableData[this.currentRow], 'from top', scrollTop);
     this.$dataContainer.scrollTop(scrollTop);
     this.$staticDataContainer.scrollTop(scrollTop);
 
@@ -916,7 +918,7 @@
     var defaultRowHeight = this.options.rowHeight,
       $currentRowElement, staticHeight, dynamicHeight, rowData, scrollTop, i;
 
-    var time = +new Date();
+    this._log('time', 'Time sized');
 
     //reconcile possible different heights between static and dynamic rows
     for(i = rowElements.length; i--;) {
@@ -963,7 +965,7 @@
     this.$dataContainer.scrollTop(scrollTop);
     this.$staticDataContainer.scrollTop(scrollTop);
 
-    console.warn('sized',(+new Date())-time);
+    this._log('timeEnd', 'Time sized');
   }
 
   /**
@@ -979,7 +981,7 @@
       return -1;
     }
     if(this.options.tableData.length === 0) {
-      console.warn('sortByColumn being ignored because there is no tableData');
+      this._log('warn', 'sortByColumn being ignored because there is no tableData');
       return -1;
     }
 
@@ -990,7 +992,7 @@
       }
     }
 
-    //console.warn('sortByColumn being ignored because a matching column field was not found');
+    this._log('warn', 'sortByColumn being ignored because a matching column field was not found');
     return -1;
   }
 
@@ -1049,7 +1051,7 @@
         this._renderTableRows(this.renderRowDataSet);
 
         $veil.hide();
-        console.error('Error sorting column.');
+        this._log('error', 'Error sorting column.');
         this._trigger('columnsort', null, {
           error: true
         });
@@ -1078,7 +1080,7 @@
         $columnHeader.removeClass('macro-table-sort-loading')
         .addClass(columnData.direction < 0 ? 'macro-table-sort-descending' : 'macro-table-sort-ascending');
 
-        //console.log('sorted data',e.data);
+        this._log('info', 'sorted data',e.data);
         this._trigger('columnsort', null, columnData);
       }
     }.bind(this);
@@ -1095,7 +1097,7 @@
     //initialize the ordered tableData to use
     if(typeof this.renderRowDataSet === 'undefined') {
 
-      //console.log('pre-sorted data',options.tableData);
+      this._log('debug', 'pre-sorted data',options.tableData);
 
       columnSorter = columnData.sortable; //could be boolean, 'numeric', a function, or anything else which will result in dictionary
       if(typeof columnData.sortable === 'function') {
@@ -1115,7 +1117,7 @@
 
     } else {
 
-      //console.log('pre-sorted data',this.renderRowDataSet);
+      this._log('debug', 'pre-sorted data',this.renderRowDataSet);
       action = 'order';
       sortWorker.postMessage({
         pid: this.sortWorkerPid,
@@ -1270,7 +1272,7 @@
 
         this._renderTableRows(this.renderRowDataSet);
         $veil.hide();
-        console.error('Error filtering rows.');
+        this._log('error', 'Error filtering rows.');
 
         if(isFiltering) {
           this._trigger('filter', null, {
@@ -1329,6 +1331,32 @@
       searchedRows: this.sortedRows[options.sortByColumn][options.searchTerm], //if not undefined, only gets filtered
       highlightMatches: options.highlightMatches
     });
+  }
+
+  /**
+   * Convenience function for translating log level keys to number
+   * @param  {String} level The log level keyname
+   * @return {Number}       Log level number
+   */
+  function translateLogLevel(level) {
+    switch(level) {
+      case 'debug':
+        return 4;
+
+      case 'time':
+      case 'timeEnd':
+      case 'info':
+        return 3;
+
+      case 'warn':
+        return 2;
+
+      case 'error':
+        return 1;
+
+      default:
+        return 0;
+    }
   }
 
 
@@ -1506,6 +1534,26 @@
       emptyInitializedMessage: 'No data to display',
       emptyFilteredMessage: 'No matching rows found',
 
+      /**
+       * Log level used for determining whether a log message should be output
+       * @type {String} 'debug', 'info', 'warn', 'error'
+       */
+      debugLevel: 'error',
+
+      /**
+       * Logging functions to use for outputting console messages
+       * @type {Object}
+       */
+      loggers: {
+        context: console,
+        debug: console.debug,
+        info: console.info,
+        warn: console.warn,
+        error: console.error,
+        time: console.time,
+        timeEnd: console.timeEnd
+      },
+
       /* Stuff users really don't need to be changing, but shouldn't be magic numbers: */
 
       rowHeight: 30, //render height of a table row, in pixels
@@ -1519,6 +1567,51 @@
 
 
     /** "Private" methods */
+
+    /**
+     * Log a console message
+     * If the debug level is set accordingly, the message will appear in the browser console
+     * @param   {String} type    The type of message to log
+     * @param   {String} message The message to log
+     * @private
+     */
+    _log: function() {
+      var logLevel = this.options.debugLevel,
+        logger = this.options.loggers,
+        type = arguments[0],
+        message = [].slice.call(arguments, 1);
+
+      if(translateLogLevel(type) <= translateLogLevel(logLevel)) {
+        switch(type) {
+          case 'time':
+            logger.time.apply(logger.context, message);
+            break;
+
+          case 'timeEnd':
+            logger.timeEnd.apply(logger.context, message);
+            break;
+
+          case 'debug':
+            logger.debug.apply(logger.context, message);
+            break;
+
+          case 'info':
+            logger.info.apply(logger.context, message);
+            break;
+
+          case 'warn':
+            logger.warn.apply(logger.context, message);
+            break;
+
+          case 'error':
+            logger.error.apply(logger.context, message);
+            break;
+
+          default:
+            break;
+        }
+      }
+    },
 
     /**
      * @method _setOption
@@ -1829,8 +1922,8 @@
       this.sortWebWorkerUrl = createBlobUrl(SortWebWorker);
       this.filterWebWorkerUrl = createBlobUrl(FilterWebWorker);
 
-      //console.info('Sort Web Worker URL', this.sortWebWorkerUrl);
-      //console.info('Filter Web Worker URL', this.filterWebWorkerUrl);
+      this._log('info', 'Sort Web Worker URL', this.sortWebWorkerUrl);
+      this._log('info', 'Filter Web Worker URL', this.filterWebWorkerUrl);
 
       this.scrollBarWidth = navigator.userAgent.indexOf(' AppleWebKit/') !== -1 ? this.styledScrollbarWidth : this.unStyledScrollbarWidth;
 
@@ -2024,7 +2117,7 @@
 
       //main function for row focusing (when they're clicked)
       function toggleRowFocus($rows) {
-        console.log('clicking this row',$rows.data('row-index'));
+        self._log('debug', 'clicking this row',$rows.data('row-index'));
 
         var dataRowIndex = $rows.data('row-index'),
           isRowUnFocusing = self.expandedTableData[dataRowIndex].focused; //row is focused and was clicked again to unfocus
@@ -2304,7 +2397,7 @@
           maxLeftPosition = $macroTable.outerWidth() - self.scrollBarWidth - self.$resizer.outerWidth(),
           minResizePosition = $columnToResize.position().left + self.resizeColumnMinWidth;
 
-        //console.log('calculateReiszeColumnWidth:', $macroTable.outerWidth() - scrollBarWidth - self.$resizer.outerWidth(), cursorOffset, $columnToResize.offset().left + resizeColumnMinWidth);
+        self._log('debug', 'calculateReiszeColumnWidth:', $macroTable.outerWidth() - scrollBarWidth - self.$resizer.outerWidth(), cursorOffset, $columnToResize.offset().left + resizeColumnMinWidth);
 
         return Math.max(Math.min(maxLeftPosition, cursorOffset), minResizePosition);
       }
@@ -2397,7 +2490,7 @@
           $macroTable.find('colgroup.macro-table-column-sizer col').filter(':nth-child('+($selectedColumn.index() + 1)+')')
           .addClass('macro-table-selected-column');
 
-          console.log('offset column',$selectedColumn.offset().left,'position column',$selectedColumn.position().left,'resizer',self.$dataContainer.scrollLeft() + $selectedColumn.position().left - (self.$resizer.outerWidth() / 2));
+          self._log('debug', 'offset column',$selectedColumn.offset().left,'position column',$selectedColumn.position().left,'resizer',self.$dataContainer.scrollLeft() + $selectedColumn.position().left - (self.$resizer.outerWidth() / 2));
         }
       });
 
@@ -2616,15 +2709,15 @@
 
           if(deltaX < 0 && self.currentColumn + (options.scrollByColumn ? 0 : 1) > 0) {
             var lastOffset = Math.abs($domColumns.eq(self.currentColumn - 1).position().left);
-            //console.log('left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',self.currentColumn);
+            self._log('debug', 'left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',self.currentColumn);
             self.$scrollContainer.scrollLeft(offset - (options.scrollByColumn ? lastOffset : horizontalPixelScroll));
           } else if(deltaX > 0 && self.currentColumn < $domColumns.length - (options.scrollByColumn ? 1 : 0)) {
             var nextOffset = Math.abs($domColumns.eq(self.currentColumn + 1).position().left);
-            //console.log('right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',self.currentColumn);
+            self._log('debug', 'right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',self.currentColumn);
             self.$scrollContainer.scrollLeft(offset + (options.scrollByColumn ? nextOffset : horizontalPixelScroll));
           }
         }
-        //console.log('Mousewheel .macro-table-data-container', scrollTop, rowHeight,self.$scrollContainer);
+        self._log('debug', 'Mousewheel .macro-table-data-container', scrollTop, rowHeight,self.$scrollContainer);
       });
 
       //scroll function for the scroll container, using the scrollbars
@@ -2644,7 +2737,7 @@
             this.currentRow += rowsToScroll;
             if(!breakTableScroll) {
               triggerScrollEvent = scrollTableVertical.call(this, rowsToScroll, forceTableScrollRender, e);
-              //console.log('scrolling down to row',currentRow,'by',rowsToScroll,'rows');
+              this._log('debug', 'scrolling down to row', this.currentRow, 'by', rowsToScroll, 'rows');
             }
 
           } else if (lastScrollTop > this.scrollTop){
@@ -2652,7 +2745,7 @@
             this.currentRow -= rowsToScroll;
             if(!breakTableScroll) {
               triggerScrollEvent = scrollTableVertical.call(this, -rowsToScroll, forceTableScrollRender, e);
-              //console.log('scrolling up to row',currentRow,'by',rowsToScroll,'rows');
+              this._log('debug', 'scrolling up to row', this.currentRow, 'by', rowsToScroll, 'rows');
             }
           }
         }
@@ -2660,7 +2753,7 @@
         if(this.scrollLeft != lastTableScrollLeft) {
           scrollTableHorizontal.call(this);
         }
-        //console.log('Scrolling .macro-table-scroll-container: lastScrollTop',lastScrollTop,'scrollTop',scrollTop,'calculatedRow',calculatedRow,'lastCalculatedRow',lastCalculatedRow,'rowsToScroll',rowsToScroll);
+        this._log('debug', 'Scrolling .macro-table-scroll-container: lastScrollTop', lastScrollTop, 'scrollTop', this.scrollTop, 'calculatedRow', this.calculatedRow, 'rowsToScroll', rowsToScroll);
         if(this.verticalRowSizePid === null && triggerScrollEvent) {
           this._trigger('scroll', e);
         }
@@ -2776,7 +2869,7 @@
 
       this._setRemovableColumnState();
 
-      console.log('replaceRowWindow',this.replaceRowWindow,'maxTotalDomRows',this.maxTotalDomRows,'maxTotalDomColumns',this.maxTotalDomColumns,'middleDomRow',~~(this.maxTotalDomRows / 2),'triggerUpDomRow',this.triggerUpDomRow,'triggerDownDomRow',this.triggerDownDomRow);
+      this._log('debug', 'replaceRowWindow',this.replaceRowWindow,'maxTotalDomRows',this.maxTotalDomRows,'maxTotalDomColumns',this.maxTotalDomColumns,'middleDomRow',~~(this.maxTotalDomRows / 2),'triggerUpDomRow',this.triggerUpDomRow,'triggerDownDomRow',this.triggerDownDomRow);
     },
 
     /**
@@ -2832,11 +2925,11 @@
 
       } else if(!parentHeight || parentHeight < minimumHeight) {
         minimumHeight += this.element.find('div.macro-table-scroll-shim').outerHeight() + this.scrollBarWidth;
-        console.warn('_getFallbackHeightToResize:: No height desernable from parent, defaulting to '+options.defaultTableHeightInRows+' rows worth');
+        this._log('warn', '_getFallbackHeightToResize:: No height desernable from parent, defaulting to '+options.defaultTableHeightInRows+' rows worth');
         return minimumHeight;
 
       } else {
-        console.warn('_getFallbackHeightToResize:: Parent container element has a height, using that');
+        this._log('warn', '_getFallbackHeightToResize:: Parent container element has a height, using that');
         return parentHeight;
       }
     },
@@ -3180,7 +3273,7 @@
      * @private
      */
     _moveColumn: function(columnToReorderIndex, newIndex) {
-      console.log('_moveColumn',columnToReorderIndex,'to',newIndex);
+      this._log('debug', '_moveColumn',columnToReorderIndex,'to',newIndex);
 
       var columns = this.options.columns;
       newIndex = newIndex > columns.length - 1 ? columns.length - 1 : newIndex;
@@ -3430,7 +3523,7 @@
           isValid = isValid && this._validateTableData(row.subrows);
         }
         if(!isValid) {
-          console.warn('_validateTableData: Invalid row detected', row);
+          this._log('warn', '_validateTableData: Invalid row detected', row);
         }
       }
 
@@ -3543,7 +3636,7 @@
         scrollToRow = 0;
       }
 
-      console.log('scroll to row',scrollToRow);
+      this._log('debug', 'scroll to row',scrollToRow);
 
       rowsToScroll = scrollToRow - this.currentRow;
       if(rowsToScroll !== 0) {
@@ -3564,7 +3657,7 @@
      * @param  {Number} scrollToColumn The column index
      */
     scrollToColumn: function(scrollToColumn) {
-      console.log('scroll to column',scrollToColumn);
+      this._log('debug', 'scroll to column',scrollToColumn);
 
       var $column = this.$dynamicHeaderRow.find('th:nth-child('+(scrollToColumn + 1)+')'),
         columnOffset = $column.length > 0 ? $column.position().left : 0;
