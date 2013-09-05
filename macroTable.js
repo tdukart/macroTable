@@ -2717,7 +2717,7 @@
             self.$scrollContainer.scrollLeft(offset + (options.scrollByColumn ? nextOffset : horizontalPixelScroll));
           }
         }
-        self._log('debug', 'Mousewheel .macro-table-data-container', scrollTop, rowHeight,self.$scrollContainer);
+        self._log('debug', 'Mousewheel .macro-table-data-container', self.scrollTop, rowHeight, self.$scrollContainer);
       });
 
       //scroll function for the scroll container, using the scrollbars
