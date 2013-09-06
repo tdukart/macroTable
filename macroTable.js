@@ -2432,8 +2432,9 @@
             $columnSizers.width(newWidth);
             self.options.columns[columnNumber].width = options.proportionalColumnWidths === true ? (newWidth * 100) / (options.width - self.scrollBarWidth - self.$staticHeader.width()) : newWidth; //set so subsequent table rerenders keeps the width
 
-            self._renderTableHeader();
-            self._resizeTable(); //resize table dimensions in case the header changed height, etc.
+            //FIXME: this is really slow, need to time and improve
+            self._renderTableHeader(); //resize table header dimensions in case the header changed height, etc.
+            self._resizeTable(); //resize table dimensions in case the rows changed height, etc.
             self._refreshRows();
 
             //cleanup the resizer element
