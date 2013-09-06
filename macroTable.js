@@ -2397,7 +2397,7 @@
           maxLeftPosition = $macroTable.outerWidth() - self.scrollBarWidth - self.$resizer.outerWidth(),
           minResizePosition = $columnToResize.position().left + self.resizeColumnMinWidth;
 
-        self._log('debug', 'calculateReiszeColumnWidth:', $macroTable.outerWidth() - scrollBarWidth - self.$resizer.outerWidth(), cursorOffset, $columnToResize.offset().left + resizeColumnMinWidth);
+        self._log('debug', 'calculateReiszeColumnWidth:', $macroTable.outerWidth() - self.scrollBarWidth - self.$resizer.outerWidth(), cursorOffset, $columnToResize.offset().left + self.resizeColumnMinWidth);
 
         return Math.max(Math.min(maxLeftPosition, cursorOffset), minResizePosition);
       }
@@ -3015,7 +3015,7 @@
         thisColumn = columns[i];
         if(typeof thisColumn.width !== 'undefined') {
           columnWidth = parseFloat(thisColumn.width, 10); //percentages could be decimal...
-          columnWidth = options.proportionalColumnWidths === true ? (columnWidth / 100) * tableViewportWidth : ~~defaultColumnWidth;
+          columnWidth = options.proportionalColumnWidths === true ? (columnWidth / 100) * tableViewportWidth : ~~columnWidth;
         } else {
           columnWidth = ~~defaultColumnWidth;
         }
