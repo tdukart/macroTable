@@ -2405,6 +2405,7 @@
       //mousedown for the resizer, used when resizing columns
       var resizePositionStart;
       this.$resizer.bind('mousedown', function(e) {
+        e.preventDefault();
         if(typeof resizePositionStart === 'undefined') { //prevent multiple mousedowns (if you mousedown, move cursor off of table, then move back and click)
           resizePositionStart = self.$resizer.position().left;
 
