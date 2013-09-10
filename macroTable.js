@@ -424,7 +424,7 @@
     rebuildWrapUp = function(blockTrigger) {
       var time = +new Date();
       this._log('time', 'Time rebuildRows size');
-      verticallySizeRows.call(this, newRows);
+      verticallySizeRows.call(this, newRows, true);
 
       newRows = null;
       this.verticalRowSizePid = null;
@@ -522,9 +522,13 @@
    * in order to allow for scrolling into view the last row of the table
    * whether or not this function is appropriate to run is handled by the caller
    * (should only be called when in the last DOM window row of the table)
+   * @param  {Boolean} forceUseOfSpacerMultiplier If we find that the bottom of the table needs space added,
+   *                                              force the use of the spacerMultipler even if it looks like it's not needed.
+   *                                              Use case is when there is only one row window and it has non-defulat row heights
+   *                                              that cause the true last row to not be scrolled to.
    * @return {Boolean} True if the scroll spacer was given margin-bottom compensation for the scrollbar (meriting a re-scroll so the last row isn't potentially cut off)
    */
-  function calculateAndApplyBottomMargin() {
+  function calculateAndApplyBottomMargin(forceUseOfSpacerMultiplier) {
     var distanceFromBottomToNewLastDomRow = 0,
       $macroTable = this.element,
       $tableContainerWrapper = this.$dataContainerWrapper,
@@ -542,7 +546,10 @@
       if(distanceFromBottomToNewLastDomRow > tableContainerHeight) {
         distanceFromBottomToNewLastDomRow -= $(element).height();
 
-        if(distanceFromBottomToNewLastDomRow / i !== this.options.rowHeight) {
+        //if the remaining rows are not default height, then we need to add the space for some phantom rows
+        //to increase the scroller height the normal use case is when the table has multiple row windows,
+        //but in case there is only one row window, we should do this just to be safe
+        if(distanceFromBottomToNewLastDomRow / i !== this.options.rowHeight || forceUseOfSpacerMultiplier) {
           //this is how many default rows-worth of space needs to be added to the bottom of the scroll spacer in order to scroll the final row into view
           spacerMultiplier = Math.max(0, this.displayRowWindow - i);
         }
@@ -630,7 +637,7 @@
           }
 
         //in the finalDomRowWindow, add margin to bottom of wrapper to allow scrolling the last row completely into the visible window
-        } else {
+        } else if(visibleRowCount > this.maxTotalDomRows) {
 
           reScrollNeeded = calculateAndApplyBottomMargin.call(this);
         }
@@ -911,12 +918,40 @@
   }
 
   /**
+   * Helper function to handle rows that are taller than this.maxRowHeight
+   * It wrapps cell content with a relatively positioned wrapper and positions the content absolute
+   * to overcome stupid table shortcomings on max-height of rows.
+   * It then loops through all cell content and for those cells too tall, it sets the height on the relative wrapper
+   * so that the content will appear at the top of the cell and truncated where it is too tall
+   * @param  {Object} row The row to be max-height adjusted
+   */
+  function fitRowToMaxHeight(row, maxRowHeight) {
+    //wrap all .macro-table-cell-content with a relatively positioned parent so that we can truncate rows that are too tall
+    $cellContent = row.find('span.macro-table-cell-content').wrap(
+      $(document.createElement('div')).addClass('macro-table-column-cell-height-clip')
+    );
+
+    //perform the adjustment of vertical position only on cells that are too tall, leave ones that fit within the max alone
+    //and do it out of the thread for speed
+    //setTimeout(function() {
+      $cellContent.each(function() {
+        var $element = $(this);
+        if($element.height() > maxRowHeight) {
+          $element.parent().height(maxRowHeight);
+        }
+      });
+    //}, 0);
+  }
+
+  /**
    * Helper function to properly calculate the row height parity between the static and dynamic rows
    * @param  {Object} rowElements Object containing the static and dynamic rows, as returned by renderRow
    */
-  function verticallySizeRows(rowElements) {
-    var defaultRowHeight = this.options.rowHeight,
-      $currentRowElement, staticHeight, dynamicHeight, rowData, scrollTop, i;
+  function verticallySizeRows(rowElements, enforceMaxHeight) {
+    var options = this.options,
+      defaultRowHeight = options.rowHeight,
+
+      $currentRowElement, staticHeight, dynamicHeight, rowData, scrollTop, i, $cellContent;
 
     this._log('time', 'Time sized');
 
@@ -931,9 +966,19 @@
       staticHeight = rowElements[i].staticRow.height();
       dynamicHeight = rowElements[i].dynamicRow.height();
       if(staticHeight >= dynamicHeight) {
-        rowData.calculatedHeight = staticHeight;
+        if(enforceMaxHeight && staticHeight > this.maxRowHeight) {
+          rowData.calculatedHeight = this.maxRowHeight;
+          fitRowToMaxHeight(rowElements[i].staticRow, this.maxRowHeight);
+        } else {
+          rowData.calculatedHeight = staticHeight;
+        }
       } else { // if(staticHeight < dynamicHeight) {
-        rowData.calculatedHeight = dynamicHeight;
+        if(enforceMaxHeight && dynamicHeight > this.maxRowHeight) {
+          rowData.calculatedHeight = this.maxRowHeight;
+          fitRowToMaxHeight(rowElements[i].dynamicRow, this.maxRowHeight);
+        } else {
+          rowData.calculatedHeight = dynamicHeight;
+        }
       }
 
       //compensate for fractional pixel heights in FF
@@ -1744,6 +1789,13 @@
        * @type {Number}
        */
       this.rowSelectColumnWidth = 16;
+
+      /**
+       * the static maximum height a row should ever reach, which is calculated as the
+       * this.$dataContainerWrapper.height() - options.rowHeight
+       * @type {Number}
+       */
+      this.maxRowHeight = Infinity;
 
       /**
        * the static width of the expand/collapse sub rows column
@@ -2793,7 +2845,7 @@
       this.$dynamicRowTemplate = $(document.createElement('tr'));
       //build dynamically left-scrollable row
       for(i = columns.length; i--;) {
-        cssClass = '';
+        cssClass = 'macro-table-column-cell';
 
         if(columns[i].resizable !== false) {
           cssClass += ' macro-table-column-resizable';
@@ -2803,24 +2855,25 @@
         switch(columns[i].align) {
           case 'right':
           case 'center':
+          case 'left':
             cssClass += ' macro-table-justify-'+columns[i].align;
             break;
 
-          //case 'left':
           default:
+            cssClass += ' macro-table-justify-left';
             break;
         }
 
-        markup = '<td class="'+ cssClass.slice(1) +'" data-column-index="'+i+'"></td>' + markup;
+        markup = '<td class="'+ cssClass +'" data-column-index="'+i+'"></td>' + markup;
       }
       this.$dynamicRowTemplate.html(markup);
 
       this.$staticRowTemplate = $(document.createElement('tr')).html(
-        '<td class="macro-table-row-control-cell macro-table-row-selector-cell">' +
+        '<td class="macro-table-column-cell macro-table-row-control-cell macro-table-row-selector-cell">' +
           '<input type="checkbox" class="macro-table-checkbox macro-table-row-selector" />' +
           '<label class="macro-table-checkbox-label"></label>' +
         '</td>' +
-        '<td class="macro-table-row-control-cell macro-table-row-expander-cell">' +
+        '<td class="macro-table-column-cell macro-table-row-control-cell macro-table-row-expander-cell">' +
           '<div class="macro-table-expand-toggle-container">' +
             '<input type="checkbox" class="macro-table-checkbox macro-table-row-expander" />' +
             '<label class="macro-table-checkbox-label macro-table-row-expander-label"></label>' +
@@ -3025,7 +3078,7 @@
         if(i < this.maxTotalDomColumns) { //TODO: right now, this is always true because we show all columns in the DOM, always
           var $summaryColumn,
             $colSizer = $(document.createElement('col')).width(columnWidth),
-            $headerColumn = $(document.createElement('th'))
+            $headerColumn = $(document.createElement('th')).addClass('macro-table-column-cell')
           .html('<div class="macro-table-column-header-text" title="' + thisColumn.title + '">' + thisColumn.title + '</div>')
           .addClass(thisColumn.className);
 
@@ -3034,7 +3087,7 @@
           }
 
           if(typeof summaryRow === 'object') {
-            $summaryColumn = $(document.createElement('th')).addClass('macro-table-summary-row-cell');
+            $summaryColumn = $(document.createElement('th')).addClass('macro-table-column-cell macro-table-summary-row-cell');
             if(typeof summaryRow[thisColumn.field] !== 'undefined') {
               $summaryColumn.html(summaryRow[thisColumn.field]);
             }
@@ -3141,7 +3194,7 @@
       if(options.rowsSelectable === true && this.renderRowDataSet.length > 0) {
         var $checboxColumnSizer = $(document.createElement('col')).addClass('macro-table-row-selector-column')
           .width(this.rowSelectColumnWidth),
-          $checkboxColumn = $(document.createElement('th')).addClass('macro-table-row-control-cell')
+          $checkboxColumn = $(document.createElement('th')).addClass('macro-table-column-cell macro-table-row-control-cell')
           .html(
             '<input id="macro-table-select-toggle-'+timestamp+'" type="checkbox" class="macro-table-checkbox macro-table-select-toggle" />'+
             '<label for="macro-table-select-toggle-'+timestamp+'" class="macro-table-checkbox-label"></label>'
@@ -3150,7 +3203,7 @@
         $staticColumnSizers.append($checboxColumnSizer);
         this.$staticHeaderRow.append($checkboxColumn);
         if(typeof summaryRow === 'object') {
-          this.$staticSummaryRow.append($(document.createElement('th')).html('&nbsp;')); //space filler
+          this.$staticSummaryRow.append($(document.createElement('th')).addClass('macro-table-column-cell').html('&nbsp;')); //space filler
         }
 
         $macroTable.addClass('macro-table-rows-selectable');
@@ -3164,7 +3217,7 @@
       if(this.rowsWithChildrenCount > 0) {
         var $expanderColumnSizer = $(document.createElement('col')).addClass('macro-table-row-expander-column')
           .width(this.expanderColumnWidth),
-          $expanderColumn = $(document.createElement('th')).addClass('macro-table-row-control-cell macro-table-row-expander-cell')
+          $expanderColumn = $(document.createElement('th')).addClass('macro-table-column-cell macro-table-row-control-cell macro-table-row-expander-cell')
           .html(
             '<input type="checkbox" id="macro-table-expand-toggle-'+timestamp+'" class="macro-table-checkbox macro-table-expand-toggle" />'+
             '<label for="macro-table-expand-toggle-'+timestamp+'" class="macro-table-checkbox-label macro-table-expand-toggle-label"></label>'
@@ -3173,7 +3226,7 @@
         $staticColumnSizers.append($expanderColumnSizer);
         this.$staticHeaderRow.append($expanderColumn);
         if(typeof summaryRow === 'object') {
-          this.$staticSummaryRow.append($(document.createElement('th')).html('&nbsp;')); //space filler
+          this.$staticSummaryRow.append($(document.createElement('th')).addClass('macro-table-column-cell').html('&nbsp;')); //space filler
         }
 
         $macroTable.addClass('macro-table-rows-expandable');
@@ -3265,7 +3318,13 @@
 
       $dataContainerWrapper.show(); //needs to be visible so row height calculation can be performed
 
-      verticallySizeRows.call(this, newRows);
+      verticallySizeRows.call(this, newRows, true);
+
+      //there is only one row window, so we want to treat it like the last one in the case where there are multiple
+      //(see use of calculateAndApplyBottomMargin in scrollTableVertical)
+      if(this.expandedTableData.length < this.maxTotalDomRows) {
+        calculateAndApplyBottomMargin.call(this, true);
+      }
     },
 
     /**
@@ -3483,6 +3542,8 @@
       this.$dataContainerWrapper
       .height(height - headerHeight - this.scrollBarWidth) //-1 to account for bottom border of header
       .width(width - this.scrollBarWidth - 1); //-1 to account for left border
+
+      this.maxRowHeight = this.$dataContainerWrapper.height() - options.rowHeight;
 
       //size the data container
       this.$dataContainer.add($macroTable.find('div.macro-table-static-data-container'))

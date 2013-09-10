@@ -177,5 +177,56 @@
     ok($('#table td.macro-table-subrow-hierarchy-line-right').length === 0, 'No subrow dotted hierarchy lines present');
   });
 
+
+  asyncTest('Row Height Limits', 5, function() {
+    $('#table').on('macrotablescroll', function(e) {
+      ok($('#table tr.macro-table-row-2').is(':visible'), 'Last row is visible after huge row is scrolled away');
+      start();
+    });
+
+    var totalRows = 3,
+      columnOptions = {
+        numColumns: 3,
+        align: {
+          0: 'right',
+          1: 'center'
+        }
+      },
+      containerWidth = 600,
+      minRowHeight, tableData, maxRowHeight;
+
+    $(window).scrollTop(0);
+    $('#qunit-fixture .wrapper').width(containerWidth + 'px');
+
+    tableData = publicFunctions.initializeTable(totalRows, columnOptions, {
+      summaryRow: true,
+      rowsSelectable: true
+    });
+
+    minRowHeight = $('#table').macroTable('option', 'rowHeight');
+    maxRowHeight = $('#table div.macro-table-data-container-wrapper').height() - minRowHeight + 1; //+1 for FF sub-pixel bug
+
+    //debugger;
+
+    $('#table').macroTable('option', {
+      tableData: publicFunctions.generateTableData(totalRows, columnOptions, {}, {
+        0: {
+          0: 'WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW'+'WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW',
+          1: 'WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW'+'WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW',
+          2: 'WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW'+'WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW WWWWW'
+        }
+      })
+    });
+
+    //debugger;
+
+    strictEqual($('#table tr.macro-table-row-0').first().height(), maxRowHeight, 'Static tall row is no higher than max ratio size');
+    strictEqual($('#table tr.macro-table-row-0').last().height(), maxRowHeight, 'Dynamic tall row is no higher than max ratio size');
+    strictEqual($('#table tr.macro-table-row-1').first().height(), minRowHeight, 'Static short row meets min height of ' + minRowHeight);
+    strictEqual($('#table tr.macro-table-row-1').last().height(), minRowHeight, 'Dynamic short row meets min height of ' + minRowHeight);
+
+    $scrollContainer = $('#table div.macro-table-scroll-container').scrollTop(minRowHeight);
+  });
+
   //TODO: test case for malformed rows (missing "data" and/or "index" fields, including subrows)
 })();

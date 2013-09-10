@@ -202,13 +202,11 @@ button:hover .icon--delete::after {
 }
 
 
-/* Table cell styles TODO: remove td and th in favor of classes */
 .macro-table tr {
   height: 30px;
 }
 
-.macro-table td,
-.macro-table th {
+.macro-table .macro-table-column-cell {
   padding: 0 0 0 1em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -220,8 +218,7 @@ button:hover .icon--delete::after {
 .macro-table td.macro-table-justify-center {
   padding: 0;
 }
-.macro-table th.macro-table-justify-center,
-.macro-table td.macro-table-justify-center {
+.macro-table .macro-table-column-cell.macro-table-justify-center {
   text-align: center;
 }
 
@@ -230,18 +227,15 @@ button:hover .icon--delete::after {
   padding: 0 1em 0 0;
 }
 
-.macro-table th.macro-table-justify-right,
-.macro-table td.macro-table-justify-right {
+.macro-table .macro-table-column-cell.macro-table-justify-right {
   text-align: right;
 }
 
-.macro-table .macro-table-static td,
-.macro-table .macro-table-static th {
+.macro-table .macro-table-static .macro-table-column-cell {
   padding: 0;
 }
 
-.macro-table .macro-table-dynamic td,
-.macro-table .macro-table-dynamic th {
+.macro-table .macro-table-dynamic .macro-table-column-cell {
   border-left: 1px #ccc solid;
 }
 
@@ -249,7 +243,7 @@ button:hover .icon--delete::after {
   text-align: center;
 }
 
-.macro-table .macro-table-column-sizer th {
+.macro-table .macro-table-column-sizer th.macro-table-column-cell {
   height: 0;
 }
 
@@ -731,6 +725,25 @@ col.macro-table-row-selector-column  {
 
 
 /* cell-specific rules */
+
+.macro-table-column-cell .macro-table-column-cell-height-clip {
+  position: relative;
+}
+
+.macro-table-column-cell-height-clip .macro-table-cell-content {
+  position: absolute;
+  top: 0;
+}
+
+.macro-table-justify-center .macro-table-column-cell-height-clip .macro-table-cell-content {
+  left: 0;
+  right: 0;
+}
+
+.macro-table-justify-right .macro-table-column-cell-height-clip .macro-table-cell-content {
+  right: 0;
+}
+
 
 .macro-table-cell-content.macro-table-no-wrap {
   white-space: nowrap;
