@@ -891,24 +891,21 @@
    * to overcome stupid table shortcomings on max-height of rows.
    * It then loops through all cell content and for those cells too tall, it sets the height on the relative wrapper
    * so that the content will appear at the top of the cell and truncated where it is too tall
-   * @param  {Object} row The row to be max-height adjusted
+   * @param  {Object} $row         The row to be max-height adjusted
+   * @param  {Number} maxRowHeight The height the row should max out at
    */
-  function fitRowToMaxHeight(row, maxRowHeight) {
-    //wrap all .macro-table-cell-content with a relatively positioned parent so that we can truncate rows that are too tall
-    $cellContent = row.find('span.macro-table-cell-content').wrap(
-      $(document.createElement('div')).addClass('macro-table-column-cell-height-clip')
-    );
-
+  function fitRowToMaxHeight($row, maxRowHeight) {
     //perform the adjustment of vertical position only on cells that are too tall, leave ones that fit within the max alone
     //and do it out of the thread for speed
-    //setTimeout(function() {
-      $cellContent.each(function() {
-        var $element = $(this);
-        if($element.height() > maxRowHeight) {
-          $element.parent().height(maxRowHeight);
-        }
-      });
-    //}, 0);
+    $row.find('span.macro-table-cell-content').each(function() {
+      var $element = $(this);
+      if($element.height() > maxRowHeight) {
+        //wrap .macro-table-cell-content with a relatively positioned parent so that we can truncate the text that is too tall
+        $element.wrap(
+          $(document.createElement('div')).addClass('macro-table-column-cell-height-clip')
+        ).parent().height(maxRowHeight);
+      }
+    });
   }
 
   /**
