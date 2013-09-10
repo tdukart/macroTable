@@ -1,78 +1,46 @@
-(function($) {
+(function($, window, document, undefined) {
 
-  var types = ['DOMMouseScroll', 'mousewheel'];
+  /** Truly Private functions */
 
-  if ($.event.fixHooks) {
-    for ( var i=types.length; i; ) {
-      $.event.fixHooks[ types[--i] ] = $.event.mouseHooks;
-    }
-  }
-
-  $.event.special.mousewheel = {
-    setup: function() {
-      if ( this.addEventListener ) {
-        for ( var i=types.length; i; ) {
-          this.addEventListener( types[--i], handler, false );
-        }
-      } else {
-        this.onmousewheel = handler;
-      }
-    },
-    teardown: function() {
-      if ( this.removeEventListener ) {
-        for ( var i=types.length; i; ) {
-          this.removeEventListener( types[--i], handler, false );
-        }
-      } else {
-        this.onmousewheel = null;
-      }
-    }
-  };
-
-  $.fn.extend({
-    mousewheel: function(fn) {
-      return fn ? this.bind("mousewheel", fn) : this.trigger("mousewheel");
-    },
-
-    unmousewheel: function(fn) {
-      return this.unbind("mousewheel", fn);
-    }
-  });
-
-
-  function handler(event) {
-    var orgEvent = event || window.event, args = [].slice.call( arguments, 1 ), delta = 0, returnValue = true, deltaX = 0, deltaY = 0;
-    event = $.event.fix(orgEvent);
-    event.type = "mousewheel";
+  /**
+   * Helper function to extract the mousewheel deta data for Firefox and Webkit
+   * @param  {Event}  event The mouse wheel event (either DOMMouseScroll or mousewheel)
+   * @return {Object}       Returns an object containing the normalized deltaY and deltaX values
+   */
+  function getMouseWheelDelta(event) {
+    var originalEvent = event.originalEvent,
+      delta, deltaX, deltaY;
 
     // Old school scrollwheel delta
-    if ( orgEvent.wheelDelta ) { delta = orgEvent.wheelDelta/120; }
-    if ( orgEvent.detail     ) { delta = -orgEvent.detail/3; }
+    if(originalEvent.wheelDelta) {
+      delta = originalEvent.wheelDelta/120;
+    }
+    if(originalEvent.detail) {
+      delta = -originalEvent.detail/3;
+    }
 
     // New school multidimensional scroll (touchpads) deltas
     deltaY = delta;
 
     // Gecko
-    if ( orgEvent.axis !== undefined && orgEvent.axis === orgEvent.HORIZONTAL_AXIS ) {
+    if(originalEvent.axis !== undefined && originalEvent.axis === originalEvent.HORIZONTAL_AXIS) {
       deltaY = 0;
-      deltaX = -1*delta;
+      deltaX = -1 * delta;
     }
 
     // Webkit
-    if ( orgEvent.wheelDeltaY !== undefined ) { deltaY = orgEvent.wheelDeltaY/120; }
-    if ( orgEvent.wheelDeltaX !== undefined ) { deltaX = -1*orgEvent.wheelDeltaX/120; }
+    if(originalEvent.wheelDeltaY !== undefined) {
+      deltaY = originalEvent.wheelDeltaY / 120;
+    }
+    if(originalEvent.wheelDeltaX !== undefined) {
+      deltaX = -1 * originalEvent.wheelDeltaX / 120;
+    }
 
-    // Add event and delta to the front of the arguments
-    args.unshift(event, delta, deltaX, deltaY);
-
-    return ($.event.dispatch || $.event.handle).apply(this, args);
+    return {
+      deltaY: deltaY,
+      deltaX: deltaX
+    };
   }
-
-})(jQuery);
-
-(function($, window, document, undefined) {
-
-  /** Truly Private functions */
 
   /**
    * Wrapper to create an inline-web worker out of a function in this thread
@@ -2744,28 +2712,29 @@
       //mousewheel for table scrolling, wrapper for scrolling the scroll container, attached to .macro-table-data-container-wrapper
       //this.$dataContainer.parent()
       $macroTable.add($macroTable.find('div.macro-table-data-veil'))
-      .bind('mousewheel', function(e, delta, deltaX, deltaY) {
+      .on('DOMMouseScroll MozMousePixelScroll mousewheel', function(e) {
         e.preventDefault();
 
-        var horizontalPixelScroll = 5;
+        var horizontalPixelScroll = 5,
+          delta = getMouseWheelDelta(e);
 
         deselectResizeHandle();
 
-        if(deltaY < 0) {
+        if(delta.deltaY < 0) {
           self.$scrollContainer.scrollTop(self.scrollTop + rowHeight);
-        } else if(deltaY > 0) {
+        } else if(delta.deltaY > 0) {
           self.$scrollContainer.scrollTop(self.scrollTop - rowHeight);
         }
 
-        if(deltaX !== 0) {
+        if(delta.deltaX !== 0) {
           var $domColumns = self.$dynamicHeaderRow.find('th'),
             offset = $domColumns.length !== 0 ? Math.abs($domColumns.eq(0).position().left) : 0;
 
-          if(deltaX < 0 && self.currentColumn + (options.scrollByColumn ? 0 : 1) > 0) {
+          if(delta.deltaX < 0 && self.currentColumn + (options.scrollByColumn ? 0 : 1) > 0) {
             var lastOffset = Math.abs($domColumns.eq(self.currentColumn - 1).position().left);
             self._log('debug', 'left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',self.currentColumn);
             self.$scrollContainer.scrollLeft(offset - (options.scrollByColumn ? lastOffset : horizontalPixelScroll));
-          } else if(deltaX > 0 && self.currentColumn < $domColumns.length - (options.scrollByColumn ? 1 : 0)) {
+          } else if(delta.deltaX > 0 && self.currentColumn < $domColumns.length - (options.scrollByColumn ? 1 : 0)) {
             var nextOffset = Math.abs($domColumns.eq(self.currentColumn + 1).position().left);
             self._log('debug', 'right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',self.currentColumn);
             self.$scrollContainer.scrollLeft(offset + (options.scrollByColumn ? nextOffset : horizontalPixelScroll));
