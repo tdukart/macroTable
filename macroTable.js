@@ -1370,7 +1370,7 @@
   }
 
 
-  $.widget('n.macroTable', {
+  $.widget('ui.macroTable', {
 
     /** Subscribable events */
 
