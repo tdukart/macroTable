@@ -1730,6 +1730,40 @@
     },
 
     /**
+     * Loop through the table data and process stuff we'll need to know before actually rendering the rows
+     * Good place to set count variables, etc.
+     * @private
+     */
+    _preprocessTableData: function() {
+      var tableData = this.options.tableData,
+
+        recursiveTraverser = function loop(rowGroup) {
+          var row, i;
+
+          for(i = rowGroup.length; i--;) {
+            row = rowGroup[i];
+
+            if(row.selected) {
+              this.selectedRowCount++;
+            }
+
+            if(row.expanded) {
+              this.expandedRowCount++;
+            }
+
+            if(row.subRows instanceof Array && row.subRows.length > 0) {
+              loop(row.subRows);
+            }
+          }
+        }.bind(this);
+
+      this.selectedRowCount = 0;
+      this.expandedRowCount = 0;
+
+      recursiveTraverser(tableData);
+    },
+
+    /**
      * @method _create
      * @description Creates the datatable. This is called by the jQuery widget framework.
      * @private
@@ -2307,8 +2341,6 @@
         e.stopPropagation(); //prevent a delegation to the tr which triggers a focus row event
 
         var $checkbox = $(this),
-          $selectAllHeaderCheckbox = self.$staticHeaderRow.find('input.macro-table-select-toggle'),
-          $expandAllHeaderCheckbox = self.$staticHeaderRow.find('input.macro-table-expand-toggle'),
           $checkboxRow = $checkbox.closest('tr'),
           domRowIndex = $checkboxRow.index(),
           dataRowIndex = $checkbox.data('row-index'),
@@ -2330,21 +2362,7 @@
             self.selectedRowCount--;
           }
 
-          //set header checkbox state
-          if(self.selectedRowCount === 0) { //no rows selected
-
-            $selectAllHeaderCheckbox.prop('checked', false);
-            $selectAllHeaderCheckbox[0].indeterminate = false;
-
-          } else if(self.selectedRowCount == self.expandedTableData.length) { //all rows selected
-
-            $selectAllHeaderCheckbox.prop('checked', true);
-            $selectAllHeaderCheckbox[0].indeterminate = false;
-
-          } else { //at least one row selected, but not all
-
-            $selectAllHeaderCheckbox[0].indeterminate = true;
-          }
+          self._updateSelectAllState();
 
           self._trigger(isChecked ? 'rowselect' : 'rowdeselect', null, {
             selectedRows: self.getSelectedRows()
@@ -2381,20 +2399,7 @@
 
           self._refreshRows();
 
-          //set header checkbox state
-          if(self.expandedRowCount === 0) { //no rows expanded
-            $expandAllHeaderCheckbox.prop('checked', false);
-
-          } else if(self.expandedRowCount == self.rowsWithChildrenCount) { //all expandable rows expanded
-            $expandAllHeaderCheckbox.prop('checked', true);
-
-          } else { //at least one row expanded, but not all
-            if(self.expandedRowCount < self.rowsWithChildrenCount / 2) {
-              $expandAllHeaderCheckbox.prop('checked', false);
-            } else {
-              $expandAllHeaderCheckbox.prop('checked', true);
-            }
-          }
+          self._updateExpandAllState();
 
           $macroTable.find('div.macro-table-scroll-spacer')
           .height(rowHeight * self.expandedTableData.length);
@@ -2803,8 +2808,6 @@
       this.currentDomRow = 0;
       this.currentColumn = 0;
       this.currentDomColumn = 0;
-      this.selectedRowCount = 0;
-      this.expandedRowCount = 0;
 
       this.verticalRowSizePid = null;
 
@@ -2861,6 +2864,8 @@
       if(isTableDataValid && options.tableData.length !== 0 && this.renderRowDataSet.length === 0) {
         this.renderRowDataSet = options.tableData;
       }
+
+      this._preprocessTableData();
 
       this.$scrollContainer.add(this.$header).add(this.$dataContainer)
       .scrollTop(0)
@@ -2994,7 +2999,7 @@
         $columnSizers = $macroTable.find('colgroup.macro-table-column-sizer'), //one in header, one in body
 
         isMarginSet = false,
-        additionalMargin = this.scrollBarWidth + this._renderHeaderRowControls(),
+        additionalMargin = this.scrollBarWidth + this._renderHeaderRowControls(), //TODO: call _renderHeaderRowControls and then use a different method to get the width
         marginAdded = additionalMargin,
         tableViewportWidth = ~~(options.width - additionalMargin),
         totalColumnWidth = 0,
@@ -3144,6 +3149,7 @@
      * @description puts the static column header into the appropriate state for the tableData
      * @private
      * @returns {Number} The width of the static columns
+     * TODO: the width should be fetchable via a getter, not as a side effect of running this method
      */
     _renderHeaderRowControls: function() {
       var options = this.options,
@@ -3173,6 +3179,9 @@
         }
 
         $macroTable.addClass('macro-table-rows-selectable');
+
+        this._updateSelectAllState();
+
       } else {
         $macroTable.removeClass('macro-table-rows-selectable');
       }
@@ -3196,6 +3205,9 @@
         }
 
         $macroTable.addClass('macro-table-rows-expandable');
+
+        this._updateExpandAllState();
+
       } else {
         $macroTable.removeClass('macro-table-rows-expandable');
       }
@@ -3208,6 +3220,51 @@
       }
 
       return this.$staticHeaderRow.width();
+    },
+
+    /**
+     * Set the state of the select all header checkbox (checked/unchecked/indeterminate) based on the number of rows selected
+     * @private
+     */
+    _updateSelectAllState: function() {
+      var $selectAllHeaderCheckbox = this.$staticHeaderRow.find('input.macro-table-select-toggle');
+
+      if(this.selectedRowCount === 0) { //no rows selected
+
+        $selectAllHeaderCheckbox.prop('checked', false);
+        $selectAllHeaderCheckbox[0].indeterminate = false;
+
+      } else if(this.selectedRowCount == this.expandedTableData.length) { //all rows selected
+
+        $selectAllHeaderCheckbox.prop('checked', true);
+        $selectAllHeaderCheckbox[0].indeterminate = false;
+
+      } else { //at least one row selected, but not all
+
+        $selectAllHeaderCheckbox[0].indeterminate = true;
+      }
+    },
+
+    /**
+     * Set the state of the expand all header checkbox (checked/unchecked) based on the number of rows expanded
+     * @private
+     */
+    _updateExpandAllState: function() {
+      var $expandAllHeaderCheckbox = this.$staticHeaderRow.find('input.macro-table-expand-toggle');
+
+      if(this.expandedRowCount === 0) { //no rows expanded
+        $expandAllHeaderCheckbox.prop('checked', false);
+
+      } else if(this.expandedRowCount === this.rowsWithChildrenCount) { //all expandable rows expanded
+        $expandAllHeaderCheckbox.prop('checked', true);
+
+      } else { //at least one row expanded, but not all
+        if(this.expandedRowCount < this.rowsWithChildrenCount / 2) {
+          $expandAllHeaderCheckbox.prop('checked', false);
+        } else {
+          $expandAllHeaderCheckbox.prop('checked', true);
+        }
+      }
     },
 
     /**
