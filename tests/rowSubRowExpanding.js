@@ -299,4 +299,58 @@
     $staticHeaderRow.trigger(event);
   });
 
+  test('Expand All Toggle Initializes Collapsed', 1, function() {
+    var columnOptions = {
+      numColumns: 1
+    };
+
+    publicFunctions.initializeTable(0, columnOptions);
+
+    $('#table').macroTable('option', {
+      tableData: publicFunctions.generateTableData(3, columnOptions, {
+        0: 1,
+        1: 1
+      }, null, false)
+    });
+
+    ok(!$('#table .macro-table-static-header-row input.macro-table-expand-toggle').is('checked'), 'Expand all is collapsed');
+  });
+
+  test('Expand All Toggle Initializes Expanded at Expanded Threshold', 1, function() {
+    var columnOptions = {
+      numColumns: 1
+    };
+
+    publicFunctions.initializeTable(0, columnOptions);
+
+    $('#table').macroTable('option', {
+      tableData: publicFunctions.generateTableData(3, columnOptions, {
+        0: 1,
+        1: 1,
+      }, null, true)
+    });
+
+    ok($('#table .macro-table-static-header-row input.macro-table-expand-toggle').is('checked'), 'Expand all is expanded');
+
+  });
+
+  test('Expand All Toggle Initializes Expanded with All Rows Expanded', 1, function() {
+    var columnOptions = {
+      numColumns: 1
+    };
+
+    publicFunctions.initializeTable(0, columnOptions);
+
+    $('#table').macroTable('option', {
+      tableData: publicFunctions.generateTableData(3, columnOptions, {
+        0: 1,
+        1: 1,
+        2: 1
+      }, null, true)
+    });
+
+    ok($('#table .macro-table-static-header-row input.macro-table-expand-toggle').is('checked'), 'Expand all is expanded');
+
+  });
+
 })();
