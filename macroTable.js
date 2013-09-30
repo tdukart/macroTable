@@ -1088,7 +1088,7 @@
         $columnSizers.addClass('macro-table-highlight');
 
         $columnHeader.removeClass('macro-table-sort-loading')
-        .addClass(columnData.direction < 0 ? 'macro-table-sort-descending' : 'macro-table-sort-ascending');
+        .addClass('macro-table-sorted ' + (columnData.direction < 0 ? 'macro-table-sort-descending' : 'macro-table-sort-ascending'));
 
         this._log('info', 'sorted data',e.data);
         this._trigger('columnsort', null, columnData);
@@ -1514,6 +1514,12 @@
        * If not set (''), the original order of the data as it was initialized is shown
        */
       sortByColumn: '',
+      /**
+       * The direction (asc/desc) the sortByColumn should be sorted in
+       * Depends on sortByColumn being valid
+       * @type {Number} 1 for Ascending, -1 for Descending
+       */
+      sortByColumnDirection: 0,
       /**
        * String to filter rows by. If '', will show all rows
        * @type {String}
@@ -2159,7 +2165,14 @@
       //row sorting listener
       $headerTable.delegate('th.macro-table-column-sortable', 'click', function(e) {
         if(!$macroTable.hasClass('macro-table-column-moving')) {
-          self._sortTable($(this).index());
+          var index = $(this).index(),
+            lastSortedColumnIndex = $headerTable.find('th.macro-table-column-sortable.macro-table-sorted').index();
+
+          if(lastSortedColumnIndex >= 0 && index !== lastSortedColumnIndex) {
+            self.options.columns[lastSortedColumnIndex].direction = 0; //clear sort order since we're leaving this column
+          }
+
+          self._sortTable(index);
         }
       });
 
@@ -2797,8 +2810,9 @@
     _init: function() {
       var options = this.options,
         columns = options.columns,
+        sortByColumn = options.sortByColumn,
         isTableDataValid = this._validateTableData(options.tableData),
-        i, cssClass, markup;
+        i, column, cssClass, markup;
 
       options.height = options.height || this._getFallbackHeightToResize();
       options.width = options.width || this._getFallbackWidthToResize();
@@ -2814,18 +2828,32 @@
       this.$dynamicRowTemplate = $(document.createElement('tr'));
       //build dynamically left-scrollable row
       for(i = columns.length; i--;) {
+        column = columns[i];
+
+        //initialize column sort order
+        if(sortByColumn !== '') {
+          if(column.field === sortByColumn) {
+            column.direction = options.sortByColumnDirection ? options.sortByColumnDirection : 0;
+          } else {
+            column.direction = 0;
+          }
+        } else {
+          column.direction = 0;
+        }
+
+
         cssClass = 'macro-table-column-cell';
 
-        if(columns[i].resizable !== false) {
+        if(column.resizable !== false) {
           cssClass += ' macro-table-column-resizable';
         }
 
         //if the cell is justified right or center, add the appropriate class
-        switch(columns[i].align) {
+        switch(column.align) {
           case 'right':
           case 'center':
           case 'left':
-            cssClass += ' macro-table-justify-'+columns[i].align;
+            cssClass += ' macro-table-justify-'+column.align;
             break;
 
           default:
@@ -3082,7 +3110,7 @@
             $headerColumn.addClass('macro-table-column-sortable');
             if(thisColumn.field === sortedColumn) {
               $colSizer.addClass('macro-table-highlight');
-              $headerColumn.addClass(thisColumn.direction < 0 ? 'macro-table-sort-descending' : 'macro-table-sort-ascending');
+              $headerColumn.addClass('macro-table-sorted ' + (thisColumn.direction < 0 ? 'macro-table-sort-descending' : 'macro-table-sort-ascending'));
             }
           }
 
@@ -3488,13 +3516,13 @@
       if(typeof callback === 'function') {
         columnData.direction = columnData.direction || 1; //initializing, so always start with ascending order
       } else {
-        columnData.direction = typeof columnData.direction === 'undefined' ? 1 : columnData.direction * -1;
+        columnData.direction = !columnData.direction ? 1 : columnData.direction * -1;
       }
 
       $columnSizers = $columnSizers.removeClass('macro-table-highlight')
       .filter(':nth-child('+(columnIndexToSort + 1)+')');
 
-      $columnHeader = $columnHeader.removeClass('macro-table-sort-ascending macro-table-sort-descending')
+      $columnHeader = $columnHeader.removeClass('macro-table-sorted macro-table-sort-ascending macro-table-sort-descending')
       .filter(':nth-child('+(columnIndexToSort + 1)+')')
       .addClass('macro-table-sort-loading');
 

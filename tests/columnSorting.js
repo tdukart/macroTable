@@ -1,5 +1,5 @@
 (function() {
-  var iteration, tableData, sortColumn0Descending, sortColumn3DescendingNumeric, sortColumn3DescendingDictionary, sortColumn3DescendingCustom;
+  var iteration, tableData, sortColumn0Ascending, sortColumn0Descending, sortColumn3DescendingNumeric, sortColumn3DescendingDictionary, sortColumn3DescendingCustom;
 
   /**
    * Test Module for testing the ability to sort rows by column
@@ -123,6 +123,71 @@
         },
         {
           "column2": "B"
+        }
+      ]];
+
+      sortColumn0Ascending = [[
+        {
+          "column0": "1"
+        },
+        {
+          "column1": "c"
+        },
+        {
+          "column2": "B"
+        }
+      ],[
+        {
+          "column0": "2"
+        },
+        {
+          "column1": "b"
+        },
+        {
+          "column2": "A"
+        }
+      ],[
+        {
+          "column0": "3"
+        },
+        {
+          "column1": "a"
+        },
+        {
+          "column2": "C"
+        }
+      ],
+      [
+        {
+          "column0": "1"
+        },
+        {
+          "column1": "c"
+        },
+        {
+          "column2": "B"
+        }
+      ],
+      [
+        {
+          "column0": "2"
+        },
+        {
+          "column1": "b"
+        },
+        {
+          "column2": "A"
+        }
+      ],
+      [
+        {
+          "column0": "3"
+        },
+        {
+          "column1": "a"
+        },
+        {
+          "column2": "C"
         }
       ]];
 
@@ -440,11 +505,9 @@
     });
 
     publicFunctions.initializeTable(tableData, {
-      numColumns: 3,
-      direction: {
-        0: -1 //sort descending for column0
-      }
+      numColumns: 3
     }, {
+      sortByColumnDirection: -1,
       sortByColumn: 'column0'
     });
 
@@ -471,11 +534,9 @@
 
     tableData[2].expanded = true;
     publicFunctions.initializeTable(0, {
-      numColumns: 3,
-      direction: {
-        0: -1 //sort descending for column0
-      }
+      numColumns: 3
     }, {
+      sortByColumnDirection: -1,
       sortByColumn: 'column0'
     });
 
@@ -496,11 +557,12 @@
           deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column descending');
 
           $('#table').macroTable('option', 'tableData', tableData);
+          $firstColumnHeader = $('#table th.macro-table-column-sortable').first();
           break;
 
         case 2:
-          ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column is still ordered descending');
-          deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Descending, 'Table snapshot ordered first column still descending after data reload');
+          ok($firstColumnHeader.hasClass('macro-table-sort-ascending'), 'Column is reset to ordered ascending');
+          deepEqual($('#table').macroTable('getTableSnapshot'), sortColumn0Ascending, 'Table snapshot ordered first column still descending after data reload');
           start();
           break;
 
@@ -546,11 +608,9 @@
 
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
-      numColumns: 3,
-      direction: {
-        0: -1 //sort descending for column0
-      }
+      numColumns: 3
     }, {
+      sortByColumnDirection: -1,
       sortByColumn: 'column0'
     });
 
@@ -566,13 +626,11 @@
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 4,
-      direction: {
-        3: -1 //sort descending for column0
-      },
       columnsSortable: {
         3: 'numeric'
       }
     }, {
+      sortByColumnDirection: -1,
       sortByColumn: 'column3'
     });
   });
@@ -586,13 +644,11 @@
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 4,
-      direction: {
-        3: -1 //sort descending for column0
-      },
       columnsSortable: {
         3: 'dictionary'
       }
     }, {
+      sortByColumnDirection: -1,
       sortByColumn: 'column3'
     });
   });
@@ -606,13 +662,11 @@
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 4,
-      direction: {
-        3: -1 //sort descending for column0
-      },
       columnsSortable: {
         3: 'string'
       }
     }, {
+      sortByColumnDirection: -1,
       sortByColumn: 'column3'
     });
   });
@@ -626,13 +680,11 @@
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 4,
-      direction: {
-        3: -1 //sort descending for column0
-      },
       columnsSortable: {
         3: true
       }
     }, {
+      sortByColumnDirection: -1,
       sortByColumn: 'column3'
     });
   });
@@ -645,11 +697,9 @@
 
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
-      numColumns: 4,
-      direction: {
-        3: -1 //sort descending for column0
-      }
+      numColumns: 4
     }, {
+      sortByColumnDirection: -1,
       sortByColumn: 'column3'
     });
   });
@@ -663,9 +713,6 @@
     tableData[2].expanded = true;
     publicFunctions.initializeTable(tableData, {
       numColumns: 4,
-      direction: {
-        3: -1 //sort descending for column0
-      },
       columnsSortable: {
         3: function(a, b) {
           var aValue = a.data[sortByField] || '',
@@ -674,6 +721,7 @@
         }
       }
     }, {
+      sortByColumnDirection: -1,
       sortByColumn: 'column3'
     });
   });
