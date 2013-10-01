@@ -449,6 +449,10 @@
     }
   });
 
+  /*
+
+  No longer supporting sorting on columns with no table data
+
   asyncTest('Columns Sortable for Empty Table (Click)', 2, function() {
     $('#table').on('macrotablecolumnsort', function(e) {
       switch(iteration++) {
@@ -482,6 +486,7 @@
     event.target = $firstColumnHeader[0];
     $headerTable.trigger(event);
   });
+  */
 
   asyncTest('Columns Sortable for Empty Table Ascending (Programmatically)', 1, function() {
     $('#table').on('macrotablecolumnsort', function(e) {

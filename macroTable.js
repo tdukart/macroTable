@@ -2163,18 +2163,18 @@
       /* Wire column sort events */
 
       //row sorting listener
-      $headerTable.delegate('th.macro-table-column-sortable', 'click', function(e) {
-        if(!$macroTable.hasClass('macro-table-column-moving')) {
-          var index = $(this).index(),
+      $headerTable.on('click', 'th.macro-table-column-sortable', function(e) {
+        if(!$macroTable.hasClass('macro-table-column-moving') && this.options.tableData.length > 0) {
+          var index = $(e.currentTarget).index(),
             lastSortedColumnIndex = $headerTable.find('th.macro-table-column-sortable.macro-table-sorted').index();
 
           if(lastSortedColumnIndex >= 0 && index !== lastSortedColumnIndex) {
-            self.options.columns[lastSortedColumnIndex].direction = 0; //clear sort order since we're leaving this column
+            this.options.columns[lastSortedColumnIndex].direction = 0; //clear sort order since we're leaving this column
           }
 
-          self._sortTable(index);
+          this._sortTable(index);
         }
-      });
+      }.bind(this));
 
 
       /* Wire row focus events */
