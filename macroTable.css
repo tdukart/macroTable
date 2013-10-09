@@ -90,13 +90,12 @@ button:hover .icon--delete::after {
 }
 
 .macro-table .macro-table-static-data-container {
-  margin-right: -4px; /* collapse space for box-shadow on static column */
+  margin-right: -2px; /* collapse space for box-shadow on static column */
   padding-right: 2px; /* allow space for box-shadow on static column */
   z-index: 3;
 }
 
 .macro-table .macro-table-static-data-container .macro-table-static {
-  margin-right: 2px; /* allow space for box-shadow */ /* do we really need this now that there's no right box shadow? */
   -moz-box-shadow: 0 2px 2px 0 #ccc;
   -webkit-box-shadow: 0 2px 2px 0 #ccc;
   box-shadow: 0 2px 2px 0 #ccc;
@@ -541,6 +540,13 @@ button:hover .icon--delete::after {
 .macro-table .macro-table-static-data-container {
   display: none;
   float: left;
+}
+
+.macro-table .macro-table-static-header,
+.macro-table .macro-table-static-data-container .macro-table-scroll-wrapper {
+  border-right: 1px solid #ccc;
+  margin-right: -1px;
+  z-index: 1;
 }
 
 .macro-table.macro-table-static-column-enabled .macro-table-static-header,
