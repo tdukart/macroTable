@@ -230,7 +230,8 @@
     strictEqual($('#table tr.macro-table-row-2').first().height(), minRowHeight, 'Static short row meets min height of ' + minRowHeight);
     strictEqual($('#table tr.macro-table-row-2').last().height(), minRowHeight, 'Dynamic short row meets min height of ' + minRowHeight);
 
-    $scrollContainer = $('#table div.macro-table-scroll-container').scrollTop(2 * minRowHeight);
+    $scrollContainer = $('#table div.macro-table-scroll-container');
+    $scrollContainer.scrollTop(2 * minRowHeight);
   });
 
   //TODO: test case for malformed rows (missing "data" and/or "index" fields, including subrows)

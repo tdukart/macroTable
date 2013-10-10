@@ -51,7 +51,9 @@
     $dataContainerWraper = $('#table div.macro-table-data-container-wrapper');
     containerOffsetTop = $dataContainerWraper.offset().top;
 
-    $scrollContainer = $('#table div.macro-table-scroll-container').scrollTop(scroll1 * rowHeight);
+    $scrollContainer = $('#table div.macro-table-scroll-container');
+    $scrollContainer.scrollTop(scroll1 * rowHeight)
+    .trigger('scroll'); //force a scroll trigger for firefox
   });
 
   asyncTest('Table Scrolls to Row Via API', 3, function() {
@@ -164,6 +166,7 @@
         case 0:
           strictEqual($dataContainerWraper.find('table.macro-table-dynamic tr.macro-table-row[data-row-index='+scrollToRow+']').offset().top, containerOffsetTop, 'Intermediate row scrolled to correctly');
 
+          //$scrollContainer.scrollTop((totalRows - 15) * rowHeight);
           $scrollContainer.scrollTop(totalRows * rowHeight);
           break;
 
@@ -246,7 +249,8 @@
     rowHeight = $('#table').macroTable('option', 'rowHeight');
     $dataContainerWraper = $('#table div.macro-table-data-container-wrapper');
     containerOffsetTop = $dataContainerWraper.offset().top;
-    $scrollContainer = $('#table div.macro-table-scroll-container').scrollTop(scrollToRow * rowHeight);
+    $scrollContainer = $('#table div.macro-table-scroll-container');
+    $scrollContainer.scrollTop(scrollToRow * rowHeight);
   });
 
   asyncTest('Table with Summary Row Scrolls to Last Row', 6, function() {
@@ -255,7 +259,8 @@
         case 0:
           strictEqual($dataContainerWraper.find('table.macro-table-dynamic tr.macro-table-row[data-row-index='+scrollToRow+']').offset().top, containerOffsetTop, 'Intermediate row scrolled to correctly');
 
-          $scrollContainer.scrollTop(totalRows * rowHeight);
+          $scrollContainer.scrollTop(totalRows * rowHeight)
+          .trigger('scroll'); //force a scroll trigger for firefox
           break;
 
         case 1:
@@ -266,7 +271,8 @@
 
           //...so you'd have to scroll again
           //this is expected behavior; if you want automatic, use the scrollToRow API call
-          $scrollContainer.scrollTop(totalRows * rowHeight);
+          $scrollContainer.scrollTop(totalRows * rowHeight)
+          .trigger('scroll');
           break;
 
         case 2:
@@ -338,7 +344,9 @@
     rowHeight = $('#table').macroTable('option', 'rowHeight');
     $dataContainerWraper = $('#table div.macro-table-data-container-wrapper');
     containerOffsetTop = $dataContainerWraper.offset().top;
-    $scrollContainer = $('#table div.macro-table-scroll-container').scrollTop(scrollToRow * rowHeight);
+    $scrollContainer = $('#table div.macro-table-scroll-container');
+    $scrollContainer.scrollTop(scrollToRow * rowHeight)
+    .trigger('scroll'); //force a scroll trigger for firefox
   });
 
   asyncTest('Table without Summary Row Scrolls to Last Row Via API', 4, function() {
@@ -489,9 +497,9 @@
           $('#table').macroTable('option', {
             summaryRow: false
           });
-          break;
+          /*break;
 
-        case 2:
+        case 2:*/
           var $firstRow = $dataContainerWraper.find('table.macro-table-dynamic tr.macro-table-row').first();
           var $firstRowStatic = $dataContainerWraper.find('table.macro-table-static tr.macro-table-row').first();
           equal($firstRow.attr('data-row-index'), 0, '0th row is first in the current row window');

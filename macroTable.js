@@ -1370,6 +1370,56 @@
   }
 
 
+
+  /**
+   * Table Event Functions
+   */
+
+  /**
+   * Event for the scrolling of the table ($scrollContainer a.k.a. div.macro-table-scroll-container)
+   * @param  {Event} e The jQuery scroll event
+   */
+  var scrollEventFn = function(e) {
+    console.error('fuck!');
+    var lastScrollTop = this.scrollTop,
+      lastTableScrollLeft = this.scrollLeft,
+      triggerScrollEvent = true,
+      rowHeight = this.options.rowHeight,
+      rowsToScroll;
+
+    this.scrollTop = $(e.target).scrollTop();
+    this.scrollLeft = $(e.target).scrollLeft();
+
+    rowsToScroll = Math.abs(~~(this.scrollTop / rowHeight) - ~~(lastScrollTop / rowHeight));
+    if(rowsToScroll > 0) {
+      if(lastScrollTop < this.scrollTop) {
+
+        this.currentRow += rowsToScroll;
+        if(!this.breakTableScroll) {
+          triggerScrollEvent = scrollTableVertical.call(this, rowsToScroll, this.forceTableScrollRender, e);
+          this._log('debug', 'scrolling down to row', this.currentRow, 'by', rowsToScroll, 'rows');
+        }
+
+      } else if (lastScrollTop > this.scrollTop){
+
+        this.currentRow -= rowsToScroll;
+        if(!this.breakTableScroll) {
+          triggerScrollEvent = scrollTableVertical.call(this, -rowsToScroll, this.forceTableScrollRender, e);
+          this._log('debug', 'scrolling up to row', this.currentRow, 'by', rowsToScroll, 'rows');
+        }
+      }
+    }
+
+    if(this.scrollLeft != lastTableScrollLeft) {
+      scrollTableHorizontal.call(this);
+    }
+    this._log('debug', 'Scrolling .macro-table-scroll-container: lastScrollTop', lastScrollTop, 'scrollTop', this.scrollTop, 'calculatedRow', this.calculatedRow, 'rowsToScroll', rowsToScroll);
+    if(this.verticalRowSizePid === null && triggerScrollEvent) {
+      this._trigger('scroll', e);
+    }
+  };
+
+
   $.widget('ui.macroTable', {
 
     /** Subscribable events */
@@ -1778,9 +1828,7 @@
       var self = this,
         options = this.options,
         $macroTable = this.element,
-        rowHeight = options.rowHeight,
-        breakTableScroll = false,
-        forceTableScrollRender = false;
+        rowHeight = options.rowHeight;
 
       /**
        * The prefix to use for events.
@@ -1971,6 +2019,14 @@
        * @type {Number}
        */
       this.scrollToRowIndex = null;
+
+
+      /**
+       * Event handler instances
+       */
+
+       this.scrollEvent = scrollEventFn.bind(this);
+
 
       /**
        * Web Worker Blob object URLs
@@ -2329,18 +2385,18 @@
             self.expandedTableData.indexOf(thisCurrentRow) : //scroll to the original row
             self.expandedTableData.indexOf(tableData[thisCurrentRow.index]); //scroll to the row's parent
 
-          breakTableScroll = true; //when resizing the scroll spacer, a scroll even may be triggered (and we don't want it to)
-          self.$scrollSpacer.height(rowHeight * self.expandedTableData.length);
+          self.breakTableScroll = true; //when resizing the scroll spacer, a macrotablescroll event may be triggered (and we don't want it to)
+          self.$scrollSpacer.height(rowHeight * self.expandedTableData.length); //may trigger 'scroll' on $scrollContainer
 
           //nested setTimeouts to allow for scroll event to trigger for the scroll-spacer resize, then re-render the current position
           setTimeout(function() {
-            breakTableScroll = false;
-            forceTableScrollRender = true;
+            self.breakTableScroll = false;
+            self.forceTableScrollRender = true;
             self.scrollToRow(thisCurrentRow);
 
             //reset the force re-render flag
             setTimeout(function() {
-              forceTableScrollRender = false;
+              self.forceTableScrollRender = false;
               self._trigger(isToggled ? 'rowexpand' : 'rowcollapse', null, {
                 expandedRows: self.expandedRowIndexes
               });
@@ -2758,43 +2814,7 @@
       });
 
       //scroll function for the scroll container, using the scrollbars
-      this.$scrollContainer.scroll(function(e) {
-        var lastScrollTop = this.scrollTop,
-          lastTableScrollLeft = this.scrollLeft,
-          triggerScrollEvent = true,
-          rowsToScroll;
-
-        this.scrollTop = $(e.target).scrollTop();
-        this.scrollLeft = $(e.target).scrollLeft();
-
-        rowsToScroll = Math.abs(~~(this.scrollTop / rowHeight) - ~~(lastScrollTop / rowHeight));
-        if(rowsToScroll > 0) {
-          if(lastScrollTop < this.scrollTop) {
-
-            this.currentRow += rowsToScroll;
-            if(!breakTableScroll) {
-              triggerScrollEvent = scrollTableVertical.call(this, rowsToScroll, forceTableScrollRender, e);
-              this._log('debug', 'scrolling down to row', this.currentRow, 'by', rowsToScroll, 'rows');
-            }
-
-          } else if (lastScrollTop > this.scrollTop){
-
-            this.currentRow -= rowsToScroll;
-            if(!breakTableScroll) {
-              triggerScrollEvent = scrollTableVertical.call(this, -rowsToScroll, forceTableScrollRender, e);
-              this._log('debug', 'scrolling up to row', this.currentRow, 'by', rowsToScroll, 'rows');
-            }
-          }
-        }
-
-        if(this.scrollLeft != lastTableScrollLeft) {
-          scrollTableHorizontal.call(this);
-        }
-        this._log('debug', 'Scrolling .macro-table-scroll-container: lastScrollTop', lastScrollTop, 'scrollTop', this.scrollTop, 'calculatedRow', this.calculatedRow, 'rowsToScroll', rowsToScroll);
-        if(this.verticalRowSizePid === null && triggerScrollEvent) {
-          this._trigger('scroll', e);
-        }
-      }.bind(this));
+      this.$scrollContainer.on('scroll', this.scrollEvent);
 
       this._initializeScrollBarOffsets();
 
@@ -3355,8 +3375,12 @@
 
       //size the scroll spacer to the theoretical max height of all the data
       if(this.expandedTableData.length) {
+        this.$scrollContainer.off('scroll', this.scrollEvent);
         this.$scrollSpacer.height(rowHeight * this.expandedTableData.length);
-        this.$scrollContainer.scrollTop(currentScrollPosition); //fix for firefox where the position would be remembered (undesirably) by the browser across page refreshes
+        if(currentScrollPosition !== this.$scrollContainer.scrollTop()) {
+          this.$scrollContainer.scrollTop(currentScrollPosition); //fix for firefox where the position would be remembered (undesirably) by the browser across page refreshes
+        }
+        this.$scrollContainer.on('scroll', this.scrollEvent);
       }
 
       //return table to the old scoll position
