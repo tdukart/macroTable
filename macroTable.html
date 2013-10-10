@@ -59,6 +59,9 @@
     <script type="text/javascript" src="macroTable.js"></script>
 
     <script type="text/javascript">
+      QUnit.config.autostart = !window.location.search.match(/qunit=false/); //don't run QUnit at start if it's disabled in the query parameters
+      //to start tests manually if autostart == false, run "QUnit.start();"
+
       var publicFunctions = {};
       $(function() {
 
