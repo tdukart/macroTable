@@ -511,7 +511,7 @@
     //loop through rows backwards to find the new, truly last row that will allow the last row to show
     $($tableRows.get().reverse()).each(function(i, element) {
       distanceFromBottomToNewLastDomRow += $(element).height();
-      if(distanceFromBottomToNewLastDomRow > tableContainerHeight) {
+      if(distanceFromBottomToNewLastDomRow >= tableContainerHeight) {
         distanceFromBottomToNewLastDomRow -= $(element).height();
 
         //if the remaining rows are not default height, then we need to add the space for some phantom rows
@@ -3304,6 +3304,7 @@
       var options = this.options,
         rowHeight = options.rowHeight,
         maxRenderCount = this.maxTotalDomRows,
+        currentScrollPosition = this.$scrollContainer.scrollTop(),
         $macroTable = this.element,
         $dataContainerWrapper = this.$dataContainerWrapper,
         $staticDataContainer = $dataContainerWrapper.find('div.macro-table-static-data-container'),
@@ -3355,6 +3356,7 @@
       //size the scroll spacer to the theoretical max height of all the data
       if(this.expandedTableData.length) {
         this.$scrollSpacer.height(rowHeight * this.expandedTableData.length);
+        this.$scrollContainer.scrollTop(currentScrollPosition); //fix for firefox where the position would be remembered (undesirably) by the browser across page refreshes
       }
 
       //return table to the old scoll position
@@ -3598,8 +3600,7 @@
       .height(height - headerHeight - this.scrollBarWidth);
 
       //size the scroll container
-      this.$scrollContainer
-      .outerHeight(height - headerHeight); //may have box-sizing: border-box; set (if not webkit)
+      this.$scrollContainer.outerHeight(height - headerHeight); //may have box-sizing: border-box; set (if not webkit)
 
       //add to the scroll spacer the amount of extra space available in the data container,
       //meaning vertical height not large enough to fit a full row of standard height (overflowed).
