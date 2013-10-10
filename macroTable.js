@@ -1380,7 +1380,6 @@
    * @param  {Event} e The jQuery scroll event
    */
   var scrollEventFn = function(e) {
-    console.error('fuck!');
     var lastScrollTop = this.scrollTop,
       lastTableScrollLeft = this.scrollLeft,
       triggerScrollEvent = true,
