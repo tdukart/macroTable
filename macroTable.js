@@ -1,5 +1,19 @@
 (function($, window, document, undefined) {
 
+  /**
+   * We need to know the width of the system scrollbar immediately, so might as well do it on load...
+   */
+  var scrollDiv = document.createElement('div');
+  scrollDiv.className = 'macro-table-measure-scrollbar';
+  document.body.appendChild(scrollDiv);
+
+  // Get the scrollbar width
+  var systemScrollbarWidth = scrollDiv.offsetWidth - scrollDiv.clientWidth;
+
+  document.body.removeChild(scrollDiv);
+  scrollDiv = null;
+
+
   /** Truly Private functions */
 
   /**
@@ -1856,22 +1870,11 @@
       this.expanderColumnWidth = 16;
 
       /**
-       * Width of scrollbars if the browser supports styling
-       * @type {Number}
-       */
-      this.styledScrollbarWidth = 12;
-
-      /**
-       * Width of scrollbars if the brwoser does not support styling
-       * @type {Number}
-       */
-      this.unStyledScrollbarWidth = 16;
-
-      /**
        * The actual scrollbar widths
+       * OS X hidden system scrollbars break the world, so hardcode default
        * @type {Number}
        */
-      this.scrollBarWidth = null;
+      this.scrollBarWidth = systemScrollbarWidth === 0 ? 16 : systemScrollbarWidth;
 
       /**
        * Min width a column can be resized
@@ -2036,8 +2039,6 @@
 
       this._log('info', 'Sort Web Worker URL', this.sortWebWorkerUrl);
       this._log('info', 'Filter Web Worker URL', this.filterWebWorkerUrl);
-
-      this.scrollBarWidth = navigator.userAgent.indexOf(' AppleWebKit/') !== -1 ? this.styledScrollbarWidth : this.unStyledScrollbarWidth;
 
       $macroTable.hide()
       .empty()
@@ -3012,7 +3013,7 @@
      * @private
      */
     _initializeScrollBarOffsets: function() {
-      if(this.scrollBarWidth === this.styledScrollbarWidth) {
+      if(this.scrollBarWidth === 12) { //FIXME: //TODO: this needs to be eliminated!
         this.element.addClass('has-styled-scrollbars');
       }
 
@@ -3591,7 +3592,7 @@
         tableData = options.tableData,
         rowHeight = options.rowHeight,
         rowSelectorOffset = options.rowsSelectable === true ? this.rowSelectColumnWidth : 0,
-        headerHeight, i;
+        headerHeight, i, scrollSpacerMarginBottom;
 
       //the cached height needs to be re-calculated because the realy heights probably changed
       for(i = tableData.length; i--;) {
@@ -3628,7 +3629,13 @@
       //add to the scroll spacer the amount of extra space available in the data container,
       //meaning vertical height not large enough to fit a full row of standard height (overflowed).
       //this will help when scrolling to the very bottom for some odd-sized cases
-      this.$scrollSpacer.css('margin-bottom', (((height - headerHeight - this.scrollBarWidth) / rowHeight) % 1) * rowHeight);
+      scrollSpacerMarginBottom = (((height - headerHeight - this.scrollBarWidth) / rowHeight) % 1) * rowHeight;
+
+      //if OS X hidden scrollbars are being used, we need extra margin since the vertical scrollbar
+      //ends below the data container (on the y plane) because the horizontal and vertical scrollbars intersect
+      scrollSpacerMarginBottom += systemScrollbarWidth === 0 ? this.scrollBarWidth : 0;
+
+      this.$scrollSpacer.css('margin-bottom', scrollSpacerMarginBottom);
 
       //size the vertical drop guide for the resizing functionality
       this.$resizer.height(height - this.scrollBarWidth);

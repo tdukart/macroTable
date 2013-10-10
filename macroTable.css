@@ -780,14 +780,26 @@ col.macro-table-row-selector-column  {
 
 /* scrollbar styling */
 
+/* used to test for system width of scrollbars */
+.macro-table-measure-scrollbar {
+  overflow: scroll;
+  position: absolute;
+  top: -9999999px;
+  width: 100px;
+  height: 100px;
+}
+
+.macro-table-measure-scrollbar::-webkit-scrollbar,
 .macro-table-scroll-container::-webkit-scrollbar {
   overflow: visible;
   background-color: #fff;
 }
 
+.macro-table-measure-scrollbar::-webkit-scrollbar:vertical,
 .macro-table-scroll-container::-webkit-scrollbar:vertical {
   width: 12px;
 }
+.macro-table-measure-scrollbar::-webkit-scrollbar:horizontal,
 .macro-table-scroll-container::-webkit-scrollbar:horizontal {
   height: 12px;
 }
