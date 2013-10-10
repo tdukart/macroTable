@@ -501,7 +501,7 @@
       $macroTable = this.element,
       $tableContainerWrapper = this.$dataContainerWrapper,
       $tableRows = this.$dataContainer.find('tbody.macro-table-column-content tr'),
-      $tableScrollSpacer = $macroTable.find('div.macro-table-scroll-spacer'),
+      $tableScrollSpacer = this.$scrollSpacer,
       $tableScrollWrappers = $tableContainerWrapper.find('div.macro-table-scroll-wrapper'),
       $reorderGuide = $macroTable.find('div.macro-table-reorder-guide'),
       spacerMultiplier = 0,
@@ -2044,6 +2044,7 @@
 
       //setup element shortcuts
       this.$scrollContainer = $macroTable.find('div.macro-table-scroll-container');
+      this.$scrollSpacer = $macroTable.find('div.macro-table-scroll-spacer');
       this.$headerWrapper = $macroTable.find('div.macro-table-header-wrapper');
       this.$dynamicHeader = this.$headerWrapper.find('div.macro-table-header');
       this.$dynamicHeaderRow = this.$dynamicHeader.find('tr.macro-table-header-row');
@@ -2329,8 +2330,7 @@
             self.expandedTableData.indexOf(tableData[thisCurrentRow.index]); //scroll to the row's parent
 
           breakTableScroll = true; //when resizing the scroll spacer, a scroll even may be triggered (and we don't want it to)
-          $macroTable.find('div.macro-table-scroll-spacer')
-          .height(rowHeight * self.expandedTableData.length);
+          self.$scrollSpacer.height(rowHeight * self.expandedTableData.length);
 
           //nested setTimeouts to allow for scroll event to trigger for the scroll-spacer resize, then re-render the current position
           setTimeout(function() {
@@ -2414,8 +2414,7 @@
 
           self._updateExpandAllState();
 
-          $macroTable.find('div.macro-table-scroll-spacer')
-          .height(rowHeight * self.expandedTableData.length);
+          self.$scrollSpacer.height(rowHeight * self.expandedTableData.length);
 
           self._trigger(isChecked ? 'rowexpand' : 'rowcollapse', null, {
             expandedRows: self.expandedRowIndexes.sort()
@@ -3144,8 +3143,7 @@
       }
 
       //size the scroll spacer to the theoretical max width of all the data + spacing margin
-      $macroTable.find('div.macro-table-scroll-spacer')
-      .width(totalColumnWidth + marginAdded);
+      this.$scrollSpacer.width(totalColumnWidth + marginAdded);
 
       $leftScrollWrapperBody.width(totalColumnWidth + marginAdded);
       $leftScrollWrapperHeader.width(totalColumnWidth + marginAdded + this.scrollBarWidth);
@@ -3356,8 +3354,7 @@
 
       //size the scroll spacer to the theoretical max height of all the data
       if(this.expandedTableData.length) {
-        $macroTable.find('div.macro-table-scroll-spacer')
-        .height(rowHeight * this.expandedTableData.length);
+        this.$scrollSpacer.height(rowHeight * this.expandedTableData.length);
       }
 
       //return table to the old scoll position
@@ -3607,8 +3604,7 @@
       //add to the scroll spacer the amount of extra space available in the data container,
       //meaning vertical height not large enough to fit a full row of standard height (overflowed).
       //this will help when scrolling to the very bottom for some odd-sized cases
-      this.$scrollContainer.find('div.macro-table-scroll-spacer')
-      .css('margin-bottom', (((height - headerHeight - this.scrollBarWidth) / rowHeight) % 1) * rowHeight);
+      this.$scrollSpacer.css('margin-bottom', (((height - headerHeight - this.scrollBarWidth) / rowHeight) % 1) * rowHeight);
 
       //size the vertical drop guide for the resizing functionality
       this.$resizer.height(height - this.scrollBarWidth);
