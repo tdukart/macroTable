@@ -566,4 +566,115 @@
     $dataContainerWraper = $('#table div.macro-table-data-container-wrapper');
   });
 
+
+  asyncTest('Table Scrolls to Column', 4, function() {
+    $('#table').on('macrotablescroll', function(e) {
+      switch(iteration++) {
+        case 0:
+          strictEqual($columnContainer.find('th.macro-table-column-cell:nth-child('+scroll1+')').position().left, 0, 'First scroll column scrolled to correctly');
+
+          $scrollContainer.scrollLeft($columnContainer.scrollLeft() + $columnContainer.find('th.macro-table-column-cell:nth-child('+scroll2+')').position().left);
+          break;
+
+        case 1:
+          strictEqual($columnContainer.find('th.macro-table-column-cell:nth-child('+scroll2+')').position().left, 0, 'Second scroll column scrolled to correctly');
+
+          $scrollContainer.scrollLeft($columnContainer.scrollLeft() + $columnContainer.find('th.macro-table-column-cell:nth-child('+scroll3+')').position().left);
+          break;
+
+        case 2:
+          strictEqual($columnContainer.find('th.macro-table-column-cell:nth-child('+scroll3+')').position().left, 0, 'Third scroll column scrolled to correctly, exposed extra left margin');
+
+          $scrollContainer.scrollLeft(0);
+          break;
+
+        case 3:
+          strictEqual($columnContainer.find('th.macro-table-column-cell:nth-child(1)').position().left, 0, 'Scrolled to top correctly');
+          start();
+          break;
+
+        default:
+          break;
+      }
+    });
+
+    var numColumns = 10,
+      scroll1 = 2,
+      scroll2 = 4,
+      scroll3 = 7,
+      containerWidth = 600,
+      $scrollContainer, $columnContainer, containerOffsetTop, tableData;
+
+    $('#qunit-fixture .wrapper').width(containerWidth + 'px');
+
+    tableData = publicFunctions.initializeTable(1, {
+      numColumns: numColumns,
+      width: {
+        2: 400
+      }
+    });
+
+    $(window).scrollTop(0);
+    containerOffsetLeft = $('#table div.macro-table-data-container-wrapper').offset().left;
+
+    $columnContainer = $('#table div.macro-table-header');
+    $scrollContainer = $('#table div.macro-table-scroll-container');
+    $scrollContainer.scrollLeft($columnContainer.find('th.macro-table-column-cell:nth-child('+scroll1+')').position().left)
+    .trigger('scroll'); //force a scroll trigger for firefox
+  });
+
+  asyncTest('Table Scrolls to Column Via API', 4, function() {
+    $('#table').on('macrotablescroll', function(e) {
+      switch(iteration++) {
+        case 0:
+          strictEqual($columnContainer.find('th.macro-table-column-cell:nth-child('+scroll1+')').position().left, 0, 'First scroll column scrolled to correctly');
+
+          $('#table').macroTable('scrollToColumn', scroll2 - 1);
+          break;
+
+        case 1:
+          strictEqual($columnContainer.find('th.macro-table-column-cell:nth-child('+scroll2+')').position().left, 0, 'Second scroll column scrolled to correctly');
+
+          $('#table').macroTable('scrollToColumn', scroll3 - 1);
+          break;
+
+        case 2:
+          strictEqual($columnContainer.find('th.macro-table-column-cell:nth-child('+scroll3+')').position().left, 0, 'Third scroll column scrolled to correctly, exposed extra left margin');
+
+          $('#table').macroTable('scrollToColumn', 0);
+          break;
+
+        case 3:
+          strictEqual($columnContainer.find('th.macro-table-column-cell:nth-child(1)').position().left, 0, 'Scrolled to top correctly');
+          start();
+          break;
+
+        default:
+          break;
+      }
+    });
+
+    var numColumns = 10,
+      scroll1 = 2,
+      scroll2 = 4,
+      scroll3 = 7,
+      containerWidth = 600,
+      $columnContainer, containerOffsetTop, tableData;
+
+    $('#qunit-fixture .wrapper').width(containerWidth + 'px');
+
+    tableData = publicFunctions.initializeTable(1, {
+      numColumns: numColumns,
+      width: {
+        2: 400
+      }
+    });
+
+    $(window).scrollTop(0);
+    containerOffsetLeft = $('#table div.macro-table-data-container-wrapper').offset().left;
+
+    $columnContainer = $('#table div.macro-table-header');
+    $('#table').macroTable('scrollToColumn', scroll1 - 1);
+  });
+
 })();

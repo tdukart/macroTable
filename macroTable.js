@@ -3795,7 +3795,7 @@
 
     /**
      * Scroll the table to the desired column
-     * @param  {Number} scrollToColumn The column index
+     * @param  {Number} scrollToColumn The column index (0 offset)
      */
     scrollToColumn: function(scrollToColumn) {
       this._log('debug', 'scroll to column',scrollToColumn);
