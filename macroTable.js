@@ -1523,7 +1523,7 @@
       /**
        * Array of objects whose order directly correlates to the display order of columns
        * Column object has the following fields:
-       * @field width {Number} the width in pixels the column should render at
+       * @field width {Number} the width in pixels (or percent, see proportionalColumnWidths) the column should render at
        * @field align {String} the text justification for the column cells. Options are 'left' (default), 'center' and 'right'
        * @field title {String} the name to display for the column
        * @field field {String} the field name in the data object that will correlate with this column

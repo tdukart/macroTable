@@ -136,6 +136,7 @@
 
           for(i = 0; i < columnOptions.numColumns; i++) {
             columns.push({
+              width: typeof columnOptions.width !== 'undefined' ? columnOptions.width[i] : undefined,
               align: typeof columnOptions.align !== 'undefined' ? columnOptions.align[i] : undefined,
               title: typeof columnOptions.columnTitles !== 'undefined' ? columnOptions.columnTitles[i] || 'Col '+i :  'Col '+i,
               field: typeof columnOptions.columnFields !== 'undefined' ? columnOptions.columnFields[i] || 'column'+i : 'column'+i,
@@ -163,6 +164,7 @@
             sortByColumn: tableOptions.sortByColumn,
             sortByColumnDirection: tableOptions.sortByColumnDirection,
             scrollRowWindow: tableOptions.scrollRowWindow,
+            proportionalColumnWidths: tableOptions.proportionalColumnWidths,
             debugLevel: 'debug'
           })
 
