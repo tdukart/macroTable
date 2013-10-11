@@ -731,15 +731,78 @@
     });
   });
 
-/*
-  asyncTest('web worker sort', function() {
-    expect(1);
+  asyncTest('Changing Between Sorted Columns Reverts Sort Order', 9, function() {
+    $('#table').on('macrotablecolumnsort', function(e) {
+      var event;
 
-    setTimeout(function() {
-      ok(true, "Passed and ready to resume!");
-      start();
-    }, 1000);
+      switch(iteration++) {
+        case 0:
+          ok($firstColumnHeader.hasClass('macro-table-sort-ascending'), 'Column 1 is ordered ascending');
+
+          event = $.Event('click');
+          event.target = $lastColumnHeader[0];
+          $headerTable.trigger(event);
+          break;
+
+        case 1:
+          ok(!$firstColumnHeader.hasClass('macro-table-sort-ascending') && !$firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column 1 is unordered');
+          ok($lastColumnHeader.hasClass('macro-table-sort-ascending'), 'Column 2 is ordered ascending');
+
+          event = $.Event('click');
+          event.target = $firstColumnHeader[0];
+          $headerTable.trigger(event);
+          break;
+
+        case 2:
+          ok(!$lastColumnHeader.hasClass('macro-table-sort-ascending') && !$lastColumnHeader.hasClass('macro-table-sort-descending'), 'Column 2 is unordered');
+          ok($firstColumnHeader.hasClass('macro-table-sort-ascending'), 'Column 1 is reset to ordered ascending');
+
+          event = $.Event('click');
+          event.target = $firstColumnHeader[0];
+          $headerTable.trigger(event);
+          break;
+
+        case 3:
+          ok($firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column 1 is ordered descending');
+
+          event = $.Event('click');
+          event.target = $lastColumnHeader[0];
+          $headerTable.trigger(event);
+          break;
+
+        case 4:
+          ok(!$firstColumnHeader.hasClass('macro-table-sort-ascending') && !$firstColumnHeader.hasClass('macro-table-sort-descending'), 'Column 1 is unordered again');
+          ok($lastColumnHeader.hasClass('macro-table-sort-ascending'), 'Column 2 is still ordered ascending');
+
+          event = $.Event('click');
+          event.target = $firstColumnHeader[0];
+          $headerTable.trigger(event);
+          break;
+
+        case 5:
+          ok($firstColumnHeader.hasClass('macro-table-sort-ascending'), 'Column 1 is still ordered ascending');
+
+          start();
+          break;
+
+        default:
+          break;
+      }
+    });
+
+    tableData[2].expanded = true;
+    publicFunctions.initializeTable(tableData, {
+      numColumns: 3
+    });
+
+    var $firstColumnHeader = $('#table th.macro-table-column-sortable').first(),
+      $lastColumnHeader = $('#table th.macro-table-column-sortable').last(),
+      $headerTable = $('div.macro-table-header-wrapper div.macro-table-header table'),
+      event;
+
+    event = $.Event('click');
+    event.target = $firstColumnHeader[0];
+    $headerTable.trigger(event);
   });
 
-*/
 })();
