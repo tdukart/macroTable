@@ -2291,7 +2291,7 @@
         var $column = $(this).closest('td'),
           $row = $column.closest('tr'),
           column = options.columns[$column.data('column-index')],
-          row = options.tableData[$row.data('row-index')];
+          row = self.renderRowDataSet[$row.data('row-index')];
 
         e.stopPropagation();
         if(typeof column.onCellClick === 'function') {
