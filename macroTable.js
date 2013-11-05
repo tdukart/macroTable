@@ -1,19 +1,5 @@
 (function($, window, document, undefined) {
 
-  /**
-   * We need to know the width of the system scrollbar immediately, so might as well do it on load...
-   */
-  var scrollDiv = document.createElement('div');
-  scrollDiv.className = 'macro-table-measure-scrollbar';
-  document.body.appendChild(scrollDiv);
-
-  // Get the scrollbar width
-  var systemScrollbarWidth = scrollDiv.offsetWidth - scrollDiv.clientWidth;
-
-  document.body.removeChild(scrollDiv);
-  scrollDiv = null;
-
-
   /** Truly Private functions */
 
   /**
@@ -1841,7 +1827,22 @@
       var self = this,
         options = this.options,
         $macroTable = this.element,
-        rowHeight = options.rowHeight;
+        rowHeight = options.rowHeight,
+        scrollDiv;
+
+      /**
+       * Discover the width of the system scrollbar
+       */
+      scrollDiv = document.createElement('div');
+      scrollDiv.className = 'macro-table-measure-scrollbar';
+      document.body.appendChild(scrollDiv);
+
+      // Get the scrollbar width
+      this.systemScrollbarWidth = scrollDiv.offsetWidth - scrollDiv.clientWidth;
+
+      document.body.removeChild(scrollDiv);
+      scrollDiv = null;
+
 
       /**
        * The prefix to use for events.
@@ -1874,7 +1875,7 @@
        * OS X hidden system scrollbars break the world, so hardcode default
        * @type {Number}
        */
-      this.scrollBarWidth = systemScrollbarWidth === 0 ? 16 : systemScrollbarWidth;
+      this.scrollBarWidth = this.systemScrollbarWidth === 0 ? 16 : this.systemScrollbarWidth;
 
       /**
        * Min width a column can be resized
@@ -3633,7 +3634,7 @@
 
       //if OS X hidden scrollbars are being used, we need extra margin since the vertical scrollbar
       //ends below the data container (on the y plane) because the horizontal and vertical scrollbars intersect
-      scrollSpacerMarginBottom += systemScrollbarWidth === 0 ? this.scrollBarWidth : 0;
+      scrollSpacerMarginBottom += this.systemScrollbarWidth === 0 ? this.scrollBarWidth : 0;
 
       this.$scrollSpacer.css('margin-bottom', scrollSpacerMarginBottom);
 
