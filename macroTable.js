@@ -1109,6 +1109,8 @@
 
       this._log('debug', 'pre-sorted data',options.tableData);
 
+      this.renderRowDataSet = []; //keep things from going haywire if method calls are made while a worker is still running...
+
       columnSorter = columnData.sortable; //could be boolean, 'numeric', a function, or anything else which will result in dictionary
       if(typeof columnData.sortable === 'function') {
         columnSorter = columnData.sortable.toString();
@@ -1127,7 +1129,7 @@
 
     } else {
 
-      this._log('debug', 'pre-sorted data',this.renderRowDataSet);
+      this._log('debug', 'pre-sorted data', this.renderRowDataSet);
       action = 'order';
       sortWorker.postMessage({
         pid: this.sortWorkerPid,
@@ -3550,7 +3552,15 @@
       .filter(':nth-child('+(columnIndexToSort + 1)+')')
       .addClass('macro-table-sort-loading');
 
-      workerSortRow.bind(this)(columnData, $columnHeader, $columnSizers, callback);
+      //execute the sort worker if there is actually work to do, otherwise, bypass it
+      if(this.renderRowDataSet.length === 0) {
+        this._renderTableRows(this.renderRowDataSet);
+        if(typeof callback === 'function') {
+          callback.bind(this)();
+        }
+      } else {
+        workerSortRow.bind(this)(columnData, $columnHeader, $columnSizers, callback);
+      }
     },
 
     /**
