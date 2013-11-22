@@ -699,7 +699,7 @@
     while(columnIterator != endColumn) {
 
       var $newColumn = $domColumns.eq(columnIterator),
-        newColumnScrollLeft = $newColumn.position().left + dataContainerScrollLeft;
+        newColumnScrollLeft = ~~($newColumn.position().left + dataContainerScrollLeft);
 
       if(scrollContainerScrollLeft >= newColumnScrollLeft &&
           scrollContainerScrollLeft < newColumnScrollLeft + $newColumn.outerWidth()) {
@@ -2205,11 +2205,11 @@
             $columnHeader.addClass('macro-table-header-active-cell');
             $reorderHandle.css({
               top: (($columnHeader.height() - $reorderHandle.height()) / 2) + 'px',
-              left: self.$dynamicHeader.scrollLeft() + $columnHeader.position().left + 2 + 'px'
+              left: ~~(self.$dynamicHeader.scrollLeft() + $columnHeader.position().left + 2) + 'px'
             });
             self.$removeColumnButton.css({
               top: (($columnHeader.height() - self.$removeColumnButton.height()) / 2) + 'px',
-              left: self.$dynamicHeader.scrollLeft() + $columnHeader.position().left + $columnHeader.outerWidth() - self.$removeColumnButton.width() + (-2) + 'px'
+              left: ~~(self.$dynamicHeader.scrollLeft() + $columnHeader.position().left + $columnHeader.outerWidth() - self.$removeColumnButton.width() + (-2)) + 'px'
             });
           } else {
             self.$dynamicHeader.removeClass('macro-table-header-active');
@@ -2497,9 +2497,9 @@
 
       //helper function to return the width to resize a column to based on current cursor position
       function calculateReiszeColumnWidth(cursorPosition, $columnToResize) {
-        var cursorOffset = cursorPosition - $macroTable.position().left,
+        var cursorOffset = ~~(cursorPosition - $macroTable.position().left),
           maxLeftPosition = $macroTable.outerWidth() - self.scrollBarWidth - self.$resizer.outerWidth(),
-          minResizePosition = $columnToResize.position().left + self.resizeColumnMinWidth;
+          minResizePosition = ~~($columnToResize.position().left + self.resizeColumnMinWidth);
 
         self._log('debug', 'calculateReiszeColumnWidth:', $macroTable.outerWidth() - self.scrollBarWidth - self.$resizer.outerWidth(), cursorOffset, $columnToResize.offset().left + self.resizeColumnMinWidth);
 
@@ -2511,7 +2511,7 @@
       this.$resizer.bind('mousedown', function(e) {
         e.preventDefault();
         if(typeof resizePositionStart === 'undefined') { //prevent multiple mousedowns (if you mousedown, move cursor off of table, then move back and click)
-          resizePositionStart = self.$resizer.position().left;
+          resizePositionStart = ~~self.$resizer.position().left;
 
           //the resizer has been grabbed, attach listeners to the container to allow it to move around
 
@@ -2526,7 +2526,7 @@
               $columns = $columnContainers.filter(':first').find('col'),
               columnNumber = $columnToResize.index(),
               $columnSizers = $columnContainers.find('col:nth-child('+(columnNumber + 1)+')'),
-              widthDelta = self.$resizer.position().left - resizePositionStart,
+              widthDelta = ~~(self.$resizer.position().left - resizePositionStart),
               newWidth = $columnSizers.width() + widthDelta;
 
             //clean up the mousemove and mouseup events on the container
@@ -2589,7 +2589,7 @@
           columnGrabOffset = e.pageX - $selectedColumn.offset().left;
 
           $reorderGuide.width($selectedColumn.outerWidth())
-          .css('left', self.$dataContainer.scrollLeft() + $selectedColumn.position().left);
+          .css('left', ~~(self.$dataContainer.scrollLeft() + $selectedColumn.position().left));
 
           self.$resizer.css('left', thumbPosition + 'px');
 
@@ -2674,7 +2674,7 @@
           setTimeout(function setReorderGuidePosition() {
             var scrollOffset = self.$dataContainer.scrollLeft(),
               cursorDataContainerOffset = lastPageX - self.$dataContainer.offset().left,
-              dataContainerOffset = self.$dataContainer.position().left,
+              dataContainerOffset = ~~self.$dataContainer.position().left,
               reorderGuidePosition = $reorderGuide.position().left,
               maxReorderGuidePosition = $headerTable.outerWidth() - $headerTable.find('th:last').outerWidth(),
               selectedColumnIndex = $macroTable.find('col.macro-table-selected-column').first().index(),
@@ -2684,7 +2684,7 @@
             $visibleColumns = $headerTable.find('th'); //TODO: filter more intelligently (only look at columns visible in window)
             $visibleColumns.each(function(i, column) {
               var $column = $(column);
-              if(cursorDataContainerOffset < $column.position().left + $column.outerWidth() || i == self.options.columns.length - 1) {
+              if(cursorDataContainerOffset < ~~($column.position().left + $column.outerWidth()) || i == self.options.columns.length - 1) {
                 $newColumn = $column;
                 newIndex = $column.index();
                 return false;
@@ -2697,7 +2697,7 @@
 
             //handle scrolling the columns if dragging the guide to the edges of the container
             var newColumnWidth = $newColumn.outerWidth(),
-              newColumnPosition = $newColumn.position().left + dataContainerOffset,
+              newColumnPosition = ~~($newColumn.position().left + dataContainerOffset),
               isScrollingRight = newColumnPosition + newColumnWidth > self.$dataContainer.outerWidth(),
               isScrollingLeft = newColumnPosition - dataContainerOffset === 0 && scrollOffset !== 0;
 
@@ -2714,7 +2714,7 @@
                   //force refresh, the recalculate position, reposition guide into new scroll window
                   setTimeout(function() {
                     //recalculate $reorderGuide.position().left because reorderGuidePosition is now stale
-                    $reorderGuide.css('left', $reorderGuide.position().left + (newColumnWidth * (isScrollingRight ? 1 : -1)));
+                    $reorderGuide.css('left', ~~($reorderGuide.position().left + (newColumnWidth * (isScrollingRight ? 1 : -1))));
                     setReorderGuidePosition();
                   }, 0);
                 }, 1000);
@@ -2733,7 +2733,7 @@
               newReorderGuidePosition = 0;
               columnGrabOffset = newColumnWidth / 2;
 
-            } else if(reorderGuidePosition == maxReorderGuidePosition && cursorDataContainerOffset > $newColumn.position().left + (newColumnWidth / 2)) {
+            } else if(reorderGuidePosition == maxReorderGuidePosition && cursorDataContainerOffset > ~~($newColumn.position().left + (newColumnWidth / 2))) {
 
               //if on the last column, don't move the reorder guide to the left until cursor position is past half the column length
               newReorderGuidePosition = maxReorderGuidePosition;
@@ -2812,14 +2812,14 @@
 
         if(delta.deltaX !== 0) {
           var $domColumns = self.$dynamicHeaderRow.find('th'),
-            offset = $domColumns.length !== 0 ? Math.abs($domColumns.eq(0).position().left) : 0;
+            offset = $domColumns.length !== 0 ? ~~Math.abs($domColumns.eq(0).position().left) : 0;
 
           if(delta.deltaX < 0 && self.currentColumn + (options.scrollByColumn ? 0 : 1) > 0) {
-            var lastOffset = Math.abs($domColumns.eq(self.currentColumn - 1).position().left);
+            var lastOffset = ~~Math.abs($domColumns.eq(self.currentColumn - 1).position().left);
             self._log('debug', 'left scroll',offset-lastOffset,'lastOffset',lastOffset,'offset',offset,'currentColumn',self.currentColumn);
             self.$scrollContainer.scrollLeft(offset - (options.scrollByColumn ? lastOffset : horizontalPixelScroll));
           } else if(delta.deltaX > 0 && self.currentColumn < $domColumns.length - (options.scrollByColumn ? 1 : 0)) {
-            var nextOffset = Math.abs($domColumns.eq(self.currentColumn + 1).position().left);
+            var nextOffset = ~~Math.abs($domColumns.eq(self.currentColumn + 1).position().left);
             self._log('debug', 'right scroll',offset-nextOffset,'nextOffset',nextOffset,'offset',offset,'currentColumn',self.currentColumn);
             self.$scrollContainer.scrollLeft(offset + (options.scrollByColumn ? nextOffset : horizontalPixelScroll));
           }
@@ -3200,7 +3200,7 @@
       }
 
       this.$dynamicHeader.add(this.$dataContainer).scrollLeft(
-        this.$dynamicHeader.scrollLeft() + this.$dynamicHeaderRow.find('th').filter(':nth-child('+(this.currentColumn + 1)+')').position().left //scroll position of old column
+        ~~(this.$dynamicHeader.scrollLeft() + this.$dynamicHeaderRow.find('th').filter(':nth-child('+(this.currentColumn + 1)+')').position().left) //scroll position of old column
       );
     },
 
@@ -3823,7 +3823,7 @@
       this._log('debug', 'scroll to column',scrollToColumn);
 
       var $column = this.$dynamicHeaderRow.find('th:nth-child('+(scrollToColumn + 1)+')'),
-        columnOffset = $column.length > 0 ? $column.position().left : 0;
+        columnOffset = $column.length > 0 ? ~~$column.position().left : 0;
 
       this.scrollLeft = -1; //force a scroll
 
