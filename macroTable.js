@@ -4,12 +4,14 @@
 
   /**
    * Helper function to extract the mousewheel deta data for Firefox and Webkit
-   * @param  {Event}  event The mouse wheel event (either DOMMouseScroll or mousewheel)
+   * @param  {Event}  event The jQuery mousewheel event (which wraps either DOMMouseScroll or mousewheel)
    * @return {Object}       Returns an object containing the normalized deltaY and deltaX values
    */
   function getMouseWheelDelta(event) {
     var originalEvent = event.originalEvent,
-      delta, deltaX, deltaY;
+      deltaX = 0,
+      deltaY = 0,
+      delta;
 
     // Old school scrollwheel delta
     if(originalEvent.wheelDelta) {
@@ -20,12 +22,21 @@
     }
 
     // New school multidimensional scroll (touchpads) deltas
-    deltaY = delta;
+    if(typeof delta !== 'undefined') {
+      deltaY = delta;
+    }
 
     // Gecko
     if(originalEvent.axis !== undefined && originalEvent.axis === originalEvent.HORIZONTAL_AXIS) {
       deltaY = 0;
       deltaX = -1 * delta;
+    }
+
+    if(originalEvent.deltaY) {
+      deltaY = -originalEvent.deltaY / 120;
+    }
+    if(originalEvent.deltaX) {
+      deltaX = originalEvent.deltaX / 120;
     }
 
     // Webkit

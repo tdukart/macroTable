@@ -519,7 +519,8 @@
     var $firstColumnHeader = $('#table th.macro-table-column-sortable').first();
   });
 
-  asyncTest('Initialize Table with Descending Ordered Column', 2, function() {
+  //no longer triggering sort event when the table has no data (why fire a worker when there's no work to do?)
+  /*asyncTest('Initialize Table with Descending Ordered Column', 2, function() {
     $('#table').on('macrotablecolumnsort', function(e) {
       switch(iteration++) {
         case 0:
@@ -546,7 +547,7 @@
     });
 
     var $firstColumnHeader = $('#table th.macro-table-column-sortable').first();
-  });
+  });*/
 
   asyncTest('Reinitialize Table with Descending Ordered Column (Sorted by Click)', 4, function() {
     $('#table').on('macrotablecolumnsort', function(e) {
