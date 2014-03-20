@@ -3719,6 +3719,15 @@
 
       return selectedRows;
     },
+    
+    /**
+     * @method getRowCount
+     * @description return the number of rows in the table
+     * @returns {Number} number of rows in the table
+     */
+    getRowCount: function () {
+      return this.expandedTableData.length;
+    },
 
     /**
      * @method getTableSnapshot
@@ -3891,6 +3900,27 @@
       //must release object URLs when we're done with them
       window.URL.revokeObjectURL(this.sortWebWorkerUrl);
       window.URL.revokeObjectURL(this.filterWebWorkerUrl);
+      
+      //release pointers
+      this.searchIndex = [];
+      this.$columnControls = null;
+      this.$dataContainer = null;
+      this.$dataContainerWrapper = null;
+      this.$dynamicHeader = null;
+      this.$dynamicHeaderRow = null;
+      this.$dynamicRowTemplate = null;
+      this.$dynamicSummaryRow = null;
+      this.$headerWrapper = null;
+      this.$removeColumnButton = null;
+      this.$resizer = null;
+      this.$scrollContainer = null;
+      this.$scrollSpacer = null;
+      this.$staticDataContainer = null;
+      this.$staticHeader = null;
+      this.$staticHeaderRow = null;
+      this.$staticRowTemplate = null;
+      this.$staticSummaryRow = null;
+      this.$tableBody = null;
 
       // In jQuery UI 1.8, you must invoke the destroy method from the base widget
       $.Widget.prototype.destroy.call( this );
