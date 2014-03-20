@@ -3719,15 +3719,6 @@
 
       return selectedRows;
     },
-    
-    /**
-     * @method getRowCount
-     * @description return the number of rows in the table
-     * @returns {Number} number of rows in the table
-     */
-    getRowCount: function () {
-      return this.expandedTableData.length;
-    },
 
     /**
      * @method getTableSnapshot
