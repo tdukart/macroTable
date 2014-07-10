@@ -75,11 +75,16 @@
      * Wrapper for a generic sorting function giving it scope into which column field to use
      * Default means of sorting column values.
      * @param sortByField {String} column field name to sort table rows by
+     * @param caseSensitive {Boolean} do a UNIX-style case-sensitive sort (A,B,C,a,b,c)
      */
-    function dictionarySort(sortByField) {
+    function dictionarySort(sortByField, caseSensitive) {
       return function(a, b) {
         var aValue = a.data[sortByField],
           bValue = b.data[sortByField];
+        if (caseSensitive !== true) {
+          aValue = aValue.toUpperCase();
+          bValue = bValue.toUpperCase();
+        }
 
         aValue = typeof aValue === 'undefined' ? '' : aValue;
         bValue = typeof bValue === 'undefined' ? '' : bValue;
@@ -157,7 +162,7 @@
               sortTableData(tableData, numberSort(sortByField), direction);
 
             } else if(columnSorter === 'dictionary' || columnSorter === 'string') {
-              sortTableData(tableData, dictionarySort(sortByField), direction);
+              sortTableData(tableData, dictionarySort(sortByField, (e.data.caseSensitiveSort === true)), direction);
 
             } else {
               eval('columnSorter = ' + columnSorter); //de-serialize the user-defined column sorting function
@@ -168,7 +173,7 @@
 
               //no user-defined column sorter, use default string order
               } else  {
-                sortTableData(tableData, dictionarySort(sortByField), direction);
+                sortTableData(tableData, dictionarySort(sortByField, (e.data.caseSensitiveSort === true)), direction);
               }
             }
           }
@@ -1135,7 +1140,8 @@
         tableData: options.tableData,
         sortByField: sortedColumn,
         direction: columnData.direction,
-        columnSorter: columnSorter
+        columnSorter: columnSorter,
+        caseSensitiveSort: (columnData.caseSensitiveSort === true)
       });
 
     } else {
