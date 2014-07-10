@@ -75,11 +75,16 @@
      * Wrapper for a generic sorting function giving it scope into which column field to use
      * Default means of sorting column values.
      * @param sortByField {String} column field name to sort table rows by
+     * @param caseSensitive {Boolean} do a UNIX-style case-sensitive sort (A,B,C,a,b,c)
      */
-    function dictionarySort(sortByField) {
+    function dictionarySort(sortByField, caseSensitive) {
       return function(a, b) {
         var aValue = a.data[sortByField],
           bValue = b.data[sortByField];
+        if (caseSensitive !== true) {
+          aValue = aValue.toUpperCase();
+          bValue = bValue.toUpperCase();
+        }
 
         aValue = typeof aValue === 'undefined' ? '' : aValue;
         bValue = typeof bValue === 'undefined' ? '' : bValue;
@@ -157,7 +162,7 @@
               sortTableData(tableData, numberSort(sortByField), direction);
 
             } else if(columnSorter === 'dictionary' || columnSorter === 'string') {
-              sortTableData(tableData, dictionarySort(sortByField), direction);
+              sortTableData(tableData, dictionarySort(sortByField, (e.data.caseSensitiveSort === true)), direction);
 
             } else {
               eval('columnSorter = ' + columnSorter); //de-serialize the user-defined column sorting function
@@ -168,7 +173,7 @@
 
               //no user-defined column sorter, use default string order
               } else  {
-                sortTableData(tableData, dictionarySort(sortByField), direction);
+                sortTableData(tableData, dictionarySort(sortByField, (e.data.caseSensitiveSort === true)), direction);
               }
             }
           }
@@ -935,6 +940,11 @@
     for(i = rowElements.length; i--;) {
       rowData = rowElements[i].rowData = rowElements[i].rowData || {};
 
+      //might have resized column that causes the contents to wrap, which would increase the height of the row
+      if (rowData.calculatedHeight !== rowElements[i].dynamicRow.height()) {
+        rowData.calculatedHeight = 0;
+      }
+
       if(rowData.calculatedHeight) {
         delete rowElements[i].rowData; //already calculated, skip to save performance hit
         continue;
@@ -1135,7 +1145,8 @@
         tableData: options.tableData,
         sortByField: sortedColumn,
         direction: columnData.direction,
-        columnSorter: columnSorter
+        columnSorter: columnSorter,
+        caseSensitiveSort: (columnData.caseSensitiveSort === true)
       });
 
     } else {
@@ -1160,6 +1171,8 @@
    */
   function postSortFilter(renderRowDataSet, sortAction, callback) {
     var options = this.options;
+
+    if (!renderRowDataSet) return;
 
     if(renderRowDataSet.length !== 0 && this.searchIndex.length === 0) {
       //called whenever the first rendering of a new dataset occurs
@@ -1524,6 +1537,7 @@
        * Column object has the following fields:
        * @field width {Number} the width in pixels (or percent, see proportionalColumnWidths) the column should render at
        * @field align {String} the text justification for the column cells. Options are 'left' (default), 'center' and 'right'
+       * @field hover {String} the text to display for the column header's tooltip (takes value from title if undefined)
        * @field title {String} the name to display for the column
        * @field field {String} the field name in the data object that will correlate with this column
        * @field formatter {Function} (optional) formats the provided data to be displayed in a row's column
@@ -2223,8 +2237,11 @@
         if($(e.relatedTarget).closest('div.macro-table-column-controls').length === 0) {
         //if(!$(e.relatedTarget).hasClass('macro-table-reorder-handle')) { //don't deselect column if hovering over the reorder handle
           columnMouseoverPid = setTimeout(function() {
-            self.$dynamicHeader.removeClass('macro-table-header-active');
-            $(e.target).removeClass('macro-table-header-active-cell');
+            //check to see if it's been removed
+            if (self.$dynamicHeader) {
+              self.$dynamicHeader.removeClass('macro-table-header-active');
+              $(e.target).removeClass('macro-table-header-active-cell');
+            }
           }, 500);
         }
       });
@@ -3106,12 +3123,15 @@
         } else {
           columnWidth = ~~defaultColumnWidth;
         }
+        if (typeof thisColumn.hover === 'undefined') {
+          thisColumn.hover = thisColumn.title;
+        }
 
         if(i < this.maxTotalDomColumns) { //TODO: right now, this is always true because we show all columns in the DOM, always
           var $summaryColumn,
             $colSizer = $(document.createElement('col')).width(columnWidth),
             $headerColumn = $(document.createElement('th')).addClass('macro-table-column-cell')
-          .html('<div class="macro-table-column-header-text" title="' + thisColumn.title + '">' + thisColumn.title + '</div>')
+          .html('<div class="macro-table-column-header-text" title="' + thisColumn.hover + '">' + thisColumn.title + '</div>')
           .addClass(thisColumn.className);
 
           if(thisColumn.align === 'center' || thisColumn.align === 'right') {
@@ -3721,6 +3741,15 @@
     },
 
     /**
+     * @method getRowCount
+     * @description return the number of rows in the table
+     * @returns {Number} number of rows in the table
+     */
+    getRowCount: function () {
+      return this.expandedTableData.length;
+    },
+
+    /**
      * @method getTableSnapshot
      * @description fetch all rows in the table with the column layout reflective of what is shown in the table
      * @returns {Array} ordered list of selected rows
@@ -3891,7 +3920,7 @@
       //must release object URLs when we're done with them
       window.URL.revokeObjectURL(this.sortWebWorkerUrl);
       window.URL.revokeObjectURL(this.filterWebWorkerUrl);
-      
+
       //release pointers
       this.searchIndex = [];
       this.$columnControls = null;
