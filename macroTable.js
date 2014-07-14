@@ -81,13 +81,14 @@
       return function(a, b) {
         var aValue = a.data[sortByField],
           bValue = b.data[sortByField];
+
+        aValue = typeof aValue === 'undefined' ? '' : aValue;
+        bValue = typeof bValue === 'undefined' ? '' : bValue;
+        
         if (caseSensitive !== true) {
           aValue = aValue.toUpperCase();
           bValue = bValue.toUpperCase();
         }
-
-        aValue = typeof aValue === 'undefined' ? '' : aValue;
-        bValue = typeof bValue === 'undefined' ? '' : bValue;
 
         return aValue == bValue ? 0 : (aValue > bValue ? 1 : -1);
       };
