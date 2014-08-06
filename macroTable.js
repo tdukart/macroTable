@@ -2504,7 +2504,7 @@
 
       //helper function to return the width to resize a column to based on current cursor position
       function calculateReiszeColumnWidth(cursorPosition, $columnToResize) {
-        var cursorOffset = ~~(cursorPosition - $macroTable.position().left),
+        var cursorOffset = ~~(cursorPosition - $macroTable.offset().left),
           maxLeftPosition = $macroTable.outerWidth() - self.scrollBarWidth - self.$resizer.outerWidth(),
           minResizePosition = ~~($columnToResize.position().left + self.resizeColumnMinWidth);
 
@@ -2518,7 +2518,7 @@
       this.$resizer.bind('mousedown', function(e) {
         e.preventDefault();
         if(typeof resizePositionStart === 'undefined') { //prevent multiple mousedowns (if you mousedown, move cursor off of table, then move back and click)
-          resizePositionStart = ~~self.$resizer.position().left;
+          resizePositionStart = ~~self.$resizer.offset().left;
 
           //the resizer has been grabbed, attach listeners to the container to allow it to move around
 
@@ -2533,7 +2533,7 @@
               $columns = $columnContainers.filter(':first').find('col'),
               columnNumber = $columnToResize.index(),
               $columnSizers = $columnContainers.find('col:nth-child('+(columnNumber + 1)+')'),
-              widthDelta = ~~(self.$resizer.position().left - resizePositionStart),
+              widthDelta = ~~(self.$resizer.offset().left - resizePositionStart),
               newWidth = $columnSizers.width() + widthDelta;
 
             //clean up the mousemove and mouseup events on the container
