@@ -2668,9 +2668,8 @@
 
           //reposition the resizer, do it out of the thread for performance improvements
           setTimeout(function() {
-            self.$resizer.css('left', calculateReiszeColumnWidth(e.pageX, $columnToResize) + 'px');
+            self.$resizer.css('left', calculateReiszeColumnWidth(cursorOffset, $columnToResize) + 'px');
           }, 0);
-
 
         /* process reordering columns */
 
